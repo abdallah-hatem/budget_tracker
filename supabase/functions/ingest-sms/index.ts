@@ -20,6 +20,13 @@ const MAX_TEXT_LENGTH = 2000;
 // Injectable dependency interface (enables unit tests with no network or DB).
 // ---------------------------------------------------------------------------
 
+export interface ExpoPushMessage {
+  to: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}
+
 export interface IngestDeps {
   /** Groq API key (empty string → 500). */
   groqKey: string;
@@ -41,6 +48,10 @@ export interface IngestDeps {
   insertPending: (row: Record<string, unknown>) => Promise<void>;
   /** Best-effort: update last_used_at for the token. */
   touchToken: (tokenHash: string) => Promise<void>;
+  /** Return Expo push tokens registered for the given user_id. */
+  getPushTokens: (userId: string) => Promise<string[]>;
+  /** Send one or more Expo push messages (best-effort). */
+  sendPush: (messages: ExpoPushMessage[]) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +180,24 @@ export async function handleIngest(
     return json({ error: "Failed to save transaction." }, 502);
   }
 
+  // --- Best-effort push notification (never changes the 200 response) ---
+  (async () => {
+    try {
+      const tokens = await deps.getPushTokens(userId);
+      if (tokens.length === 0) return;
+      const bodyText = `E£ ${amount} · ${parsed.note || parsed.category_slug}`;
+      const messages: ExpoPushMessage[] = tokens.map((to) => ({
+        to,
+        title: "New transaction to review",
+        body: bodyText,
+        data: { url: "/(tabs)/pending", type: "sms_pending" },
+      }));
+      await deps.sendPush(messages);
+    } catch (_e) {
+      // Swallow — push failure must never affect the 200 response.
+    }
+  })();
+
   return json({ ok: true }, 200);
 }
 
@@ -216,6 +245,26 @@ if (import.meta.main) {
         .from("ingest_tokens")
         .update({ last_used_at: new Date().toISOString() })
         .eq("token_hash", tokenHash);
+    },
+
+    async getPushTokens(userId) {
+      const { data, error } = await sb
+        .from("push_tokens")
+        .select("token")
+        .eq("user_id", userId);
+      if (error || !data) return [];
+      return (data as { token: string }[]).map((r) => r.token);
+    },
+
+    async sendPush(messages) {
+      await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(messages),
+      });
     },
   };
 

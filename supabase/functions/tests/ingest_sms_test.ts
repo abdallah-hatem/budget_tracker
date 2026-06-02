@@ -1,7 +1,7 @@
 // Tests for ingest-sms Edge Function handler.
 // All deps are injected fakes — no network, no database.
 import { assert, assertEquals } from "@std/assert";
-import { handleIngest, type IngestDeps } from "../ingest-sms/index.ts";
+import { handleIngest, type ExpoPushMessage, type IngestDeps } from "../ingest-sms/index.ts";
 import type { ParsedTransaction } from "../_shared/categorize.ts";
 
 // ---------------------------------------------------------------------------
@@ -46,6 +46,8 @@ function makeDeps(over: Partial<IngestDeps> = {}): IngestDeps {
       hash === VALID_TOKEN_HASH ? Promise.resolve(VALID_USER_ID) : Promise.resolve(null),
     insertPending: () => Promise.resolve(),
     touchToken: () => Promise.resolve(),
+    getPushTokens: () => Promise.resolve([]),
+    sendPush: () => Promise.resolve(),
     ...over,
   };
 }
@@ -454,3 +456,127 @@ Deno.test("far-future received_at is clamped: occurred_at is not in the far futu
     `expected occurred_at to be ~now (within 60 s), got diff ${Math.abs(insertedTime - nowMs)} ms`,
   );
 });
+
+// ---------------------------------------------------------------------------
+// Tests: push notifications
+// ---------------------------------------------------------------------------
+
+const FAKE_PUSH_TOKEN = "ExponentPushToken[test-device-abc]";
+
+Deno.test(
+  "push: tokens present → sendPush called once with correct message shape",
+  async () => {
+    const captured: ExpoPushMessage[][] = [];
+
+    // We need to wait for the fire-and-forget push to complete.
+    // Use a Promise that resolves when sendPush is called.
+    let resolvePush!: () => void;
+    const pushDone = new Promise<void>((r) => (resolvePush = r));
+
+    const res = await handleIngest(
+      postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+      makeDeps({
+        getPushTokens: () => Promise.resolve([FAKE_PUSH_TOKEN]),
+        sendPush: (msgs) => {
+          captured.push(msgs);
+          resolvePush();
+          return Promise.resolve();
+        },
+      }),
+    );
+
+    // Response must be 200 regardless.
+    assertEquals(res.status, 200);
+    assertEquals((await res.json()).ok, true);
+
+    // Wait for the async push fire-and-forget to finish.
+    await pushDone;
+
+    assertEquals(captured.length, 1, "sendPush should be called exactly once");
+    const msgs = captured[0];
+    assertEquals(msgs.length, 1, "one message per token");
+    const msg = msgs[0];
+    assertEquals(msg.to, FAKE_PUSH_TOKEN);
+    assertEquals(msg.title, "New transaction to review");
+    assertEquals(msg.data?.url, "/(tabs)/pending");
+    assertEquals(msg.data?.type, "sms_pending");
+    assert(typeof msg.body === "string" && msg.body.length > 0);
+  },
+);
+
+Deno.test(
+  "push: no tokens registered → sendPush NOT called",
+  async () => {
+    let sendPushCalled = false;
+
+    const res = await handleIngest(
+      postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+      makeDeps({
+        getPushTokens: () => Promise.resolve([]),
+        sendPush: () => {
+          sendPushCalled = true;
+          return Promise.resolve();
+        },
+      }),
+    );
+
+    assertEquals(res.status, 200);
+    // Give the fire-and-forget a tick to settle (it returns early when no tokens).
+    await Promise.resolve();
+    assertEquals(sendPushCalled, false, "sendPush must not be called when no tokens");
+  },
+);
+
+Deno.test(
+  "push: amount <= 0 (skipped path) → sendPush NOT called",
+  async () => {
+    let sendPushCalled = false;
+
+    const res = await handleIngest(
+      postReq({ token: VALID_TOKEN, text: "Your OTP is 123456" }),
+      makeDeps({
+        categorizeFn: () => Promise.resolve(SAMPLE_PARSED_ZERO),
+        getPushTokens: () => Promise.resolve([FAKE_PUSH_TOKEN]),
+        sendPush: () => {
+          sendPushCalled = true;
+          return Promise.resolve();
+        },
+      }),
+    );
+
+    assertEquals(res.status, 200);
+    assertEquals((await res.json()).skipped, true);
+    // Give the event loop a few ticks.
+    await Promise.resolve();
+    assertEquals(sendPushCalled, false, "sendPush must not be called on skip path");
+  },
+);
+
+Deno.test(
+  "push: sendPush throws → still returns 200 {ok:true} (best-effort)",
+  async () => {
+    let resolvePush!: () => void;
+    const pushDone = new Promise<void>((r) => (resolvePush = r));
+
+    const res = await handleIngest(
+      postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+      makeDeps({
+        getPushTokens: () => Promise.resolve([FAKE_PUSH_TOKEN]),
+        sendPush: () => {
+          resolvePush();
+          return Promise.reject(new Error("Expo service unavailable"));
+        },
+      }),
+    );
+
+    // Response must be 200 even though sendPush throws.
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body, { ok: true });
+
+    // Ensure the rejected push promise has been handled (no unhandled rejection).
+    await pushDone;
+    // Give one more tick for the catch block to run.
+    await Promise.resolve();
+  },
+);
