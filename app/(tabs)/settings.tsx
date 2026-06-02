@@ -21,6 +21,7 @@ export default function Settings() {
   const [rawToken, setRawToken] = useState<string | null>(null);
   const [copyLabel, setCopyLabel] = useState<'copy' | 'copied'>('copy');
   const [guideOpen, setGuideOpen] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
 
   useEffect(() => {
     hasActiveIngestToken()
@@ -30,11 +31,14 @@ export default function Settings() {
 
   async function onGenerateToken() {
     setBusy(true);
+    setTokenError(null);
     try {
       const token = await createIngestToken();
       setRawToken(token);
       setHasToken(true);
       setCopyLabel('copy');
+    } catch (e) {
+      setTokenError(e instanceof Error ? e.message : 'Failed to generate token.');
     } finally {
       setBusy(false);
     }
@@ -42,10 +46,13 @@ export default function Settings() {
 
   async function onRevokeToken() {
     setBusy(true);
+    setTokenError(null);
     try {
       await revokeIngestTokens();
       setHasToken(false);
       setRawToken(null);
+    } catch (e) {
+      setTokenError(e instanceof Error ? e.message : 'Failed to revoke token.');
     } finally {
       setBusy(false);
     }
@@ -160,6 +167,13 @@ export default function Settings() {
         </View>
       ) : null}
 
+      {/* Token action error */}
+      {tokenError ? (
+        <Text testID="token-error" className="text-sm text-red-600 mb-2">
+          {tokenError}
+        </Text>
+      ) : null}
+
       {/* Generate (no active token) or Regenerate + Revoke (active token) */}
       {!hasToken ? (
         <TouchableOpacity
@@ -213,7 +227,7 @@ export default function Settings() {
               ? '١. افتح تطبيق الاختصارات ← الأتمتة ← جديد ← رسالة'
               : '1. Shortcuts → Automation → New → Message',
             locale === 'ar'
-              ? '٢. "الرسالة تحتوي على: EGP" ← تشغيل فوري'
+              ? '٢. "الرسالة تحتوي على: EGP" أو "جنيه" أو اسم المرسِل البنكي ← تشغيل فوري'
               : '2. "Message Contains: EGP" → Run Immediately',
             locale === 'ar'
               ? '٣. أضف إجراء "الحصول على محتويات URL"'

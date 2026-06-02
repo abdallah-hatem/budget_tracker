@@ -197,6 +197,22 @@ describe('Settings screen — Regenerate + Revoke (active token)', () => {
   });
 });
 
+describe('Settings screen — Token error handling', () => {
+  it('shows token-error when createIngestToken rejects', async () => {
+    mockHasToken.mockResolvedValue(false);
+    mockCreate.mockRejectedValue(new Error('Network error'));
+    render(<Settings />);
+    await waitFor(() => expect(screen.getByTestId('gen-token')).toBeTruthy());
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('gen-token'));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('token-error')).toBeTruthy());
+    expect(screen.getByText('Network error')).toBeTruthy();
+  });
+});
+
 describe('Settings screen — iOS Shortcut guide', () => {
   it('renders the shortcut-guide-toggle button', async () => {
     render(<Settings />);
