@@ -40,7 +40,14 @@
           }
         }
       ],
-      "expo-speech-recognition"
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone to capture spoken expenses.",
+          "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition to transcribe spoken expenses.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
