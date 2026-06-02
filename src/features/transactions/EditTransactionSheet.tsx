@@ -11,6 +11,8 @@ interface Props {
   locale: Locale;
   onDone: () => void;
   onCancel: () => void;
+  /** When true the Save action also sets status:'confirmed' on the patch. */
+  confirmOnSave?: boolean;
 }
 
 /**
@@ -18,7 +20,7 @@ interface Props {
  * with Save (updateTransaction), Delete (deleteTransaction), and Cancel.
  * Parent re-queries via its own refresh() inside onDone.
  */
-export function EditTransactionSheet({ transaction, locale, onDone, onCancel }: Props) {
+export function EditTransactionSheet({ transaction, locale, onDone, onCancel, confirmOnSave = false }: Props) {
   const rtl = isRTL(locale);
   const [type, setType] = useState<TxnType>(transaction.type);
   const [amount, setAmount] = useState<string>(String(transaction.amount));
@@ -53,6 +55,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel }: 
         amount: parsed,
         category_slug: categorySlug,
         note: note.trim() === '' ? null : note.trim(),
+        ...(confirmOnSave ? { status: 'confirmed' as const } : {}),
       });
       onDone();
     } catch (e) {

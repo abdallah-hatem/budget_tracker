@@ -96,6 +96,44 @@ describe('EditTransactionSheet', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('includes status:confirmed in patch when confirmOnSave is true', async () => {
+    mockUpdate.mockResolvedValueOnce({ ...txn, status: 'confirmed' });
+    const onDone = jest.fn();
+    render(
+      <EditTransactionSheet
+        transaction={txn}
+        locale="en"
+        onDone={onDone}
+        onCancel={jest.fn()}
+        confirmOnSave
+      />
+    );
+
+    fireEvent.press(screen.getByTestId('edit-save'));
+
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith(
+        't1',
+        expect.objectContaining({ status: 'confirmed' }),
+      ),
+    );
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+  });
+
+  it('does NOT include status in patch when confirmOnSave is false (default)', async () => {
+    mockUpdate.mockResolvedValueOnce({ ...txn });
+    const onDone = jest.fn();
+    render(
+      <EditTransactionSheet transaction={txn} locale="en" onDone={onDone} onCancel={jest.fn()} />
+    );
+
+    fireEvent.press(screen.getByTestId('edit-save'));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
+    const patch = mockUpdate.mock.calls[0][1] as Record<string, unknown>;
+    expect(patch).not.toHaveProperty('status');
+  });
+
   it('shows error message and does NOT call onDone when updateTransaction rejects', async () => {
     mockUpdate.mockRejectedValueOnce(new Error('DB error: amount > 0'));
     const onDone = jest.fn();

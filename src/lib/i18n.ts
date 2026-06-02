@@ -75,6 +75,13 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
 
   // Loading state
   loading: { en: 'Loading…', ar: 'جارٍ التحميل…' },
+
+  // Pending inbox (P2.3/P2.4)
+  pending_title: { en: 'Pending', ar: 'قيد المراجعة' },
+  pending_empty: { en: 'No pending transactions', ar: 'لا توجد معاملات قيد المراجعة' },
+  confirm: { en: 'Confirm', ar: 'تأكيد' },
+  reject: { en: 'Reject', ar: 'رفض' },
+  via_sms: { en: 'via SMS', ar: 'عبر رسالة' },
 };
 
 export function isRTL(locale: Locale): boolean {
