@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { categoryLabel, formatAmount } from '../../src/features/transactions/display';
@@ -26,8 +27,10 @@ export default function Dashboard() {
   const rtl = isRTL(locale);
   const dir = rtl ? 'rtl' : 'ltr';
 
-  const { monthKey, summary, transactions, loading, prevMonth, nextMonth } =
+  const { monthKey, summary, transactions, loading, prevMonth, nextMonth, refresh } =
     useMonthSummary();
+
+  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   const recent = transactions.slice(0, 5);
 

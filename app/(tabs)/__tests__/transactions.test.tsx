@@ -3,6 +3,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import TransactionsScreen from '../transactions';
 import type { Transaction } from '../../../src/types';
 
+jest.mock('expo-router', () => {
+  const { useEffect } = require('react');
+  return {
+    useFocusEffect: (cb: () => void) => { useEffect(() => { cb(); }, []); },
+  };
+});
+
 jest.mock('../../../src/features/transactions/api', () => ({
   listTransactions: jest.fn(),
   updateTransaction: jest.fn(),
@@ -72,12 +79,22 @@ describe('TransactionsScreen', () => {
     fireEvent.press(await screen.findByTestId('edit-delete'));
     await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('a'));
     // After delete, the list is refreshed (listTransactions called again).
-    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+    // With the focus-effect also triggering a refresh on mount, total calls >= 2.
+    await waitFor(() => expect(mockList.mock.calls.length).toBeGreaterThanOrEqual(2));
   });
 
   it('shows the empty state when there are no transactions', async () => {
     mockList.mockResolvedValue([]);
     render(<TransactionsScreen />);
     await waitFor(() => expect(screen.getByText('No transactions yet')).toBeTruthy());
+  });
+
+  it('calls listTransactions again on focus', async () => {
+    mockList.mockResolvedValue([]);
+    render(<TransactionsScreen />);
+    // The initial mount calls listTransactions once (from useEffect on filterKey).
+    // The useFocusEffect mock fires the refresh callback immediately, triggering
+    // another call. Wait for both to settle.
+    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
   });
 });

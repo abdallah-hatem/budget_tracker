@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, FlatList, Pressable, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { useTransactions } from '../../src/features/transactions/useTransactions';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import { categoryLabel, formatAmount } from '../../src/features/transactions/display';
@@ -44,6 +45,8 @@ export default function TransactionsScreen() {
   }, [monthKey, categoryFilter]);
 
   const { data, loading, refresh } = useTransactions(filter);
+
+  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   return (
     <SafeAreaView className="flex-1 bg-white" style={{ direction: dir }}>

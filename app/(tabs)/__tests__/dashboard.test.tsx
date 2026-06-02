@@ -3,6 +3,13 @@ import { render, screen } from '@testing-library/react-native';
 import Dashboard from '../index';
 import type { Transaction } from '../../../src/types';
 
+jest.mock('expo-router', () => {
+  const { useEffect } = require('react');
+  return {
+    useFocusEffect: (cb: () => void) => { useEffect(() => { cb(); }, []); },
+  };
+});
+
 // --- mock data hooks/session so the screen renders deterministically ---
 jest.mock('../../../src/features/dashboard/useMonthSummary', () => ({
   useMonthSummary: jest.fn(),
@@ -106,5 +113,23 @@ describe('Dashboard', () => {
     render(<Dashboard />);
     // i18n 'no_transactions' string (en). Adjust if M3's STRINGS differs.
     expect(screen.getByText('No transactions yet')).toBeTruthy();
+  });
+
+  it('calls refresh again on focus', () => {
+    const refresh = jest.fn();
+    mockSummary.mockReturnValue({
+      monthKey: { year: 2026, month: 5 },
+      summary: { income: 0, expense: 0, net: 0, byCategory: [] },
+      transactions: [],
+      loading: false,
+      error: null,
+      refresh,
+      prevMonth: jest.fn(),
+      nextMonth: jest.fn(),
+    });
+    render(<Dashboard />);
+    // useFocusEffect mock immediately invokes the callback, so refresh should
+    // have been called at least once by the focus handler.
+    expect(refresh).toHaveBeenCalled();
   });
 });
