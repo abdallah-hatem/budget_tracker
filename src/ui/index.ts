@@ -33,4 +33,10 @@ export type { PrimaryButtonProps } from './PrimaryButton';
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 
+export { SpendingDonut } from './SpendingDonut';
+export type { SpendingDonutProps, SpendingDonutDatum } from './SpendingDonut';
+
+export { TransactionRow } from './TransactionRow';
+export type { TransactionRowProps } from './TransactionRow';
+
 export { FloatingTabBar } from './FloatingTabBar';

@@ -7,7 +7,19 @@ jest.mock('expo-router', () => {
   const { useEffect } = require('react');
   return {
     useFocusEffect: (cb: () => void) => { useEffect(() => { cb(); }, []); },
+    useRouter: () => ({ navigate: jest.fn(), push: jest.fn() }),
   };
+});
+
+// The PieChart depends on react-native-svg internals that aren't transformed in
+// jest (not in transformIgnorePatterns). Stub it so the dashboard renders.
+jest.mock('react-native-gifted-charts', () => ({ PieChart: () => null }));
+
+// moti ships untransformed ESM (not in transformIgnorePatterns); stub MotiView
+// to a plain View so the staggered reveal wrappers render children directly.
+jest.mock('moti', () => {
+  const { View } = require('react-native');
+  return { MotiView: View };
 });
 
 // --- mock data hooks/session so the screen renders deterministically ---
@@ -75,11 +87,16 @@ beforeEach(() => {
 describe('Dashboard', () => {
   it('renders the net amount, totals, and bilingual category breakdown (en)', () => {
     render(<Dashboard />);
-    // Net big number.
-    expect(screen.getByText('750.00 EGP')).toBeTruthy();
-    // Income & expense totals.
-    expect(screen.getByText('1000.00 EGP')).toBeTruthy();
-    expect(screen.getByText('250.00 EGP')).toBeTruthy();
+    // Net big number in the Hero. The label is uppercased via CSS only, so the
+    // text node still reads "Net this month". The Hero splits the amount into
+    // symbol / integer / decimals, so we assert on the integer + decimals parts.
+    expect(screen.getByText('Net this month')).toBeTruthy();
+    expect(screen.getByText('750')).toBeTruthy();
+    expect(screen.getByText('.00')).toBeTruthy();
+    // Income & expense totals, rendered via the Money component (E£ + grouping).
+    // Each also appears in the by-category list, so use getAllByText.
+    expect(screen.getAllByText('E£ 1,000.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('E£ 250.00').length).toBeGreaterThan(0);
     // By-category breakdown uses English labels (locale = en).
     expect(screen.getByText('Food & Drink')).toBeTruthy();
     expect(screen.getByText('Salary')).toBeTruthy();
@@ -111,8 +128,8 @@ describe('Dashboard', () => {
       nextMonth: jest.fn(),
     });
     render(<Dashboard />);
-    // i18n 'no_transactions' string (en). Adjust if M3's STRINGS differs.
-    expect(screen.getByText('No transactions yet')).toBeTruthy();
+    // Redesigned empty state copy.
+    expect(screen.getByText('No spending yet this month')).toBeTruthy();
   });
 
   it('calls refresh again on focus', () => {
