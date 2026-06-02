@@ -1,5 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, FlatList, Pressable, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { useTransactions } from '../../src/features/transactions/useTransactions';
@@ -142,19 +150,21 @@ export default function TransactionsScreen() {
         onRequestClose={() => setEditing(null)}
       >
         <Pressable className="flex-1 justify-end bg-black/40" onPress={() => setEditing(null)}>
-          <Pressable onPress={() => {}}>
-            {editing ? (
-              <EditTransactionSheet
-                transaction={editing}
-                locale={locale}
-                onCancel={() => setEditing(null)}
-                onDone={() => {
-                  setEditing(null);
-                  void refresh();
-                }}
-              />
-            ) : null}
-          </Pressable>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <Pressable onPress={() => {}}>
+              {editing ? (
+                <EditTransactionSheet
+                  transaction={editing}
+                  locale={locale}
+                  onCancel={() => setEditing(null)}
+                  onDone={() => {
+                    setEditing(null);
+                    void refresh();
+                  }}
+                />
+              ) : null}
+            </Pressable>
+          </KeyboardAvoidingView>
         </Pressable>
       </Modal>
     </SafeAreaView>

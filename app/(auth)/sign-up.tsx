@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '@/src/lib/supabase';
@@ -36,7 +36,12 @@ export default function SignUp() {
   }
 
   return (
-    <View className="flex-1 justify-center px-6 bg-white">
+    <ScrollView
+      className="flex-1 bg-white"
+      contentContainerClassName="flex-grow justify-center px-6 py-10"
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
+    >
       <Text className="text-3xl font-bold mb-8 text-gray-900">
         {t('auth.signUp.title', locale)}
       </Text>
@@ -91,6 +96,6 @@ export default function SignUp() {
       <Link href={"/(auth)/sign-in" as never} className="text-blue-600 text-center">
         {t('auth.toSignIn', locale)}
       </Link>
-    </View>
+    </ScrollView>
   );
 }

@@ -77,8 +77,10 @@ export default function CaptureScreen() {
   return (
     <ScrollView
       className="flex-1 bg-gray-50"
-      contentContainerClassName="p-4"
+      contentContainerClassName="p-4 pb-24"
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      automaticallyAdjustKeyboardInsets
     >
       <Text className="mb-4 text-2xl font-bold">
         {locale === 'ar' ? 'تسجيل معاملة' : 'Capture'}
