@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, type TextStyle } from 'react-native';
 import { splitMoney } from '@/src/lib/money';
 import { FONT } from '@/src/lib/font';
 
@@ -19,8 +19,24 @@ export interface HeroProps {
  * Hero — the big balance display block.
  * Layout: tiny uppercase label → large split number (Sora 52 + E£ symbol + decimals at 28) → delta pill.
  */
+
+// Real Unicode minus (U+2212)
+const UNICODE_MINUS = '−';
+
+// Muted style shared by the sign prefix and the currency symbol.
+// Defined as a const with explicit TextStyle type so spread doesn't hit readonly issues.
+const MUTED_STYLE: TextStyle = {
+  fontFamily: FONT.sora,
+  fontSize: 28,
+  color: '#A8B2AF', // ink2
+  lineHeight: 52,
+  fontVariant: ['tabular-nums', 'lining-nums'],
+  // Prevent bidi reordering on each muted glyph
+  writingDirection: 'ltr',
+};
+
 export function Hero({ label, amount, delta }: HeroProps) {
-  const { symbol, integer, decimals } = splitMoney(amount);
+  const { negative, symbol, integer, decimals } = splitMoney(amount);
 
   const deltaColor = delta !== undefined && delta >= 0 ? '#2BD98E' : '#FF5C6C';
   const deltaArrow = delta !== undefined && delta >= 0 ? '▲' : '▼';
@@ -43,19 +59,17 @@ export function Hero({ label, amount, delta }: HeroProps) {
         {label}
       </Text>
 
-      {/* Big split number */}
+      {/* Big split number — flex-row, each Text guards its own bidi */}
       <View className="flex-row items-end">
+        {/* Unicode minus prefix when net is negative — same muted ink2 treatment */}
+        {negative && (
+          <Text style={[MUTED_STYLE, { marginRight: 1 }]}>
+            {UNICODE_MINUS}
+          </Text>
+        )}
+
         {/* E£ symbol — smaller, ink2 */}
-        <Text
-          style={{
-            fontFamily: FONT.sora,
-            fontSize: 28,
-            color: '#A8B2AF',
-            lineHeight: 52,
-            fontVariant: ['tabular-nums', 'lining-nums'],
-            marginRight: 2,
-          }}
-        >
+        <Text style={[MUTED_STYLE, { marginRight: 2 }]}>
           {symbol}
         </Text>
 
@@ -67,22 +81,14 @@ export function Hero({ label, amount, delta }: HeroProps) {
             color: '#F4F7F5',
             lineHeight: 60,
             fontVariant: ['tabular-nums', 'lining-nums'],
+            writingDirection: 'ltr',
           }}
         >
           {integer}
         </Text>
 
         {/* Decimal part — smaller, ink2 */}
-        <Text
-          style={{
-            fontFamily: FONT.sora,
-            fontSize: 28,
-            color: '#A8B2AF',
-            lineHeight: 52,
-            fontVariant: ['tabular-nums', 'lining-nums'],
-            marginLeft: 1,
-          }}
-        >
+        <Text style={[MUTED_STYLE, { marginLeft: 1 }]}>
           .{decimals}
         </Text>
       </View>

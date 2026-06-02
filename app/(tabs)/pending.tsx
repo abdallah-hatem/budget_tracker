@@ -12,10 +12,10 @@ import { useFocusEffect } from 'expo-router';
 import { usePendingContext } from '../../src/features/transactions/PendingProvider';
 import { updateTransaction, deleteTransaction } from '../../src/features/transactions/api';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
-import { categoryLabel, formatAmount } from '../../src/features/transactions/display';
+import { categoryLabel } from '../../src/features/transactions/display';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { t, isRTL } from '../../src/lib/i18n';
-import { Screen, Card, CategoryAvatar, EmptyState } from '../../src/ui';
+import { Screen, Card, CategoryAvatar, EmptyState, Money } from '../../src/ui';
 import { FONT } from '../../src/lib/font';
 import type { Transaction } from '../../src/types';
 
@@ -94,7 +94,7 @@ export default function PendingScreen() {
           <EmptyState
             emoji="📥"
             title={t('pending_empty', locale)}
-            subtitle="Nothing to review"
+            subtitle={locale === 'ar' ? 'لا يوجد شيء لمراجعته' : 'Nothing to review'}
           />
         </View>
       ) : (
@@ -146,18 +146,12 @@ export default function PendingScreen() {
                 </View>
 
                 {/* Amount */}
-                <Text
-                  style={{
-                    fontFamily: FONT.soraSb,
-                    fontSize: 16,
-                    color: item.type === 'income' ? '#2BD98E' : '#F4F7F5',
-                    fontVariant: ['tabular-nums', 'lining-nums'],
-                    writingDirection: dir,
-                  }}
-                >
-                  {item.type === 'income' ? '+' : '-'}
-                  {formatAmount(item.amount, locale)}
-                </Text>
+                <Money
+                  amount={item.amount}
+                  tone={item.type === 'income' ? 'accent' : 'ink'}
+                  sign={item.type === 'income' ? 'always' : 'none'}
+                  size={16}
+                />
               </View>
 
               {/* ── via SMS pill + raw text ── */}
@@ -205,7 +199,7 @@ export default function PendingScreen() {
 
               {/* ── Divider ── */}
               <View
-                style={{ height: 1, backgroundColor: '#2A3331', marginVertical: 12 }}
+                style={{ height: 1, backgroundColor: 'rgba(42,51,49,0.4)', marginVertical: 12 }}
               />
 
               {/* ── Action buttons ── */}

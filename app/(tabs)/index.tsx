@@ -197,7 +197,7 @@ export default function Dashboard() {
                 <Card className="flex-1">
                   <SectionLabel>{t('income', locale)}</SectionLabel>
                   <View style={{ marginTop: 6 }}>
-                    <Money amount={summary.income} tone="accent" sign="none" size={20} />
+                    <Money amount={summary.income} tone="accent" sign="always" size={20} />
                   </View>
                 </Card>
                 <Card className="flex-1">

@@ -73,6 +73,7 @@ describe('splitMoney', () => {
   it('splits a simple amount correctly', () => {
     const result = splitMoney(1250);
     expect(result).toEqual({
+      negative: false,
       symbol: 'E£',
       integer: '1,250',
       decimals: '00',
@@ -81,6 +82,7 @@ describe('splitMoney', () => {
 
   it('splits zero correctly', () => {
     expect(splitMoney(0)).toEqual({
+      negative: false,
       symbol: 'E£',
       integer: '0',
       decimals: '00',
@@ -89,14 +91,16 @@ describe('splitMoney', () => {
 
   it('splits a decimal amount correctly', () => {
     expect(splitMoney(99.9)).toEqual({
+      negative: false,
       symbol: 'E£',
       integer: '99',
       decimals: '90',
     });
   });
 
-  it('uses absolute value for negative amounts', () => {
+  it('sets negative=true and uses absolute value for negative amounts', () => {
     expect(splitMoney(-1500)).toEqual({
+      negative: true,
       symbol: 'E£',
       integer: '1,500',
       decimals: '00',
@@ -105,6 +109,7 @@ describe('splitMoney', () => {
 
   it('handles large amounts with grouping', () => {
     expect(splitMoney(1234567.89)).toEqual({
+      negative: false,
       symbol: 'E£',
       integer: '1,234,567',
       decimals: '89',

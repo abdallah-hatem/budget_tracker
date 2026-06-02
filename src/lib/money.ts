@@ -18,6 +18,8 @@ export interface FormatMoneyOptions {
 }
 
 export interface SplitMoneyResult {
+  /** true when amount < 0 */
+  negative: boolean;
   symbol: string;
   integer: string;
   decimals: string;
@@ -63,10 +65,12 @@ export function formatMoney(
 }
 
 /**
- * Split an amount into symbol, integer, and decimal parts for hero display.
- * Always uses absolute value (sign is a UI concern at render time).
+ * Split an amount into sign flag, symbol, integer, and decimal parts for hero display.
+ * Uses absolute value for the numeric parts; callers use `negative` to render
+ * a leading Unicode minus (−) in the appropriate style.
  */
 export function splitMoney(amount: number): SplitMoneyResult {
+  const negative = amount < 0;
   const abs = Math.abs(amount);
   const formatter = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
@@ -80,6 +84,7 @@ export function splitMoney(amount: number): SplitMoneyResult {
   const decimals = formatted.slice(dotIndex + 1); // "00"
 
   return {
+    negative,
     symbol: 'E£',
     integer,
     decimals,

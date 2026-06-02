@@ -17,8 +17,7 @@ import { CATEGORIES } from '../../src/lib/categories';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/features/dashboard/monthRange';
 import { t, isRTL } from '../../src/lib/i18n';
-import { formatMoney } from '../../src/lib/money';
-import { Screen, Pill, EmptyState, TransactionRow } from '../../src/ui';
+import { Screen, Pill, EmptyState, TransactionRow, Money } from '../../src/ui';
 import { FONT } from '../../src/lib/font';
 import type { Transaction, Locale } from '../../src/types';
 
@@ -229,17 +228,12 @@ export default function TransactionsScreen() {
                 >
                   {formatDayHeader(section.title, locale)}
                 </Text>
-                <Text
-                  style={{
-                    fontFamily: FONT.soraSb,
-                    fontSize: 13,
-                    color: isPositive ? '#2BD98E' : '#F4F7F5',
-                    fontVariant: ['tabular-nums', 'lining-nums'],
-                  }}
-                >
-                  {isPositive ? '+' : ''}
-                  {formatMoney(Math.abs(subtotal), { sign: 'none' })}
-                </Text>
+                <Money
+                  amount={subtotal}
+                  sign="auto"
+                  tone={subtotal >= 0 ? 'accent' : 'ink'}
+                  size={13}
+                />
               </View>
             );
           }}

@@ -86,10 +86,10 @@ describe('PendingScreen', () => {
     expect(screen.getByTestId('pending-row-p2')).toBeTruthy();
     expect(screen.getByText('Food & Drink')).toBeTruthy();
     expect(screen.getByText('Salary')).toBeTruthy();
-    // expense is negative
-    expect(screen.getByText('-120.00 EGP')).toBeTruthy();
-    // income is positive
-    expect(screen.getByText('+5000.00 EGP')).toBeTruthy();
+    // expense — no sign prefix (sign='none'), ink color
+    expect(screen.getByText('E£ 120.00')).toBeTruthy();
+    // income — always-show plus prefix (sign='always'), accent color
+    expect(screen.getByText('+E£ 5,000.00')).toBeTruthy();
   });
 
   it('shows the empty state when there are no pending transactions', async () => {

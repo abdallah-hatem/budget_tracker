@@ -54,6 +54,8 @@ export function Money({
           fontSize: size,
           color,
           fontVariant: ['tabular-nums', 'lining-nums'],
+          // Prevent bidi reordering — sign+symbol+digits must always read L→R
+          writingDirection: 'ltr',
         },
         style,
       ]}
