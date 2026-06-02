@@ -232,4 +232,32 @@ describe('Settings screen — iOS Shortcut guide', () => {
       expect(screen.getByText(/functions\/v1\/ingest-sms/)).toBeTruthy(),
     );
   });
+
+  it('copies the ingest URL from the guide', async () => {
+    render(<Settings />);
+    fireEvent.press(screen.getByTestId('shortcut-guide-toggle'));
+    await waitFor(() => expect(screen.getByTestId('copy-url')).toBeTruthy());
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('copy-url'));
+    });
+    await waitFor(() =>
+      expect(mockClipboard).toHaveBeenCalledWith(
+        expect.stringContaining('/functions/v1/ingest-sms'),
+      ),
+    );
+  });
+
+  it('copies the JSON request body from the guide', async () => {
+    render(<Settings />);
+    fireEvent.press(screen.getByTestId('shortcut-guide-toggle'));
+    await waitFor(() => expect(screen.getByTestId('copy-body')).toBeTruthy());
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('copy-body'));
+    });
+    await waitFor(() =>
+      expect(mockClipboard).toHaveBeenCalledWith(
+        expect.stringContaining('"token"'),
+      ),
+    );
+  });
 });

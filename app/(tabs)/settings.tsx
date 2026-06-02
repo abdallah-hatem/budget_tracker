@@ -22,6 +22,7 @@ export default function Settings() {
   const [copyLabel, setCopyLabel] = useState<'copy' | 'copied'>('copy');
   const [guideOpen, setGuideOpen] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   useEffect(() => {
     hasActiveIngestToken()
@@ -63,6 +64,12 @@ export default function Settings() {
     await Clipboard.setStringAsync(rawToken);
     setCopyLabel('copied');
     setTimeout(() => setCopyLabel('copy'), 2000);
+  }
+
+  async function copyField(key: string, value: string) {
+    await Clipboard.setStringAsync(value);
+    setCopiedField(key);
+    setTimeout(() => setCopiedField((c) => (c === key ? null : c)), 2000);
   }
 
   // ── locale ────────────────────────────────────────────────────────────────
@@ -222,33 +229,63 @@ export default function Settings() {
           <Text className="text-sm font-semibold text-gray-800 mb-1">
             {locale === 'ar' ? 'الخطوات:' : 'Steps:'}
           </Text>
-          {[
-            locale === 'ar'
-              ? '١. افتح تطبيق الاختصارات ← الأتمتة ← جديد ← رسالة'
-              : '1. Shortcuts → Automation → New → Message',
-            locale === 'ar'
-              ? '٢. "الرسالة تحتوي على: EGP" أو "جنيه" أو اسم المرسِل البنكي ← تشغيل فوري'
-              : '2. "Message Contains: EGP" → Run Immediately',
-            locale === 'ar'
-              ? '٣. أضف إجراء "الحصول على محتويات URL"'
-              : '3. Add action "Get Contents of URL"',
-            locale === 'ar' ? '٤. الطريقة: POST' : '4. Method: POST',
-            locale === 'ar'
-              ? `٥. URL: ${ingestUrl}`
-              : `5. URL: ${ingestUrl}`,
-            locale === 'ar'
-              ? '٦. Headers: Content-Type: application/json'
-              : '6. Headers: Content-Type: application/json',
-            locale === 'ar'
-              ? `٧. apikey: ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '<anon key>'}`
-              : `7. apikey: ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '<anon key>'}`,
-            locale === 'ar'
-              ? '٨. نص الطلب (JSON): { "text": <مدخلات الاختصار>, "token": "<الصق الرمز>" }'
-              : '8. Request Body (JSON): { "text": <Shortcut Input>, "token": "<paste the token above>" }',
-          ].map((step, i) => (
+          {(locale === 'ar'
+            ? [
+                '١. الاختصارات ← الأتمتة ← جديد ← رسالة',
+                '٢. "الرسالة تحتوي على: EGP" أو "جنيه" أو اسم المرسِل البنكي ← تشغيل فوري',
+                '٣. أضف إجراء "الحصول على محتويات URL" ← الطريقة POST',
+                '٤. أضف رأس Content-Type: application/json',
+                '٥. الصِق القيم أدناه: الرابط، ورأس apikey، ونص الطلب (JSON)',
+                '٦. في نص JSON استبدل <Shortcut Input> بمتغير "مدخلات الاختصار" و<token> برمزك',
+              ]
+            : [
+                '1. Shortcuts → Automation → New → Message',
+                '2. "Message Contains: EGP" (or "جنيه" / your bank sender) → Run Immediately',
+                '3. Add action "Get Contents of URL" → Method: POST',
+                '4. Add header Content-Type: application/json',
+                '5. Paste the values below: the URL, an apikey header, and the JSON body',
+                '6. In the JSON body, replace <Shortcut Input> with the "Shortcut Input" magic variable and <token> with your token',
+              ]
+          ).map((step, i) => (
             <Text key={i} className="text-xs text-gray-700 leading-5">
               {step}
             </Text>
+          ))}
+
+          {/* Copyable values */}
+          {[
+            { key: 'url', label: locale === 'ar' ? 'الرابط (URL)' : 'URL', value: ingestUrl },
+            {
+              key: 'apikey',
+              label: 'apikey',
+              value: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '<anon key>',
+            },
+            {
+              key: 'body',
+              label: locale === 'ar' ? 'نص الطلب (JSON)' : 'Request Body (JSON)',
+              value: '{ "text": "<Shortcut Input>", "token": "<paste your token>" }',
+            },
+          ].map((f) => (
+            <View
+              key={f.key}
+              className="mt-2 rounded-md border border-gray-200 bg-white p-2 gap-1"
+            >
+              <Text className="text-[11px] font-semibold uppercase text-gray-400">
+                {f.label}
+              </Text>
+              <Text selectable className="font-mono text-xs text-gray-900 break-all">
+                {f.value}
+              </Text>
+              <TouchableOpacity
+                testID={`copy-${f.key}`}
+                onPress={() => copyField(f.key, f.value)}
+                className="self-start rounded bg-gray-200 px-2 py-1"
+              >
+                <Text className="text-[11px] font-semibold text-gray-700">
+                  {t(copiedField === f.key ? 'copied' : 'copy', locale)}
+                </Text>
+              </TouchableOpacity>
+            </View>
           ))}
         </View>
       ) : null}
