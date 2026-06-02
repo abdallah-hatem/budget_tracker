@@ -1,6 +1,30 @@
 import '@testing-library/react-native/matchers';
 
 // ---------------------------------------------------------------------------
+// Redesign deps that don't need to actually animate/draw in unit tests.
+// moti -> plain RN components; gifted-charts -> no-op; vector icons -> host stub.
+// ---------------------------------------------------------------------------
+jest.mock('moti', () => {
+  const { View, Text } = require('react-native');
+  return {
+    MotiView: View,
+    MotiText: Text,
+    AnimatePresence: ({ children }: { children?: unknown }) => children,
+  };
+});
+
+jest.mock('react-native-gifted-charts', () => ({
+  PieChart: () => null,
+  BarChart: () => null,
+  LineChart: () => null,
+}));
+
+jest.mock('@expo/vector-icons', () => {
+  const Icon = () => null;
+  return new Proxy({}, { get: () => Icon });
+});
+
+// ---------------------------------------------------------------------------
 // expo-speech-recognition — full behavioural mock (used by all tests).
 // Includes __emit / __reset helpers for the useSpeechRecognition hook tests.
 // ---------------------------------------------------------------------------
