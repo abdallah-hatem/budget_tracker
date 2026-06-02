@@ -14,6 +14,7 @@ import { useTransactions } from '../../src/features/transactions/useTransactions
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import { categoryLabel } from '../../src/features/transactions/display';
 import { CATEGORIES } from '../../src/lib/categories';
+import { categoryStyle } from '../../src/lib/categoryStyle';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/features/dashboard/monthRange';
 import { t, isRTL } from '../../src/lib/i18n';
@@ -182,6 +183,7 @@ export default function TransactionsScreen() {
               <Pill
                 testID={`filter-${item.slug ?? 'all'}`}
                 label={item.label}
+                emoji={item.slug ? categoryStyle(item.slug).emoji : undefined}
                 active={active}
                 onPress={() => setCategoryFilter(item.slug)}
               />

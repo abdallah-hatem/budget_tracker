@@ -7,6 +7,8 @@ export interface PillProps {
   active?: boolean;
   onPress?: PressableProps['onPress'];
   testID?: string;
+  /** Optional leading emoji/glyph shown before the label (kept as a separate node). */
+  emoji?: string;
 }
 
 /**
@@ -14,13 +16,16 @@ export interface PillProps {
  * Active: accentSoft background + accent text.
  * Inactive: surface background + ink2 text.
  */
-export function Pill({ label, active = false, onPress, testID }: PillProps) {
+export function Pill({ label, active = false, onPress, testID, emoji }: PillProps) {
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
       style={({ pressed }) => ({
-        paddingHorizontal: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: 999,
         backgroundColor: active
@@ -29,6 +34,7 @@ export function Pill({ label, active = false, onPress, testID }: PillProps) {
         opacity: pressed ? 0.7 : 1,
       })}
     >
+      {emoji ? <Text style={{ fontSize: 13 }}>{emoji}</Text> : null}
       <Text
         style={{
           fontFamily: FONT.jakartaMd,
