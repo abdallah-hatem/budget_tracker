@@ -39,4 +39,6 @@ export type { SpendingDonutProps, SpendingDonutDatum } from './SpendingDonut';
 export { TransactionRow } from './TransactionRow';
 export type { TransactionRowProps } from './TransactionRow';
 
-export { FloatingTabBar } from './FloatingTabBar';
+// NOTE: FloatingTabBar is intentionally NOT re-exported here — it pulls in the
+// PendingProvider -> supabase -> AsyncStorage chain, which poisons unit tests
+// that import the barrel. Import it directly: `@/src/ui/FloatingTabBar`.

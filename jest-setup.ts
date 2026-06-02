@@ -19,6 +19,10 @@ jest.mock('react-native-gifted-charts', () => ({
   LineChart: () => null,
 }));
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 jest.mock('@expo/vector-icons', () => {
   const Icon = () => null;
   return new Proxy({}, { get: () => Icon });
