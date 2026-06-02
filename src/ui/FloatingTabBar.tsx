@@ -80,6 +80,7 @@ const TAB_ORDER: TabEntry[] = [
 interface TabItemProps {
   route: { name: string; key: string };
   isFocused: boolean;
+  /** Kept for accessibilityLabel only — not rendered visually */
   label: string;
   iconFocused: string;
   iconUnfocused: string;
@@ -127,6 +128,7 @@ function TabItem({
       onLongPress={onLongPress}
       accessibilityRole="tab"
       accessibilityState={{ selected: isFocused }}
+      accessibilityLabel={label}
       style={[
         {
           flex: 1,
@@ -137,10 +139,11 @@ function TabItem({
         animatedStyle,
       ]}
     >
+      {/* Icon only — no text label to avoid Arabic truncation */}
       <View style={{ position: 'relative' }}>
         <Ionicons
           name={iconName as keyof typeof Ionicons.glyphMap}
-          size={22}
+          size={24}
           color={iconColor}
         />
         {showBadge && (badgeCount ?? 0) > 0 && (
@@ -171,17 +174,6 @@ function TabItem({
           </View>
         )}
       </View>
-      <Text
-        numberOfLines={1}
-        style={{
-          fontFamily: FONT.jakartaMd,
-          fontSize: 10,
-          color: iconColor,
-          marginTop: 3,
-        }}
-      >
-        {label}
-      </Text>
     </AnimatedPressable>
   );
 }
@@ -227,7 +219,7 @@ function CenterFAB({ onPress }: CenterFABProps) {
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         accessibilityRole="button"
-        accessibilityLabel="Add transaction"
+        accessibilityLabel="Add transaction / إضافة معاملة"
         style={[
           animatedStyle,
           {

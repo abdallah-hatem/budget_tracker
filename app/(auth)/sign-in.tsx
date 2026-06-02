@@ -58,7 +58,7 @@ export default function SignIn() {
               letterSpacing: -0.5,
             }}
           >
-            Ledger
+            {locale === 'ar' ? 'مصاريف' : 'Masareef'}
           </AppText>
           <AppText
             weight="medium"

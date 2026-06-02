@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   View,
   TextInput,
   Pressable,
@@ -217,7 +218,7 @@ export default function CaptureScreen() {
         >
           {!supported
             ? isRTL
-              ? 'Voice needs a dev build — type instead'
+              ? 'الصوت يتطلب بناء مطوّر — اكتب بدلاً من ذلك'
               : 'Voice needs a dev build — type instead'
             : isListening
               ? isRTL
@@ -252,7 +253,7 @@ export default function CaptureScreen() {
           style={{
             marginTop: 8,
             backgroundColor: SURFACE,
-            borderRadius: 16,
+            borderRadius: 14,
             paddingHorizontal: 16,
             paddingVertical: 4,
             minHeight: 56,
@@ -306,12 +307,7 @@ export default function CaptureScreen() {
         })}
       >
         {loading ? (
-          <AppText
-            weight="semibold"
-            style={{ fontSize: 16, color: '#06251A' }}
-          >
-            {'…'}
-          </AppText>
+          <ActivityIndicator color="#06251A" />
         ) : (
           <Text
             style={{

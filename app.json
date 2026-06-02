@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "tmp-app",
+    "name": "Masareef",
     "slug": "tmp-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -45,9 +45,12 @@
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to use the microphone to capture spoken expenses.",
           "speechRecognitionPermission": "Allow $(PRODUCT_NAME) to use speech recognition to transcribe spoken expenses.",
-          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

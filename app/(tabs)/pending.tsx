@@ -182,13 +182,13 @@ export default function PendingScreen() {
                   </View>
                 </View>
 
-                {/* Raw SMS text */}
+                {/* Raw SMS text — ink2 for AA contrast on essential muted text */}
                 {item.raw_text ? (
                   <Text
                     style={{
                       fontFamily: FONT.jakarta,
                       fontSize: 12,
-                      color: '#6B7672',
+                      color: '#A8B2AF',
                       lineHeight: 18,
                       textAlign: rtl ? 'right' : 'left',
                     }}
