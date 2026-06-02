@@ -1,3 +1,8 @@
+// NOTE: Not currently rendered. The Capture screen auto-saves on "Add" (no
+// confirm step). Retained intentionally as the editable review sheet for a
+// possible confidence-gated fallback (low-confidence parses -> confirm instead
+// of auto-save). See app/(tabs)/capture.tsx `onCategorize`. Delete this file +
+// confirmReducer + their tests if pure auto-add becomes permanent.
 import React, { useReducer, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import type { Locale, ParsedTransaction, Transaction, TxnSource } from '../../types';
