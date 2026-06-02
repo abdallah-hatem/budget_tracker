@@ -1,5 +1,12 @@
 import '@testing-library/react-native/matchers';
 
+// supabase.ts throws at import if these are unset; provide harmless test values
+// so importing modules that transitively reach the supabase client never crashes.
+process.env.EXPO_PUBLIC_SUPABASE_URL =
+  process.env.EXPO_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
+process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'test-anon-key';
+
 // ---------------------------------------------------------------------------
 // Redesign deps that don't need to actually animate/draw in unit tests.
 // moti -> plain RN components; gifted-charts -> no-op; vector icons -> host stub.
