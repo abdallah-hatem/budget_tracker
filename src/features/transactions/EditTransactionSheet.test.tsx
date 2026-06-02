@@ -1,0 +1,73 @@
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { EditTransactionSheet } from './EditTransactionSheet';
+import type { Transaction } from '../../types';
+
+jest.mock('./api', () => ({
+  updateTransaction: jest.fn(),
+  deleteTransaction: jest.fn(),
+}));
+import { updateTransaction, deleteTransaction } from './api';
+const mockUpdate = updateTransaction as jest.MockedFunction<typeof updateTransaction>;
+const mockDelete = deleteTransaction as jest.MockedFunction<typeof deleteTransaction>;
+
+const txn: Transaction = {
+  id: 't1',
+  user_id: 'u1',
+  type: 'expense',
+  amount: 50,
+  currency: 'EGP',
+  category_slug: 'food',
+  note: 'coffee',
+  raw_text: null,
+  source: 'text',
+  status: 'confirmed',
+  confidence: null,
+  occurred_at: '2026-06-10T00:00:00.000Z',
+  created_at: '2026-06-10T00:00:00.000Z',
+};
+
+describe('EditTransactionSheet', () => {
+  beforeEach(() => {
+    mockUpdate.mockReset();
+    mockDelete.mockReset();
+  });
+
+  it('saves an edited amount via updateTransaction then calls onDone', async () => {
+    mockUpdate.mockResolvedValueOnce({ ...txn, amount: 75 });
+    const onDone = jest.fn();
+    render(
+      <EditTransactionSheet transaction={txn} locale="en" onDone={onDone} onCancel={jest.fn()} />
+    );
+
+    fireEvent.changeText(screen.getByTestId('edit-amount'), '75');
+    fireEvent.press(screen.getByTestId('edit-save'));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith('t1', expect.objectContaining({ amount: 75 })));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+  });
+
+  it('deletes via deleteTransaction then calls onDone', async () => {
+    mockDelete.mockResolvedValueOnce(undefined);
+    const onDone = jest.fn();
+    render(
+      <EditTransactionSheet transaction={txn} locale="en" onDone={onDone} onCancel={jest.fn()} />
+    );
+
+    fireEvent.press(screen.getByTestId('edit-delete'));
+
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('t1'));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+  });
+
+  it('cancel calls onCancel without touching the api', () => {
+    const onCancel = jest.fn();
+    render(
+      <EditTransactionSheet transaction={txn} locale="en" onDone={jest.fn()} onCancel={onCancel} />
+    );
+    fireEvent.press(screen.getByTestId('edit-cancel'));
+    expect(onCancel).toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+});
