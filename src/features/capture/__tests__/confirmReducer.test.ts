@@ -39,7 +39,7 @@ describe('initConfirmState', () => {
 describe('confirmReducer', () => {
   const base = initConfirmState(parsed);
 
-  it('SET_TYPE switches the type and resets category to other_expense for expense', () => {
+  it('SET_TYPE to income resets category to other_income', () => {
     const next = confirmReducer(base, { kind: 'SET_TYPE', value: 'income' });
     expect(next.type).toBe('income');
     expect(next.category_slug).toBe('other_income');
