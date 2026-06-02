@@ -36,6 +36,13 @@ const FAB_OVERLAP = 16; // how many px the FAB overlaps the bar's top edge
 const HORIZONTAL_INSET = 16;
 const BOTTOM_OFFSET = 12; // distance above safe-area bottom
 
+/**
+ * Minimum paddingBottom to add to scrollable content so the floating tab bar
+ * (and FAB) never overlap the last row.
+ * Usage: `contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_CLEARANCE }}`
+ */
+export const TAB_BAR_CLEARANCE = 96;
+
 // ── Tab definition (capture is the center FAB slot, not a regular tab) ───────
 type TabEntry =
   | {

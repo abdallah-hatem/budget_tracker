@@ -18,6 +18,8 @@ import { useSession } from '../../src/features/auth/SessionProvider';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/features/dashboard/monthRange';
 import { t, isRTL } from '../../src/lib/i18n';
 import { Screen, Pill, EmptyState, TransactionRow, Money } from '../../src/ui';
+import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT } from '../../src/lib/font';
 import type { Transaction, Locale } from '../../src/types';
 
@@ -69,6 +71,7 @@ export default function TransactionsScreen() {
   const locale: Locale = profile?.locale ?? 'en';
   const rtl = isRTL(locale);
   const dir = rtl ? 'rtl' : 'ltr';
+  const insets = useSafeAreaInsets();
 
   const [monthKey, setMonthKey] = useState<MonthKey>(() => currentMonthKey());
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -199,7 +202,7 @@ export default function TransactionsScreen() {
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 128, paddingTop: 12 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BAR_CLEARANCE, paddingTop: 12 }}
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => {
             const dayTxns = section.data;

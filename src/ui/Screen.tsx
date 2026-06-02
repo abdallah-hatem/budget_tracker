@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TAB_BAR_CLEARANCE } from './FloatingTabBar';
 
 export interface ScreenProps {
   children: React.ReactNode;
@@ -13,10 +14,12 @@ export interface ScreenProps {
 /**
  * Screen — base layout wrapper for all app screens.
  * SafeAreaView (top edge), bg-canvas, flex-1.
- * When scroll=true wraps children in a ScrollView with
- * contentContainerStyle padding 20 + pb-32 for the floating tab bar.
+ * When scroll=true wraps children in a ScrollView whose paddingBottom
+ * is insets.bottom + TAB_BAR_CLEARANCE so the floating tab bar never
+ * overlaps the last row.
  */
 export function Screen({ children, scroll = false, padded = true }: ScreenProps) {
+  const insets = useSafeAreaInsets();
   const paddingStyle = padded ? { paddingHorizontal: 20 } : undefined;
 
   if (scroll) {
@@ -26,7 +29,7 @@ export function Screen({ children, scroll = false, padded = true }: ScreenProps)
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             paddingStyle,
-            { paddingBottom: 128 }, // room for floating tab bar
+            { paddingBottom: insets.bottom + TAB_BAR_CLEARANCE },
           ]}
           showsVerticalScrollIndicator={false}
         >

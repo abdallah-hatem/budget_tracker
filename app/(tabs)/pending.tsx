@@ -16,6 +16,8 @@ import { categoryLabel } from '../../src/features/transactions/display';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { t, isRTL } from '../../src/lib/i18n';
 import { Screen, Card, CategoryAvatar, EmptyState, Money } from '../../src/ui';
+import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT } from '../../src/lib/font';
 import type { Transaction } from '../../src/types';
 
@@ -23,7 +25,7 @@ export default function PendingScreen() {
   const { profile } = useSession();
   const locale = profile?.locale ?? 'en';
   const rtl = isRTL(locale);
-  const dir = rtl ? 'rtl' : 'ltr';
+  const insets = useSafeAreaInsets();
 
   const { data, loading, refresh } = usePendingContext();
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -101,7 +103,7 @@ export default function PendingScreen() {
         <FlatList
           data={data}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 128, gap: 12 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + TAB_BAR_CLEARANCE, gap: 12 }}
           renderItem={({ item }) => (
             <Card testID={`pending-row-${item.id}`}>
               {/* ── Transaction row: avatar + details + amount ── */}

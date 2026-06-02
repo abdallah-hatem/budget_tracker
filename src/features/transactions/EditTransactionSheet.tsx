@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateTransaction, deleteTransaction } from './api';
 import { categoryLabel } from './display';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
@@ -24,6 +25,7 @@ interface Props {
  */
 export function EditTransactionSheet({ transaction, locale, onDone, onCancel, confirmOnSave = false }: Props) {
   const rtl = isRTL(locale);
+  const insets = useSafeAreaInsets();
   const [type, setType] = useState<TxnType>(transaction.type);
   const [amount, setAmount] = useState<string>(String(transaction.amount));
   const [categorySlug, setCategorySlug] = useState<string>(transaction.category_slug);
@@ -89,7 +91,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
         borderTopRightRadius: 28,
         paddingTop: 12,
         paddingHorizontal: 20,
-        paddingBottom: 32,
+        paddingBottom: 32 + insets.bottom,
         gap: 20,
         direction: rtl ? 'rtl' : 'ltr',
       }}
