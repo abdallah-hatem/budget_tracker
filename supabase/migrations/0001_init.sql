@@ -110,3 +110,29 @@ create policy "categories_select_all"
   on public.categories for select
   to anon, authenticated
   using ( true );
+
+-- ---------------------------------------------------------------------------
+-- Auto-create a profiles row when a new auth user is created.
+-- SECURITY DEFINER so the supabase_auth_admin role can insert into public.profiles.
+-- search_path = '' (hardening) -> everything is schema-qualified below.
+-- ---------------------------------------------------------------------------
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.profiles (id, display_name, locale)
+  values (
+    new.id,
+    new.raw_user_meta_data ->> 'display_name',
+    coalesce(new.raw_user_meta_data ->> 'locale', 'en')
+  );
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
