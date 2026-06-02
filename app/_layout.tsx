@@ -23,6 +23,7 @@ import {
 } from '@expo-google-fonts/readex-pro';
 import { SessionProvider, useSession } from '@/src/features/auth/SessionProvider';
 import { redirectTarget } from '@/src/features/auth/redirectTarget';
+import { useNotifications } from '@/src/features/notifications/useNotifications';
 
 // Keep splash visible while fonts load.
 SplashScreen.preventAutoHideAsync();
@@ -31,6 +32,9 @@ function RootNavigator() {
   const { session, loading } = useSession();
   const segments = useSegments();
   const router = useRouter();
+
+  // Register push token + wire tap-to-navigate deep-link (no-op on simulator).
+  useNotifications();
 
   useEffect(() => {
     const inAuthGroup = (segments[0] as string) === '(auth)';

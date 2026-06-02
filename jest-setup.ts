@@ -57,6 +57,29 @@ jest.mock('react-native-safe-area-context', () => {
 type Handler = (event: any) => void;
 const _speechHandlers: Record<string, Handler[]> = {};
 
+// ---------------------------------------------------------------------------
+// expo-notifications — native module; mock for unit tests.
+// SDK 54 API: shouldShowBanner / shouldShowList (not shouldShowAlert).
+// ---------------------------------------------------------------------------
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  getLastNotificationResponseAsync: jest.fn(async () => null),
+  getPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  requestPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  getExpoPushTokenAsync: jest.fn(async () => ({ data: 'ExponentPushToken[test]' })),
+  setNotificationChannelAsync: jest.fn(),
+  AndroidImportance: { DEFAULT: 3 },
+}));
+
+// ---------------------------------------------------------------------------
+// expo-device — native module; mock for unit tests.
+// ---------------------------------------------------------------------------
+jest.mock('expo-device', () => ({
+  isDevice: true,
+}));
+
+// ---------------------------------------------------------------------------
 jest.mock('expo-speech-recognition', () => ({
   ExpoSpeechRecognitionModule: {
     requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
