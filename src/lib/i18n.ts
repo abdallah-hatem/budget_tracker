@@ -82,6 +82,23 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   confirm: { en: 'Confirm', ar: 'تأكيد' },
   reject: { en: 'Reject', ar: 'رفض' },
   via_sms: { en: 'via SMS', ar: 'عبر رسالة' },
+
+  // SMS auto-capture / ingest token (P2.5)
+  sms_capture: { en: 'SMS Auto-Capture', ar: 'التقاط الرسائل تلقائياً' },
+  sms_token_intro: {
+    en: 'Generate a secret token to link your iOS Shortcut.',
+    ar: 'أنشئ رمزاً سرياً لربط اختصار iOS الخاص بك.',
+  },
+  generate_token: { en: 'Generate token', ar: 'إنشاء رمز' },
+  regenerate_token: { en: 'Regenerate token', ar: 'إعادة إنشاء الرمز' },
+  revoke_token: { en: 'Revoke token', ar: 'إلغاء الرمز' },
+  token_shown_once: {
+    en: 'Copy this token now — it won\'t be shown again.',
+    ar: 'انسخ هذا الرمز الآن — لن يُعرض مجدداً.',
+  },
+  copy: { en: 'Copy', ar: 'نسخ' },
+  copied: { en: 'Copied!', ar: 'تم النسخ!' },
+  shortcut_guide: { en: 'iOS Shortcut guide', ar: 'دليل اختصار iOS' },
 };
 
 export function isRTL(locale: Locale): boolean {

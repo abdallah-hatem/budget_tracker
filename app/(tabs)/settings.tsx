@@ -1,15 +1,64 @@
-import { useState } from 'react';
-import { I18nManager, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { I18nManager, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import type { Locale } from '@/src/types';
 import { supabase } from '@/src/lib/supabase';
 import { t, isRTL } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
+import {
+  createIngestToken,
+  revokeIngestTokens,
+  hasActiveIngestToken,
+} from '@/src/features/ingest/api';
+import * as Clipboard from 'expo-clipboard';
 
 export default function Settings() {
   const { user, profile } = useSession();
   const locale: Locale = profile?.locale ?? 'en';
   const [busy, setBusy] = useState(false);
 
+  // ── ingest token state ────────────────────────────────────────────────────
+  const [hasToken, setHasToken] = useState(false);
+  const [rawToken, setRawToken] = useState<string | null>(null);
+  const [copyLabel, setCopyLabel] = useState<'copy' | 'copied'>('copy');
+  const [guideOpen, setGuideOpen] = useState(false);
+
+  useEffect(() => {
+    hasActiveIngestToken()
+      .then(setHasToken)
+      .catch(() => {});
+  }, []);
+
+  async function onGenerateToken() {
+    setBusy(true);
+    try {
+      const token = await createIngestToken();
+      setRawToken(token);
+      setHasToken(true);
+      setCopyLabel('copy');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRevokeToken() {
+    setBusy(true);
+    try {
+      await revokeIngestTokens();
+      setHasToken(false);
+      setRawToken(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onCopy() {
+    if (!rawToken) return;
+    await Clipboard.setStringAsync(rawToken);
+    setCopyLabel('copied');
+    setTimeout(() => setCopyLabel('copy'), 2000);
+  }
+
+  // ── locale ────────────────────────────────────────────────────────────────
   async function setLocale(next: Locale) {
     if (!user || next === locale) return;
     setBusy(true);
@@ -33,8 +82,10 @@ export default function Settings() {
 
   const selected = locale;
 
+  const ingestUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL ?? '<SUPABASE_URL>'}/functions/v1/ingest-sms`;
+
   return (
-    <View className="flex-1 bg-white px-6 pt-6">
+    <ScrollView className="flex-1 bg-white px-6 pt-6">
       <Text className="text-2xl font-bold text-gray-900 mb-6">
         {t('settings.title', locale)}
       </Text>
@@ -80,14 +131,122 @@ export default function Settings() {
         </TouchableOpacity>
       </View>
 
+      {/* ── SMS Auto-Capture ─────────────────────────────────────────────── */}
+      <Text className="text-sm uppercase text-gray-400 mb-1">
+        {t('sms_capture', locale)}
+      </Text>
+      <Text className="text-sm text-gray-500 mb-3">{t('sms_token_intro', locale)}</Text>
+
+      {/* Token display (shown once right after generate/regenerate) */}
+      {rawToken ? (
+        <View className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 gap-2">
+          <Text
+            selectable
+            testID="token-value"
+            className="font-mono text-sm text-gray-900 break-all"
+          >
+            {rawToken}
+          </Text>
+          <Text className="text-xs text-amber-700">{t('token_shown_once', locale)}</Text>
+          <TouchableOpacity
+            testID="copy-token"
+            onPress={onCopy}
+            className="self-start rounded-md bg-amber-200 px-3 py-1.5"
+          >
+            <Text className="text-xs font-semibold text-amber-900">
+              {t(copyLabel, locale)}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {/* Generate (no active token) or Regenerate + Revoke (active token) */}
+      {!hasToken ? (
+        <TouchableOpacity
+          disabled={busy}
+          testID="gen-token"
+          onPress={onGenerateToken}
+          className="mb-3 rounded-lg bg-blue-600 py-3 items-center"
+        >
+          <Text className="text-white font-semibold">{t('generate_token', locale)}</Text>
+        </TouchableOpacity>
+      ) : (
+        <View className="flex-row gap-3 mb-3">
+          <TouchableOpacity
+            disabled={busy}
+            testID="regen-token"
+            onPress={onGenerateToken}
+            className="flex-1 rounded-lg bg-blue-100 py-3 items-center"
+          >
+            <Text className="text-blue-700 font-semibold">{t('regenerate_token', locale)}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            disabled={busy}
+            testID="revoke-token"
+            onPress={onRevokeToken}
+            className="flex-1 rounded-lg border border-red-300 py-3 items-center"
+          >
+            <Text className="text-red-600 font-semibold">{t('revoke_token', locale)}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── iOS Shortcut guide (collapsible) ─────────────────────────────── */}
+      <TouchableOpacity
+        testID="shortcut-guide-toggle"
+        onPress={() => setGuideOpen((o) => !o)}
+        className="flex-row items-center justify-between mb-2"
+      >
+        <Text className="text-sm font-semibold text-blue-700">
+          {t('shortcut_guide', locale)}
+        </Text>
+        <Text className="text-sm text-blue-700">{guideOpen ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+
+      {guideOpen ? (
+        <View className="rounded-lg border border-gray-100 bg-gray-50 p-4 mb-6 gap-2">
+          <Text className="text-sm font-semibold text-gray-800 mb-1">
+            {locale === 'ar' ? 'الخطوات:' : 'Steps:'}
+          </Text>
+          {[
+            locale === 'ar'
+              ? '١. افتح تطبيق الاختصارات ← الأتمتة ← جديد ← رسالة'
+              : '1. Shortcuts → Automation → New → Message',
+            locale === 'ar'
+              ? '٢. "الرسالة تحتوي على: EGP" ← تشغيل فوري'
+              : '2. "Message Contains: EGP" → Run Immediately',
+            locale === 'ar'
+              ? '٣. أضف إجراء "الحصول على محتويات URL"'
+              : '3. Add action "Get Contents of URL"',
+            locale === 'ar' ? '٤. الطريقة: POST' : '4. Method: POST',
+            locale === 'ar'
+              ? `٥. URL: ${ingestUrl}`
+              : `5. URL: ${ingestUrl}`,
+            locale === 'ar'
+              ? '٦. Headers: Content-Type: application/json'
+              : '6. Headers: Content-Type: application/json',
+            locale === 'ar'
+              ? `٧. apikey: ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '<anon key>'}`
+              : `7. apikey: ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '<anon key>'}`,
+            locale === 'ar'
+              ? '٨. نص الطلب (JSON): { "text": <مدخلات الاختصار>, "token": "<الصق الرمز>" }'
+              : '8. Request Body (JSON): { "text": <Shortcut Input>, "token": "<paste the token above>" }',
+          ].map((step, i) => (
+            <Text key={i} className="text-xs text-gray-700 leading-5">
+              {step}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
       <TouchableOpacity
         disabled={busy}
         onPress={onSignOut}
-        className="border border-red-500 rounded-lg py-3 items-center"
+        className="border border-red-500 rounded-lg py-3 items-center mb-8"
         testID="sign-out"
       >
         <Text className="text-red-600 font-semibold">{t('settings.signOut', locale)}</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
