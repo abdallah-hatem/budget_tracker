@@ -22,7 +22,7 @@ export default function CaptureScreen() {
   const { user, profile } = useSession();
   const locale: Locale = (profile?.locale as Locale) ?? 'en';
 
-  const { transcript, isListening, error: sttError, start, stop } =
+  const { transcript, isListening, supported, error: sttError, start, stop } =
     useSpeechRecognition();
 
   const [text, setText] = useState('');
@@ -41,6 +41,7 @@ export default function CaptureScreen() {
   }, [transcript]);
 
   const toggleMic = () => {
+    if (!supported) return;
     if (isListening) {
       stop();
     } else {
@@ -87,18 +88,23 @@ export default function CaptureScreen() {
       <Pressable
         testID="capture-mic"
         onPress={toggleMic}
+        disabled={!supported}
         className={`mb-4 items-center justify-center rounded-2xl py-8 ${
-          isListening ? 'bg-red-500' : 'bg-black'
+          !supported ? 'bg-gray-300' : isListening ? 'bg-red-500' : 'bg-black'
         }`}
       >
         <Text className="text-lg text-white">
-          {isListening
+          {!supported
             ? locale === 'ar'
-              ? '● استماع… اضغط للإيقاف'
-              : '● Listening… tap to stop'
-            : locale === 'ar'
-              ? '🎤 اضغط للتحدث'
-              : '🎤 Tap to speak'}
+              ? '🎤 الصوت يتطلب نسخة تطوير — اكتب بدلاً من ذلك'
+              : '🎤 Voice needs a dev build — type instead'
+            : isListening
+              ? locale === 'ar'
+                ? '● استماع… اضغط للإيقاف'
+                : '● Listening… tap to stop'
+              : locale === 'ar'
+                ? '🎤 اضغط للتحدث'
+                : '🎤 Tap to speak'}
         </Text>
       </Pressable>
 
