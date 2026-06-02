@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SessionProvider, useSession } from '@/src/features/auth/SessionProvider';
 import { redirectTarget } from '@/src/features/auth/redirectTarget';
 
@@ -39,10 +40,12 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <SessionProvider>
-      {/* Dark status-bar content (black time/battery icons) on our light screens. */}
-      <StatusBar style="dark" />
-      <RootNavigator />
-    </SessionProvider>
+    <SafeAreaProvider>
+      <SessionProvider>
+        {/* Dark status-bar content (black time/battery icons) on our light screens. */}
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </SessionProvider>
+    </SafeAreaProvider>
   );
 }

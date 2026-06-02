@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { useSpeechRecognition } from '../../src/hooks/useSpeechRecognition';
 import { requestCategorize } from '../../src/features/capture/categorizeClient';
@@ -116,6 +117,7 @@ export default function CaptureScreen() {
   const savedIncome = saved?.type === 'income';
 
   return (
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
     <ScrollView
       className="flex-1 bg-gray-50"
       contentContainerClassName="p-4 pb-24"
@@ -258,5 +260,6 @@ export default function CaptureScreen() {
         </View>
       ) : null}
     </ScrollView>
+    </SafeAreaView>
   );
 }

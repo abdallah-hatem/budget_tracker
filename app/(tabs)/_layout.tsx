@@ -10,7 +10,7 @@ function TabsInner() {
   const { count: pendingCount } = usePendingContext();
 
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: '#2563eb', headerShown: true }}>
+    <Tabs screenOptions={{ tabBarActiveTintColor: '#2563eb', headerShown: false }}>
       <Tabs.Screen
         name="index"
         options={{

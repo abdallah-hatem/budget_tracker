@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { I18nManager, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Locale } from '@/src/types';
 import { supabase } from '@/src/lib/supabase';
 import { t, isRTL } from '@/src/lib/i18n';
@@ -99,6 +100,7 @@ export default function Settings() {
   const ingestUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL ?? '<SUPABASE_URL>'}/functions/v1/ingest-sms`;
 
   return (
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
     <ScrollView className="flex-1 bg-white px-6 pt-6">
       <Text className="text-2xl font-bold text-gray-900 mb-6">
         {t('settings.title', locale)}
@@ -299,5 +301,6 @@ export default function Settings() {
         <Text className="text-red-600 font-semibold">{t('settings.signOut', locale)}</Text>
       </TouchableOpacity>
     </ScrollView>
+    </SafeAreaView>
   );
 }
