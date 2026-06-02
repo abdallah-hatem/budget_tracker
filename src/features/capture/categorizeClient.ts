@@ -17,15 +17,9 @@ export async function requestCategorize(
 
   if (error) {
     if (error instanceof FunctionsHttpError) {
-      try {
-        const body = await error.context.json();
-        throw new Error(body?.error ?? 'Categorization failed');
-      } catch (parseErr) {
-        if (parseErr instanceof Error && parseErr.message !== 'Categorization failed') {
-          throw parseErr;
-        }
-        throw new Error('Categorization failed');
-      }
+      let body: { error?: string } | null = null;
+      try { body = await error.context.json(); } catch { /* non-JSON body */ }
+      throw new Error(body?.error ?? 'Categorization failed');
     }
     throw new Error(error.message || 'Categorization failed');
   }

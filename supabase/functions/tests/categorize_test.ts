@@ -221,3 +221,43 @@ Deno.test("throws when the response has no tool_use block", async () => {
   }
   assert(threw, "expected categorize to throw when no tool_use block present");
 });
+
+Deno.test("coerceOccurredAt: garbage date string -> occurred_at omitted", async () => {
+  const { create } = stub(
+    fakeToolUse({
+      type: "expense",
+      amount: 20,
+      currency: "EGP",
+      category_slug: "food",
+      note: "test",
+      confidence: 0.8,
+      occurred_at: "not-a-date-at-all",
+    }),
+  );
+
+  const parsed = await categorize("test", "en", "k", { createMessage: create });
+
+  // garbage date -> coerceOccurredAt returns undefined -> field omitted
+  assertEquals(parsed.occurred_at, undefined);
+});
+
+Deno.test("coerceOccurredAt: valid ISO date -> normalised ISO string", async () => {
+  const { create } = stub(
+    fakeToolUse({
+      type: "expense",
+      amount: 20,
+      currency: "EGP",
+      category_slug: "food",
+      note: "test",
+      confidence: 0.8,
+      occurred_at: "2026-06-01",
+    }),
+  );
+
+  const parsed = await categorize("test", "en", "k", { createMessage: create });
+
+  // valid date -> should come back as a full ISO string
+  assertEquals(typeof parsed.occurred_at, "string");
+  // Should start with "2026-06-01" (timezone offset may shift the time part)
+  assertEquals((parsed.occurred_at ?? "").startsWith("2026-06-0"), true);
+});

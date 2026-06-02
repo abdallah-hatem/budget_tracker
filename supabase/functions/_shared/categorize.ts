@@ -191,7 +191,11 @@ function coerceSlug(v: unknown, type: TxnType): string {
 }
 
 function coerceOccurredAt(v: unknown): string | undefined {
-  return typeof v === "string" && v.trim().length > 0 ? v : undefined;
+  if (typeof v !== "string") return undefined;
+  const s = v.trim();
+  if (s.length === 0) return undefined;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
 function findToolUse(
