@@ -34,7 +34,7 @@ create table public.transactions (
   user_id       uuid not null references auth.users (id) on delete cascade,
   type          text not null check (type in ('expense', 'income')),
   amount        numeric(14, 2) not null check (amount > 0),
-  currency      text not null default 'EGP',
+  currency      text not null default 'EGP' constraint transactions_currency_egp check (currency = 'EGP'),
   category_slug text not null references public.categories (slug),
   note          text,
   raw_text      text,
