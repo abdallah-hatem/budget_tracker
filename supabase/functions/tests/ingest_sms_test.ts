@@ -1,0 +1,417 @@
+// Tests for ingest-sms Edge Function handler.
+// All deps are injected fakes — no network, no database.
+import { assert, assertEquals } from "@std/assert";
+import { handleIngest, type IngestDeps } from "../ingest-sms/index.ts";
+import type { ParsedTransaction } from "../_shared/categorize.ts";
+
+// ---------------------------------------------------------------------------
+// Test fixtures
+// ---------------------------------------------------------------------------
+
+const SAMPLE_PARSED: ParsedTransaction = {
+  type: "expense",
+  amount: 250,
+  currency: "EGP",
+  category_slug: "food",
+  note: "lunch",
+  confidence: 0.92,
+};
+
+const SAMPLE_PARSED_ZERO: ParsedTransaction = {
+  type: "expense",
+  amount: 0,
+  currency: "EGP",
+  category_slug: "other_expense",
+  note: "",
+  confidence: 0,
+};
+
+const VALID_TOKEN = "my-raw-secret-token";
+const VALID_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
+
+// Resolve the real sha256 hash of VALID_TOKEN so our fake lookupUserId can
+// match against the hashed value that handleIngest computes internally.
+import { sha256Hex } from "../_shared/hash.ts";
+const VALID_TOKEN_HASH = await sha256Hex(VALID_TOKEN);
+
+/**
+ * Build a full IngestDeps with sensible defaults.
+ * Override individual fields via the `over` argument.
+ */
+function makeDeps(over: Partial<IngestDeps> = {}): IngestDeps {
+  return {
+    groqKey: "test-groq-key",
+    categorizeFn: () => Promise.resolve(SAMPLE_PARSED),
+    lookupUserId: (hash) =>
+      hash === VALID_TOKEN_HASH ? Promise.resolve(VALID_USER_ID) : Promise.resolve(null),
+    insertPending: () => Promise.resolve(),
+    touchToken: () => Promise.resolve(),
+    ...over,
+  };
+}
+
+/** Build a POST Request with a JSON body. */
+function postReq(body: unknown, url = "http://localhost/ingest-sms"): Request {
+  return new Request(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tests: HTTP method routing
+// ---------------------------------------------------------------------------
+
+Deno.test("OPTIONS → 204 with CORS headers", async () => {
+  const res = await handleIngest(
+    new Request("http://localhost/ingest-sms", { method: "OPTIONS" }),
+    makeDeps(),
+  );
+  assertEquals(res.status, 204);
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+});
+
+Deno.test("GET → 405", async () => {
+  const res = await handleIngest(
+    new Request("http://localhost/ingest-sms", { method: "GET" }),
+    makeDeps(),
+  );
+  assertEquals(res.status, 405);
+});
+
+Deno.test("PUT → 405", async () => {
+  const res = await handleIngest(
+    new Request("http://localhost/ingest-sms", { method: "PUT" }),
+    makeDeps(),
+  );
+  assertEquals(res.status, 405);
+});
+
+// ---------------------------------------------------------------------------
+// Tests: JSON parsing
+// ---------------------------------------------------------------------------
+
+Deno.test("invalid JSON body → 400", async () => {
+  const req = new Request("http://localhost/ingest-sms", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{not json",
+  });
+  const res = await handleIngest(req, makeDeps());
+  assertEquals(res.status, 400);
+  const json = await res.json();
+  assert(typeof json.error === "string");
+});
+
+// ---------------------------------------------------------------------------
+// Tests: field validation
+// ---------------------------------------------------------------------------
+
+Deno.test("missing token field → 401", async () => {
+  const res = await handleIngest(postReq({ text: "spent 100 on lunch" }), makeDeps());
+  assertEquals(res.status, 401);
+});
+
+Deno.test("empty token string → 401", async () => {
+  const res = await handleIngest(
+    postReq({ token: "", text: "spent 100 on lunch" }),
+    makeDeps(),
+  );
+  assertEquals(res.status, 401);
+});
+
+Deno.test("missing text field → 400", async () => {
+  const res = await handleIngest(postReq({ token: VALID_TOKEN }), makeDeps());
+  assertEquals(res.status, 400);
+});
+
+Deno.test("empty text string → 400", async () => {
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "   " }),
+    makeDeps(),
+  );
+  assertEquals(res.status, 400);
+});
+
+Deno.test("text > 2000 chars → 413", async () => {
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "a".repeat(2001) }),
+    makeDeps(),
+  );
+  assertEquals(res.status, 413);
+  const json = await res.json();
+  assert(typeof json.error === "string");
+});
+
+Deno.test("text exactly 2000 chars → not 413 (passes length check)", async () => {
+  // The 2000-char text will fail at lookupUserId (returns VALID_USER_ID) or
+  // categorize — we just need it NOT to be 413.
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "a".repeat(2000) }),
+    makeDeps(),
+  );
+  assertEquals(res.status !== 413, true);
+});
+
+// ---------------------------------------------------------------------------
+// Tests: server-side guards
+// ---------------------------------------------------------------------------
+
+Deno.test("missing groqKey → 500", async () => {
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "spent 100 on lunch" }),
+    makeDeps({ groqKey: "" }),
+  );
+  assertEquals(res.status, 500);
+  const json = await res.json();
+  assert(typeof json.error === "string");
+});
+
+// ---------------------------------------------------------------------------
+// Tests: token authentication
+// ---------------------------------------------------------------------------
+
+Deno.test("unknown token (lookupUserId returns null) → 401", async () => {
+  const res = await handleIngest(
+    postReq({ token: "bad-token-nobody-has", text: "spent 100 on lunch" }),
+    makeDeps(),
+  );
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assert(typeof body.error === "string");
+});
+
+Deno.test("revoked token (lookupUserId returns null) → 401", async () => {
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "spent 100 on lunch" }),
+    makeDeps({
+      // Simulate a revoked token: lookupUserId always returns null.
+      lookupUserId: () => Promise.resolve(null),
+    }),
+  );
+  assertEquals(res.status, 401);
+});
+
+// ---------------------------------------------------------------------------
+// Tests: happy path (amount > 0)
+// ---------------------------------------------------------------------------
+
+Deno.test("valid token + amount > 0 → insertPending called once → 200 {ok:true}", async () => {
+  let insertCalled = 0;
+  let insertedRow: Record<string, unknown> | null = null;
+
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+    makeDeps({
+      insertPending: (row) => {
+        insertCalled++;
+        insertedRow = row;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body, { ok: true });
+  assertEquals(insertCalled, 1);
+
+  // Verify required fields in the inserted row.
+  assert(insertedRow !== null);
+  const row = insertedRow as Record<string, unknown>;
+  assertEquals(row.status, "pending");
+  assertEquals(row.source, "sms");
+  assertEquals(row.user_id, VALID_USER_ID);
+  assertEquals(row.amount, 250);
+  assertEquals(row.currency, "EGP");
+  assert(typeof row.occurred_at === "string");
+});
+
+Deno.test("valid token + amount > 0 → CORS header present on 200", async () => {
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+    makeDeps(),
+  );
+  assertEquals(res.status, 200);
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+});
+
+// ---------------------------------------------------------------------------
+// Tests: amount <= 0 skips insert
+// ---------------------------------------------------------------------------
+
+Deno.test("amount === 0 → insertPending NOT called → 200 {ok:true, skipped:true}", async () => {
+  let insertCalled = 0;
+
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Your OTP is 123456" }),
+    makeDeps({
+      categorizeFn: () => Promise.resolve(SAMPLE_PARSED_ZERO),
+      insertPending: () => {
+        insertCalled++;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body, { ok: true, skipped: true });
+  assertEquals(insertCalled, 0);
+});
+
+Deno.test("very small positive amount that rounds to 0 → skipped", async () => {
+  let insertCalled = 0;
+
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "some SMS" }),
+    makeDeps({
+      categorizeFn: () =>
+        Promise.resolve({ ...SAMPLE_PARSED, amount: 0.001 }),
+      insertPending: () => {
+        insertCalled++;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  // 0.001 rounds to 0.00 → skipped
+  assertEquals(body.skipped, true);
+  assertEquals(insertCalled, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Tests: touchToken is called on a successful (valid-token) request
+// ---------------------------------------------------------------------------
+
+Deno.test("touchToken is called when token is valid (amount > 0)", async () => {
+  let touchHashSeen: string | null = null;
+
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+    makeDeps({
+      touchToken: (hash) => {
+        touchHashSeen = hash;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  // touchToken should have been called with the sha256 hash of VALID_TOKEN.
+  assertEquals(touchHashSeen, VALID_TOKEN_HASH);
+});
+
+Deno.test("touchToken is called when token is valid (amount === 0, skipped)", async () => {
+  let touchCalled = false;
+
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Your OTP is 123456" }),
+    makeDeps({
+      categorizeFn: () => Promise.resolve(SAMPLE_PARSED_ZERO),
+      touchToken: () => {
+        touchCalled = true;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  assertEquals(touchCalled, true);
+});
+
+// ---------------------------------------------------------------------------
+// Tests: received_at handling
+// ---------------------------------------------------------------------------
+
+Deno.test("valid received_at is reflected in occurred_at", async () => {
+  let insertedRow: Record<string, unknown> | null = null;
+  const receivedAt = "2026-01-15T10:30:00.000Z";
+
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP", received_at: receivedAt }),
+    makeDeps({
+      insertPending: (row) => {
+        insertedRow = row;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  assertEquals((insertedRow as unknown as Record<string, unknown>).occurred_at, receivedAt);
+});
+
+Deno.test("invalid received_at falls back to current time (ISO string)", async () => {
+  let insertedRow: Record<string, unknown> | null = null;
+
+  await handleIngest(
+    postReq({
+      token: VALID_TOKEN,
+      text: "Paid 250 EGP",
+      received_at: "not-a-date",
+    }),
+    makeDeps({
+      insertPending: (row) => {
+        insertedRow = row;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  // Should be a valid ISO timestamp (not "not-a-date").
+  const row2 = insertedRow as unknown as Record<string, unknown>;
+  assert(typeof row2.occurred_at === "string");
+  assert(!Number.isNaN(new Date(row2.occurred_at as string).getTime()));
+  assert(row2.occurred_at !== "not-a-date");
+});
+
+// ---------------------------------------------------------------------------
+// Tests: categorize or insert throwing → 502
+// ---------------------------------------------------------------------------
+
+Deno.test("categorizeFn throwing → 502", async () => {
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP" }),
+    makeDeps({
+      categorizeFn: () => Promise.reject(new Error("Groq is down")),
+    }),
+  );
+  assertEquals(res.status, 502);
+  const body = await res.json();
+  assert(typeof body.error === "string");
+});
+
+Deno.test("insertPending throwing → 502", async () => {
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP" }),
+    makeDeps({
+      insertPending: () => Promise.reject(new Error("DB connection refused")),
+    }),
+  );
+  assertEquals(res.status, 502);
+  const body = await res.json();
+  assert(typeof body.error === "string");
+});
+
+// ---------------------------------------------------------------------------
+// Tests: amount rounding
+// ---------------------------------------------------------------------------
+
+Deno.test("amount is rounded to 2 decimal places before insert", async () => {
+  let insertedRow: Record<string, unknown> | null = null;
+
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid some amount" }),
+    makeDeps({
+      categorizeFn: () => Promise.resolve({ ...SAMPLE_PARSED, amount: 99.999 }),
+      insertPending: (row) => {
+        insertedRow = row;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  // 99.999 rounded to 2dp = 100.00
+  assertEquals((insertedRow as unknown as Record<string, unknown>).amount, 100);
+});

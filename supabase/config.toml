@@ -405,3 +405,6 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [functions.categorize]
 enabled = true
 verify_jwt = true
+
+[functions.ingest-sms]
+verify_jwt = false
