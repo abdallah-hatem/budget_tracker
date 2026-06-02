@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { I18nManager, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Locale } from '@/src/types';
+import { I18nManager, TouchableOpacity, View } from 'react-native';
 import { supabase } from '@/src/lib/supabase';
 import { t, isRTL } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
@@ -11,6 +9,8 @@ import {
   hasActiveIngestToken,
 } from '@/src/features/ingest/api';
 import * as Clipboard from 'expo-clipboard';
+import type { Locale } from '@/src/types';
+import { Screen, Card, AppText, SectionLabel, Pill } from '@/src/ui';
 
 export default function Settings() {
   const { user, profile } = useSession();
@@ -100,207 +100,331 @@ export default function Settings() {
   const ingestUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL ?? '<SUPABASE_URL>'}/functions/v1/ingest-sms`;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-    <ScrollView className="flex-1 bg-white px-6 pt-6">
-      <Text className="text-2xl font-bold text-gray-900 mb-6">
-        {t('settings.title', locale)}
-      </Text>
-
-      <Text className="text-sm uppercase text-gray-400 mb-1">
-        {t('settings.account', locale)}
-      </Text>
-      <Text className="text-base text-gray-900 mb-6" testID="settings-email">
-        {user?.email ?? '—'}
-      </Text>
-
-      <Text className="text-sm uppercase text-gray-400 mb-2">
-        {t('settings.language', locale)}
-      </Text>
-      <View className="flex-row gap-3 mb-8">
-        <TouchableOpacity
-          disabled={busy}
-          onPress={() => setLocale('en')}
-          className={
-            selected === 'en'
-              ? 'flex-1 items-center py-3 rounded-lg bg-blue-600'
-              : 'flex-1 items-center py-3 rounded-lg bg-gray-100'
-          }
-          testID="locale-en"
-        >
-          <Text className={selected === 'en' ? 'text-white font-semibold' : 'text-gray-800'}>
-            {t('settings.langEnglish', locale)}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          disabled={busy}
-          onPress={() => setLocale('ar')}
-          className={
-            selected === 'ar'
-              ? 'flex-1 items-center py-3 rounded-lg bg-blue-600'
-              : 'flex-1 items-center py-3 rounded-lg bg-gray-100'
-          }
-          testID="locale-ar"
-        >
-          <Text className={selected === 'ar' ? 'text-white font-semibold' : 'text-gray-800'}>
-            {t('settings.langArabic', locale)}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ── SMS Auto-Capture ─────────────────────────────────────────────── */}
-      <Text className="text-sm uppercase text-gray-400 mb-1">
-        {t('sms_capture', locale)}
-      </Text>
-      <Text className="text-sm text-gray-500 mb-3">{t('sms_token_intro', locale)}</Text>
-
-      {/* Token display (shown once right after generate/regenerate) */}
-      {rawToken ? (
-        <View className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 gap-2">
-          <Text
-            selectable
-            testID="token-value"
-            className="font-mono text-sm text-gray-900 break-all"
-          >
-            {rawToken}
-          </Text>
-          <Text className="text-xs text-amber-700">{t('token_shown_once', locale)}</Text>
-          <TouchableOpacity
-            testID="copy-token"
-            onPress={onCopy}
-            className="self-start rounded-md bg-amber-200 px-3 py-1.5"
-          >
-            <Text className="text-xs font-semibold text-amber-900">
-              {t(copyLabel, locale)}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      {/* Token action error */}
-      {tokenError ? (
-        <Text testID="token-error" className="text-sm text-red-600 mb-2">
-          {tokenError}
-        </Text>
-      ) : null}
-
-      {/* Generate (no active token) or Regenerate + Revoke (active token) */}
-      {!hasToken ? (
-        <TouchableOpacity
-          disabled={busy}
-          testID="gen-token"
-          onPress={onGenerateToken}
-          className="mb-3 rounded-lg bg-blue-600 py-3 items-center"
-        >
-          <Text className="text-white font-semibold">{t('generate_token', locale)}</Text>
-        </TouchableOpacity>
-      ) : (
-        <View className="flex-row gap-3 mb-3">
-          <TouchableOpacity
-            disabled={busy}
-            testID="regen-token"
-            onPress={onGenerateToken}
-            className="flex-1 rounded-lg bg-blue-100 py-3 items-center"
-          >
-            <Text className="text-blue-700 font-semibold">{t('regenerate_token', locale)}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            disabled={busy}
-            testID="revoke-token"
-            onPress={onRevokeToken}
-            className="flex-1 rounded-lg border border-red-300 py-3 items-center"
-          >
-            <Text className="text-red-600 font-semibold">{t('revoke_token', locale)}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ── iOS Shortcut guide (collapsible) ─────────────────────────────── */}
-      <TouchableOpacity
-        testID="shortcut-guide-toggle"
-        onPress={() => setGuideOpen((o) => !o)}
-        className="flex-row items-center justify-between mb-2"
+    <Screen scroll padded>
+      {/* ── Page title ─────────────────────────────────────────────────────── */}
+      <AppText
+        weight="bold"
+        className="text-ink"
+        style={{ fontSize: 28, marginTop: 8, marginBottom: 24 }}
       >
-        <Text className="text-sm font-semibold text-blue-700">
-          {t('shortcut_guide', locale)}
-        </Text>
-        <Text className="text-sm text-blue-700">{guideOpen ? '▲' : '▼'}</Text>
-      </TouchableOpacity>
+        {t('settings.title', locale)}
+      </AppText>
 
-      {guideOpen ? (
-        <View className="rounded-lg border border-gray-100 bg-gray-50 p-4 mb-6 gap-2">
-          <Text className="text-sm font-semibold text-gray-800 mb-1">
-            {locale === 'ar' ? 'الخطوات:' : 'Steps:'}
-          </Text>
-          {(locale === 'ar'
-            ? [
-                '١. الاختصارات ← الأتمتة ← جديد ← رسالة',
-                '٢. "الرسالة تحتوي على: EGP" أو "جنيه" أو اسم المرسِل البنكي ← تشغيل فوري',
-                '٣. أضف إجراء "الحصول على محتويات URL" ← الطريقة POST',
-                '٤. أضف رأس Content-Type: application/json',
-                '٥. الصِق القيم أدناه: الرابط، ورأس apikey، ونص الطلب (JSON)',
-                '٦. في نص JSON استبدل <Shortcut Input> بمتغير "مدخلات الاختصار" و<token> برمزك',
-              ]
-            : [
-                '1. Shortcuts → Automation → New → Message',
-                '2. "Message Contains: EGP" (or "جنيه" / your bank sender) → Run Immediately',
-                '3. Add action "Get Contents of URL" → Method: POST',
-                '4. Add header Content-Type: application/json',
-                '5. Paste the values below: the URL, an apikey header, and the JSON body',
-                '6. In the JSON body, replace <Shortcut Input> with the "Shortcut Input" magic variable and <token> with your token',
-              ]
-          ).map((step, i) => (
-            <Text key={i} className="text-xs text-gray-700 leading-5">
-              {step}
-            </Text>
-          ))}
+      {/* ── ACCOUNT ────────────────────────────────────────────────────────── */}
+      <Card className="mb-4">
+        <SectionLabel>{t('settings.account', locale)}</SectionLabel>
+        <AppText
+          testID="settings-email"
+          className="text-ink"
+          style={{ fontSize: 15, marginTop: 10 }}
+        >
+          {user?.email ?? '—'}
+        </AppText>
+      </Card>
 
-          {/* Copyable values */}
-          {[
-            { key: 'url', label: locale === 'ar' ? 'الرابط (URL)' : 'URL', value: ingestUrl },
-            {
-              key: 'apikey',
-              label: 'apikey',
-              value: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '<anon key>',
-            },
-            {
-              key: 'body',
-              label: locale === 'ar' ? 'نص الطلب (JSON)' : 'Request Body (JSON)',
-              value: '{ "text": "<Shortcut Input>", "token": "<paste your token>" }',
-            },
-          ].map((f) => (
-            <View
-              key={f.key}
-              className="mt-2 rounded-md border border-gray-200 bg-white p-2 gap-1"
-            >
-              <Text className="text-[11px] font-semibold uppercase text-gray-400">
-                {f.label}
-              </Text>
-              <Text selectable className="font-mono text-xs text-gray-900 break-all">
-                {f.value}
-              </Text>
-              <TouchableOpacity
-                testID={`copy-${f.key}`}
-                onPress={() => copyField(f.key, f.value)}
-                className="self-start rounded bg-gray-200 px-2 py-1"
-              >
-                <Text className="text-[11px] font-semibold text-gray-700">
-                  {t(copiedField === f.key ? 'copied' : 'copy', locale)}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+      {/* ── LANGUAGE ───────────────────────────────────────────────────────── */}
+      <Card className="mb-4">
+        <SectionLabel>{t('settings.language', locale)}</SectionLabel>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+          <Pill
+            testID="locale-en"
+            label={t('settings.langEnglish', locale)}
+            active={selected === 'en'}
+            onPress={() => !busy && setLocale('en')}
+          />
+          <Pill
+            testID="locale-ar"
+            label={t('settings.langArabic', locale)}
+            active={selected === 'ar'}
+            onPress={() => !busy && setLocale('ar')}
+          />
         </View>
-      ) : null}
+      </Card>
 
+      {/* ── SMS AUTO-CAPTURE ───────────────────────────────────────────────── */}
+      <Card className="mb-4">
+        <SectionLabel>{t('sms_capture', locale)}</SectionLabel>
+        <AppText
+          className="text-ink2"
+          style={{ fontSize: 14, marginTop: 10, marginBottom: 16, lineHeight: 20 }}
+        >
+          {t('sms_token_intro', locale)}
+        </AppText>
+
+        {/* Token error */}
+        {tokenError ? (
+          <AppText
+            testID="token-error"
+            className="text-danger"
+            style={{ fontSize: 13, marginBottom: 12 }}
+          >
+            {tokenError}
+          </AppText>
+        ) : null}
+
+        {/* Token display (shown once right after generate/regenerate) */}
+        {rawToken ? (
+          <View
+            style={{
+              backgroundColor: '#1C2322',
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 16,
+              gap: 8,
+            }}
+          >
+            <AppText
+              testID="token-value"
+              selectable
+              style={{
+                fontFamily: 'monospace',
+                fontSize: 13,
+                color: '#F4F7F5',
+                letterSpacing: 0.5,
+              }}
+            >
+              {rawToken}
+            </AppText>
+            <AppText
+              className="text-warning"
+              style={{ fontSize: 12, lineHeight: 17 }}
+            >
+              {t('token_shown_once', locale)}
+            </AppText>
+            <TouchableOpacity
+              testID="copy-token"
+              onPress={onCopy}
+              style={{
+                alignSelf: 'flex-start',
+                backgroundColor: 'rgba(43,217,142,0.16)',
+                borderRadius: 999,
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+              }}
+            >
+              <AppText
+                weight="semibold"
+                className="text-accent"
+                style={{ fontSize: 12 }}
+              >
+                {t(copyLabel, locale)}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {/* Generate (no active token) or Regenerate + Revoke (active token) */}
+        {!hasToken ? (
+          <TouchableOpacity
+            disabled={busy}
+            testID="gen-token"
+            onPress={onGenerateToken}
+            style={{
+              backgroundColor: busy ? '#1FB877' : '#2BD98E',
+              borderRadius: 16,
+              paddingVertical: 15,
+              alignItems: 'center',
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            <AppText
+              weight="semibold"
+              style={{ fontSize: 15, color: '#06251A' }}
+            >
+              {t('generate_token', locale)}
+            </AppText>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity
+              disabled={busy}
+              testID="regen-token"
+              onPress={onGenerateToken}
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(43,217,142,0.12)',
+                borderRadius: 14,
+                paddingVertical: 13,
+                alignItems: 'center',
+              }}
+            >
+              <AppText
+                weight="semibold"
+                className="text-accent"
+                style={{ fontSize: 14 }}
+              >
+                {t('regenerate_token', locale)}
+              </AppText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              disabled={busy}
+              testID="revoke-token"
+              onPress={onRevokeToken}
+              style={{
+                flex: 1,
+                borderWidth: 1,
+                borderColor: '#FF5C6C',
+                borderRadius: 14,
+                paddingVertical: 13,
+                alignItems: 'center',
+              }}
+            >
+              <AppText
+                weight="semibold"
+                className="text-danger"
+                style={{ fontSize: 14 }}
+              >
+                {t('revoke_token', locale)}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── iOS Shortcut guide (collapsible) ───────────────────────────── */}
+        <TouchableOpacity
+          testID="shortcut-guide-toggle"
+          onPress={() => setGuideOpen((o) => !o)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 16,
+          }}
+        >
+          <AppText
+            weight="semibold"
+            className="text-accent"
+            style={{ fontSize: 14 }}
+          >
+            {t('shortcut_guide', locale)}
+          </AppText>
+          <AppText className="text-accent" style={{ fontSize: 14 }}>
+            {guideOpen ? '▲' : '▼'}
+          </AppText>
+        </TouchableOpacity>
+
+        {guideOpen ? (
+          <View style={{ marginTop: 12, gap: 6 }}>
+            <AppText
+              weight="semibold"
+              className="text-ink"
+              style={{ fontSize: 13, marginBottom: 4 }}
+            >
+              {locale === 'ar' ? 'الخطوات:' : 'Steps:'}
+            </AppText>
+            {(locale === 'ar'
+              ? [
+                  '١. الاختصارات ← الأتمتة ← جديد ← رسالة',
+                  '٢. "الرسالة تحتوي على: EGP" أو "جنيه" أو اسم المرسِل البنكي ← تشغيل فوري',
+                  '٣. أضف إجراء "الحصول على محتويات URL" ← الطريقة POST',
+                  '٤. أضف رأس Content-Type: application/json',
+                  '٥. الصِق القيم أدناه: الرابط، ورأس apikey، ونص الطلب (JSON)',
+                  '٦. في نص JSON استبدل <Shortcut Input> بمتغير "مدخلات الاختصار" و<token> برمزك',
+                ]
+              : [
+                  '1. Shortcuts → Automation → New → Message',
+                  '2. "Message Contains: EGP" (or "جنيه" / your bank sender) → Run Immediately',
+                  '3. Add action "Get Contents of URL" → Method: POST',
+                  '4. Add header Content-Type: application/json',
+                  '5. Paste the values below: the URL, an apikey header, and the JSON body',
+                  '6. In the JSON body, replace <Shortcut Input> with the "Shortcut Input" magic variable and <token> with your token',
+                ]
+            ).map((step, i) => (
+              <AppText key={i} className="text-ink2" style={{ fontSize: 12, lineHeight: 19 }}>
+                {step}
+              </AppText>
+            ))}
+
+            {/* Copyable values */}
+            {[
+              { key: 'url', label: locale === 'ar' ? 'الرابط (URL)' : 'URL', value: ingestUrl },
+              {
+                key: 'apikey',
+                label: 'apikey',
+                value: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '<anon key>',
+              },
+              {
+                key: 'body',
+                label: locale === 'ar' ? 'نص الطلب (JSON)' : 'Request Body (JSON)',
+                value: '{ "text": "<Shortcut Input>", "token": "<paste your token>" }',
+              },
+            ].map((f) => (
+              <View
+                key={f.key}
+                style={{
+                  marginTop: 8,
+                  backgroundColor: '#1C2322',
+                  borderRadius: 12,
+                  padding: 10,
+                  gap: 6,
+                }}
+              >
+                <AppText
+                  weight="semibold"
+                  className="text-ink3"
+                  style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}
+                >
+                  {f.label}
+                </AppText>
+                <AppText
+                  selectable
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    color: '#F4F7F5',
+                    lineHeight: 17,
+                  }}
+                >
+                  {f.value}
+                </AppText>
+                <TouchableOpacity
+                  testID={`copy-${f.key}`}
+                  onPress={() => copyField(f.key, f.value)}
+                  style={{
+                    alignSelf: 'flex-start',
+                    backgroundColor: 'rgba(43,217,142,0.16)',
+                    borderRadius: 999,
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
+                  }}
+                >
+                  <AppText
+                    weight="semibold"
+                    className="text-accent"
+                    style={{ fontSize: 11 }}
+                  >
+                    {t(copiedField === f.key ? 'copied' : 'copy', locale)}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </Card>
+
+      {/* ── Sign out ───────────────────────────────────────────────────────── */}
       <TouchableOpacity
         disabled={busy}
         onPress={onSignOut}
-        className="border border-red-500 rounded-lg py-3 items-center mb-8"
         testID="sign-out"
+        style={{
+          borderWidth: 1,
+          borderColor: '#FF5C6C',
+          borderRadius: 16,
+          paddingVertical: 15,
+          alignItems: 'center',
+          marginTop: 8,
+          marginBottom: 16,
+        }}
       >
-        <Text className="text-red-600 font-semibold">{t('settings.signOut', locale)}</Text>
+        <AppText
+          weight="semibold"
+          className="text-danger"
+          style={{ fontSize: 15 }}
+        >
+          {t('settings.signOut', locale)}
+        </AppText>
       </TouchableOpacity>
-    </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }

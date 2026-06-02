@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
-  Text,
   TextInput,
   TouchableOpacity,
+  View,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '@/src/lib/supabase';
 import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
+import { AppText } from '@/src/ui';
+import { FONT } from '@/src/lib/font';
 
 export default function SignUp() {
   const { profile } = useSession();
@@ -36,66 +40,146 @@ export default function SignUp() {
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-white"
-      contentContainerClassName="flex-grow justify-center px-6 py-10"
-      keyboardShouldPersistTaps="handled"
-      automaticallyAdjustKeyboardInsets
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#0B0F0E' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text className="text-3xl font-bold mb-8 text-gray-900">
-        {t('auth.signUp.title', locale)}
-      </Text>
-
-      <Text className="text-sm text-gray-600 mb-1">{t('auth.email', locale)}</Text>
-      <TextInput
-        className="border border-gray-300 rounded-lg px-4 py-3 mb-4 text-base text-gray-900"
-        autoCapitalize="none"
-        autoComplete="email"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-        testID="email-input"
-      />
-
-      <Text className="text-sm text-gray-600 mb-1">{t('auth.password', locale)}</Text>
-      <TextInput
-        className="border border-gray-300 rounded-lg px-4 py-3 mb-4 text-base text-gray-900"
-        secureTextEntry
-        autoComplete="password-new"
-        value={password}
-        onChangeText={setPassword}
-        testID="password-input"
-      />
-
-      {error ? (
-        <Text className="text-red-600 mb-4" testID="error-text">
-          {error}
-        </Text>
-      ) : null}
-      {info ? (
-        <Text className="text-green-700 mb-4" testID="info-text">
-          {info}
-        </Text>
-      ) : null}
-
-      <TouchableOpacity
-        className="bg-blue-600 rounded-lg py-3 items-center mb-4"
-        disabled={busy}
-        onPress={onSubmit}
-        testID="submit-button"
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingHorizontal: 28,
+          paddingVertical: 48,
+        }}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
-        {busy ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text className="text-white font-semibold text-base">
-            {t('auth.signUpButton', locale)}
-          </Text>
-        )}
-      </TouchableOpacity>
+        {/* Wordmark */}
+        <View style={{ alignItems: 'center', marginBottom: 48 }}>
+          <AppText
+            style={{
+              fontFamily: FONT.sora,
+              fontSize: 32,
+              color: '#2BD98E',
+              letterSpacing: -0.5,
+            }}
+          >
+            Ledger
+          </AppText>
+          <AppText
+            weight="medium"
+            className="text-ink3"
+            style={{ fontSize: 13, marginTop: 4 }}
+          >
+            {t('auth.signUp.title', locale)}
+          </AppText>
+        </View>
 
-      <Link href={"/(auth)/sign-in" as never} className="text-blue-600 text-center">
-        {t('auth.toSignIn', locale)}
-      </Link>
-    </ScrollView>
+        {/* Email input */}
+        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6 }}>
+          {t('auth.email', locale)}
+        </AppText>
+        <TextInput
+          style={{
+            backgroundColor: '#14191A',
+            borderRadius: 14,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            fontSize: 15,
+            color: '#F4F7F5',
+            fontFamily: FONT.jakarta,
+            marginBottom: 14,
+          }}
+          placeholderTextColor="#6B7672"
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+          testID="email-input"
+        />
+
+        {/* Password input */}
+        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6 }}>
+          {t('auth.password', locale)}
+        </AppText>
+        <TextInput
+          style={{
+            backgroundColor: '#14191A',
+            borderRadius: 14,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            fontSize: 15,
+            color: '#F4F7F5',
+            fontFamily: FONT.jakarta,
+            marginBottom: 14,
+          }}
+          placeholderTextColor="#6B7672"
+          secureTextEntry
+          autoComplete="password-new"
+          value={password}
+          onChangeText={setPassword}
+          testID="password-input"
+        />
+
+        {/* Error / Info messages */}
+        {error ? (
+          <AppText
+            testID="error-text"
+            className="text-danger"
+            style={{ fontSize: 13, marginBottom: 14, lineHeight: 19 }}
+          >
+            {error}
+          </AppText>
+        ) : null}
+        {info ? (
+          <AppText
+            testID="info-text"
+            className="text-accent"
+            style={{ fontSize: 13, marginBottom: 14, lineHeight: 19 }}
+          >
+            {info}
+          </AppText>
+        ) : null}
+
+        {/* Submit */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: busy ? '#1FB877' : '#2BD98E',
+            borderRadius: 16,
+            paddingVertical: 15,
+            alignItems: 'center',
+            marginBottom: 20,
+            opacity: busy ? 0.8 : 1,
+          }}
+          disabled={busy}
+          onPress={onSubmit}
+          testID="submit-button"
+        >
+          {busy ? (
+            <ActivityIndicator color="#06251A" />
+          ) : (
+            <AppText
+              weight="semibold"
+              style={{ fontSize: 15, color: '#06251A' }}
+            >
+              {t('auth.signUpButton', locale)}
+            </AppText>
+          )}
+        </TouchableOpacity>
+
+        {/* Link to sign in */}
+        <Link href={"/(auth)/sign-in" as never} style={{ textAlign: 'center' }}>
+          <AppText
+            weight="medium"
+            className="text-accent"
+            style={{ fontSize: 14 }}
+          >
+            {t('auth.toSignIn', locale)}
+          </AppText>
+        </Link>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
