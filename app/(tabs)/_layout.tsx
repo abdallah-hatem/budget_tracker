@@ -2,10 +2,12 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
+import { usePending } from '@/src/features/transactions/usePending';
 
 export default function TabsLayout() {
   const { profile } = useSession();
   const locale = profile?.locale ?? 'en';
+  const { count: pendingCount } = usePending();
 
   return (
     <Tabs screenOptions={{ tabBarActiveTintColor: '#2563eb', headerShown: true }}>
@@ -24,6 +26,16 @@ export default function TabsLayout() {
           title: t('tabs.capture', locale),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="add-circle-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="pending"
+        options={{
+          title: t('pending_title', locale),
+          tabBarBadge: pendingCount || undefined,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="mail-unread-outline" color={color} size={size} />
           ),
         }}
       />
