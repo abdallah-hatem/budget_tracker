@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import { updateTransaction, deleteTransaction } from './api';
 import { categoryLabel } from './display';
@@ -26,6 +26,15 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel }: 
   const [note, setNote] = useState<string>(transaction.note ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-scroll the selected category chip into view (on open + on tap).
+  const catScrollRef = useRef<ScrollView>(null);
+  const chipX = useRef<Record<string, number>>({});
+  const didInitialScroll = useRef(false);
+  const scrollToSlug = (slug: string, animated: boolean) => {
+    const x = chipX.current[slug];
+    if (x != null) catScrollRef.current?.scrollTo({ x: Math.max(0, x - 16), animated });
+  };
 
   const cats = type === 'income' ? incomeCategories() : expenseCategories();
 
@@ -107,12 +116,27 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel }: 
       {/* Category */}
       <View className="gap-1">
         <Text className="text-xs text-gray-500">{t('by_category', locale)}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
+        <ScrollView
+          ref={catScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerClassName="gap-2"
+        >
           {cats.map((c) => (
             <Pressable
               key={c.slug}
               testID={`edit-cat-${c.slug}`}
-              onPress={() => setCategorySlug(c.slug)}
+              onLayout={(e) => {
+                chipX.current[c.slug] = e.nativeEvent.layout.x;
+                if (c.slug === categorySlug && !didInitialScroll.current) {
+                  didInitialScroll.current = true;
+                  scrollToSlug(c.slug, false);
+                }
+              }}
+              onPress={() => {
+                setCategorySlug(c.slug);
+                scrollToSlug(c.slug, true);
+              }}
               className={`rounded-full px-3 py-2 ${categorySlug === c.slug ? 'bg-gray-900' : 'bg-gray-100'}`}
             >
               <Text className={categorySlug === c.slug ? 'text-white' : 'text-gray-700'}>
