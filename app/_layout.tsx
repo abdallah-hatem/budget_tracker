@@ -4,8 +4,28 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
+import {
+  Sora_600SemiBold,
+  Sora_700Bold,
+} from '@expo-google-fonts/sora';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import {
+  ReadexPro_400Regular,
+  ReadexPro_500Medium,
+  ReadexPro_600SemiBold,
+} from '@expo-google-fonts/readex-pro';
 import { SessionProvider, useSession } from '@/src/features/auth/SessionProvider';
 import { redirectTarget } from '@/src/features/auth/redirectTarget';
+
+// Keep splash visible while fonts load.
+SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { session, loading } = useSession();
@@ -24,8 +44,8 @@ function RootNavigator() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator />
+      <View className="flex-1 items-center justify-center bg-canvas">
+        <ActivityIndicator color="#2BD98E" />
       </View>
     );
   }
@@ -39,11 +59,33 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Sora_600SemiBold,
+    Sora_700Bold,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    ReadexPro_400Regular,
+    ReadexPro_500Medium,
+    ReadexPro_600SemiBold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider>
       <SessionProvider>
-        {/* Dark status-bar content (black time/battery icons) on our light screens. */}
-        <StatusBar style="dark" />
+        {/* Light status-bar content (white time/battery icons) for dark canvas. */}
+        <StatusBar style="light" />
         <RootNavigator />
       </SessionProvider>
     </SafeAreaProvider>
