@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { I18nManager, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { supabase } from '@/src/lib/supabase';
 import { t, isRTL } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
@@ -15,6 +15,7 @@ import { Screen, Card, AppText, SectionLabel, Pill } from '@/src/ui';
 export default function Settings() {
   const { user, profile } = useSession();
   const locale: Locale = profile?.locale ?? 'en';
+  const rtl = isRTL(locale);
   const [busy, setBusy] = useState(false);
 
   // ── ingest token state ────────────────────────────────────────────────────
@@ -79,13 +80,11 @@ export default function Settings() {
     setBusy(true);
     // Persist on the profile row (RLS restricts to the current user).
     await supabase.from('profiles').update({ locale: next }).eq('id', user.id);
-    // Apply RTL direction; takes full effect after the next reload.
-    I18nManager.allowRTL(true);
-    I18nManager.forceRTL(isRTL(next));
-    setBusy(false);
+    // RTL is driven purely by JS (locale + manual row-reverse + writingDirection).
+    // DO NOT call I18nManager.forceRTL — it would double-flip layouts after reload.
     // SessionProvider will pick up the new locale on the next auth/profile refresh;
-    // for an immediate switch, M6 can add a profile-refetch helper. The toggle UI
-    // below still reflects the chosen value optimistically via `selected`.
+    // the toggle UI below still reflects the chosen value optimistically via `selected`.
+    setBusy(false);
   }
 
   async function onSignOut() {
@@ -105,7 +104,7 @@ export default function Settings() {
       <AppText
         weight="bold"
         className="text-ink"
-        style={{ fontSize: 28, marginTop: 8, marginBottom: 24 }}
+        style={{ fontSize: 28, marginTop: 8, marginBottom: 24, textAlign: rtl ? 'right' : 'left' }}
       >
         {t('settings.title', locale)}
       </AppText>
@@ -116,7 +115,7 @@ export default function Settings() {
         <AppText
           testID="settings-email"
           className="text-ink"
-          style={{ fontSize: 15, marginTop: 10 }}
+          style={{ fontSize: 15, marginTop: 10, textAlign: rtl ? 'right' : 'left' }}
         >
           {user?.email ?? '—'}
         </AppText>
@@ -125,7 +124,7 @@ export default function Settings() {
       {/* ── LANGUAGE ───────────────────────────────────────────────────────── */}
       <Card className="mb-4">
         <SectionLabel>{t('settings.language', locale)}</SectionLabel>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+        <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10, marginTop: 12 }}>
           <Pill
             testID="locale-en"
             label={t('settings.langEnglish', locale)}
@@ -146,7 +145,7 @@ export default function Settings() {
         <SectionLabel>{t('sms_capture', locale)}</SectionLabel>
         <AppText
           className="text-ink2"
-          style={{ fontSize: 14, marginTop: 10, marginBottom: 16, lineHeight: 20 }}
+          style={{ fontSize: 14, marginTop: 10, marginBottom: 16, lineHeight: 20, textAlign: rtl ? 'right' : 'left' }}
         >
           {t('sms_token_intro', locale)}
         </AppText>
@@ -235,7 +234,7 @@ export default function Settings() {
             </AppText>
           </TouchableOpacity>
         ) : (
-          <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10 }}>
             <TouchableOpacity
               disabled={busy}
               testID="regen-token"
@@ -285,7 +284,7 @@ export default function Settings() {
           testID="shortcut-guide-toggle"
           onPress={() => setGuideOpen((o) => !o)}
           style={{
-            flexDirection: 'row',
+            flexDirection: rtl ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             marginTop: 16,
@@ -308,7 +307,7 @@ export default function Settings() {
             <AppText
               weight="semibold"
               className="text-ink"
-              style={{ fontSize: 13, marginBottom: 4 }}
+              style={{ fontSize: 13, marginBottom: 4, textAlign: rtl ? 'right' : 'left' }}
             >
               {locale === 'ar' ? 'الخطوات:' : 'Steps:'}
             </AppText>
@@ -330,7 +329,7 @@ export default function Settings() {
                   '6. In the JSON body, replace <Shortcut Input> with the "Shortcut Input" magic variable and <token> with your token',
                 ]
             ).map((step, i) => (
-              <AppText key={i} className="text-ink2" style={{ fontSize: 12, lineHeight: 19 }}>
+              <AppText key={i} className="text-ink2" style={{ fontSize: 12, lineHeight: 19, textAlign: rtl ? 'right' : 'left' }}>
                 {step}
               </AppText>
             ))}
@@ -362,7 +361,7 @@ export default function Settings() {
                 <AppText
                   weight="semibold"
                   className="text-ink3"
-                  style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}
+                  style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, textAlign: rtl ? 'right' : 'left' }}
                 >
                   {f.label}
                 </AppText>
@@ -373,29 +372,32 @@ export default function Settings() {
                     fontSize: 11,
                     color: '#F4F7F5',
                     lineHeight: 17,
+                    textAlign: rtl ? 'right' : 'left',
                   }}
                 >
                   {f.value}
                 </AppText>
-                <TouchableOpacity
-                  testID={`copy-${f.key}`}
-                  onPress={() => copyField(f.key, f.value)}
-                  style={{
-                    alignSelf: 'flex-start',
-                    backgroundColor: 'rgba(43,217,142,0.16)',
-                    borderRadius: 999,
-                    paddingHorizontal: 12,
-                    paddingVertical: 5,
-                  }}
-                >
-                  <AppText
-                    weight="semibold"
-                    className="text-accent"
-                    style={{ fontSize: 11 }}
+                <View style={{ flexDirection: rtl ? 'row-reverse' : 'row' }}>
+                  <TouchableOpacity
+                    testID={`copy-${f.key}`}
+                    onPress={() => copyField(f.key, f.value)}
+                    style={{
+                      alignSelf: 'flex-start',
+                      backgroundColor: 'rgba(43,217,142,0.16)',
+                      borderRadius: 999,
+                      paddingHorizontal: 12,
+                      paddingVertical: 5,
+                    }}
                   >
-                    {t(copiedField === f.key ? 'copied' : 'copy', locale)}
-                  </AppText>
-                </TouchableOpacity>
+                    <AppText
+                      weight="semibold"
+                      className="text-accent"
+                      style={{ fontSize: 11 }}
+                    >
+                      {t(copiedField === f.key ? 'copied' : 'copy', locale)}
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>
