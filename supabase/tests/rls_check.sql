@@ -117,4 +117,57 @@ end $$;
 
 reset role;
 
+-- ===========================================================================
+-- ingest_tokens RLS isolation checks (Phase 2)
+-- ===========================================================================
+
+-- Seed a token owned by user A (inserted as superuser, bypasses RLS).
+insert into public.ingest_tokens (user_id, token_hash, label)
+values ('00000000-0000-0000-0000-00000000000a', 'aaaa1111bbbb2222cccc3333dddd4444eeee5555ffff6666aaaa1111bbbb2222', 'test-token-a');
+
+-- ---- Impersonate user B: cannot SELECT user A's ingest_tokens ----
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000b","role":"authenticated"}';
+
+do $$
+declare visible int;
+begin
+  select count(*) into visible from public.ingest_tokens;
+  assert visible = 0,
+    format('FAIL: user B can see %s of user A''s ingest_tokens (expected 0)', visible);
+  raise notice 'PASS: user B sees 0 of user A''s ingest_tokens';
+end $$;
+
+-- ---- WRITE isolation: user B cannot INSERT forging user A's user_id ----
+do $$
+begin
+  begin
+    insert into public.ingest_tokens (user_id, token_hash)
+    values (
+      '00000000-0000-0000-0000-00000000000a',
+      'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef'
+    );
+    raise exception 'FAIL: user B could forge an ingest_tokens INSERT with user A''s user_id';
+  exception when others then
+    raise notice 'PASS: user B INSERT forging user A user_id in ingest_tokens was denied';
+  end;
+end $$;
+
+reset role;
+
+-- ---- Confirm user A sees their own token ----
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}';
+
+do $$
+declare visible int;
+begin
+  select count(*) into visible from public.ingest_tokens;
+  assert visible = 1,
+    format('FAIL: user A sees %s of their own ingest_tokens (expected 1)', visible);
+  raise notice 'PASS: user A sees their own 1 ingest_token';
+end $$;
+
+reset role;
+
 rollback;  -- leave the DB clean
