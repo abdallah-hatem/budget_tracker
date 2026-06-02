@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { PendingProvider, usePendingContext } from '@/src/features/transactions/PendingProvider';
+import { FloatingTabBar } from '@/src/ui/FloatingTabBar';
 
 function TabsInner() {
   const { profile } = useSession();
@@ -10,7 +11,14 @@ function TabsInner() {
   const { count: pendingCount } = usePendingContext();
 
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: '#2563eb', headerShown: false }}>
+    <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+        // Prevent white flash between screens — match canvas colour
+        sceneStyle: { backgroundColor: '#0B0F0E' },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -33,6 +41,7 @@ function TabsInner() {
         name="pending"
         options={{
           title: t('pending_title', locale),
+          // The custom bar handles the badge; keep native badge for fallback
           tabBarBadge: pendingCount || undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="mail-unread-outline" color={color} size={size} />

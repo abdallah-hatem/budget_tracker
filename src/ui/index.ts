@@ -32,3 +32,5 @@ export type { PrimaryButtonProps } from './PrimaryButton';
 
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
+
+export { FloatingTabBar } from './FloatingTabBar';
