@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,15 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
 import { usePendingContext } from '../../src/features/transactions/PendingProvider';
 import { updateTransaction, deleteTransaction } from '../../src/features/transactions/api';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import { categoryLabel, formatAmount } from '../../src/features/transactions/display';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { t, isRTL } from '../../src/lib/i18n';
+import { Screen, Card, CategoryAvatar, EmptyState } from '../../src/ui';
+import { FONT } from '../../src/lib/font';
 import type { Transaction } from '../../src/types';
 
 export default function PendingScreen() {
@@ -40,102 +40,269 @@ export default function PendingScreen() {
     void refresh();
   }
 
+  const pendingCount = data?.length ?? 0;
+
   return (
-    <SafeAreaView className="flex-1 bg-white" style={{ direction: dir }}>
-      <View className="p-4">
-        <Text className="text-xl font-bold text-gray-900">{t('pending_title', locale)}</Text>
+    <Screen padded={false}>
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
+        <View
+          style={{
+            flexDirection: rtl ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: FONT.jakartaB,
+              fontSize: 28,
+              color: '#F4F7F5',
+            }}
+          >
+            {t('pending_title', locale)}
+          </Text>
+          {pendingCount > 0 && (
+            <View
+              style={{
+                backgroundColor: '#2BD98E',
+                borderRadius: 999,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                minWidth: 24,
+                alignItems: 'center',
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: FONT.soraSb,
+                  fontSize: 12,
+                  color: '#06251A',
+                  fontVariant: ['tabular-nums', 'lining-nums'],
+                }}
+              >
+                {pendingCount}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
-      <FlatList
-        data={data}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, gap: 8 }}
-        ListEmptyComponent={
-          loading ? null : (
-            <Text className="text-center text-sm text-gray-400 mt-8">
-              {t('pending_empty', locale)}
-            </Text>
-          )
-        }
-        renderItem={({ item }) => (
-          <View
-            testID={`pending-row-${item.id}`}
-            className="rounded-lg border border-gray-100 px-3 py-3 gap-2"
-          >
-            {/* Top row: category + signed amount */}
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-medium text-gray-900">
-                {categoryLabel(item.category_slug, locale)}
-              </Text>
-              <Text
-                className={`text-sm font-semibold ${item.type === 'income' ? 'text-green-600' : 'text-red-600'}`}
+      {/* ── List ───────────────────────────────────────────────────── */}
+      {!loading && pendingCount === 0 ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <EmptyState
+            emoji="📥"
+            title={t('pending_empty', locale)}
+            subtitle="Nothing to review"
+          />
+        </View>
+      ) : (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 128, gap: 12 }}
+          renderItem={({ item }) => (
+            <Card testID={`pending-row-${item.id}`}>
+              {/* ── Transaction row: avatar + details + amount ── */}
+              <View
+                style={{
+                  flexDirection: rtl ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
               >
-                {item.type === 'income' ? '+' : '-'}
-                {formatAmount(item.amount, locale)}
-              </Text>
-            </View>
+                <CategoryAvatar slug={item.category_slug} />
 
-            {/* Note */}
-            {item.note ? (
-              <Text className="text-xs text-gray-600">{item.note}</Text>
-            ) : null}
+                <View
+                  style={{
+                    flex: 1,
+                    alignItems: rtl ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT.jakartaSb,
+                      fontSize: 16,
+                      color: '#F4F7F5',
+                      textAlign: rtl ? 'right' : 'left',
+                    }}
+                    numberOfLines={1}
+                  >
+                    {item.note && item.note.trim().length > 0
+                      ? item.note
+                      : categoryLabel(item.category_slug, locale)}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: FONT.jakartaMd,
+                      fontSize: 13,
+                      color: '#A8B2AF',
+                      marginTop: 2,
+                    }}
+                  >
+                    {categoryLabel(item.category_slug, locale)}
+                  </Text>
+                </View>
 
-            {/* Raw SMS text */}
-            {item.raw_text ? (
-              <Text className="text-xs text-gray-400" numberOfLines={2}>
-                {item.raw_text}
-              </Text>
-            ) : null}
-
-            {/* via SMS tag */}
-            <View className="flex-row">
-              <View className="rounded-full bg-blue-50 px-2 py-0.5">
-                <Text className="text-xs text-blue-600">{t('via_sms', locale)}</Text>
+                {/* Amount */}
+                <Text
+                  style={{
+                    fontFamily: FONT.soraSb,
+                    fontSize: 16,
+                    color: item.type === 'income' ? '#2BD98E' : '#F4F7F5',
+                    fontVariant: ['tabular-nums', 'lining-nums'],
+                    writingDirection: dir,
+                  }}
+                >
+                  {item.type === 'income' ? '+' : '-'}
+                  {formatAmount(item.amount, locale)}
+                </Text>
               </View>
-            </View>
 
-            {/* Actions */}
-            <View className="flex-row gap-2 pt-1">
-              <Pressable
-                testID={`pending-confirm-${item.id}`}
-                onPress={() => handleConfirm(item.id)}
-                className="flex-1 rounded-lg bg-green-50 px-3 py-2"
-              >
-                <Text className="text-center text-xs font-medium text-green-700">
-                  {t('confirm', locale)}
-                </Text>
-              </Pressable>
-              <Pressable
-                testID={`pending-edit-${item.id}`}
-                onPress={() => setEditing(item)}
-                className="flex-1 rounded-lg bg-gray-100 px-3 py-2"
-              >
-                <Text className="text-center text-xs font-medium text-gray-700">
-                  {t('edit', locale)}
-                </Text>
-              </Pressable>
-              <Pressable
-                testID={`pending-reject-${item.id}`}
-                onPress={() => handleReject(item.id)}
-                className="flex-1 rounded-lg bg-red-50 px-3 py-2"
-              >
-                <Text className="text-center text-xs font-medium text-red-600">
-                  {t('reject', locale)}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-      />
+              {/* ── via SMS pill + raw text ── */}
+              <View style={{ marginTop: 10, gap: 6 }}>
+                {/* via SMS chip */}
+                <View style={{ flexDirection: rtl ? 'row-reverse' : 'row' }}>
+                  <View
+                    style={{
+                      borderRadius: 999,
+                      backgroundColor: 'rgba(43,217,142,0.1)',
+                      paddingHorizontal: 10,
+                      paddingVertical: 3,
+                      alignSelf: 'flex-start',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: FONT.jakartaMd,
+                        fontSize: 11,
+                        color: '#2BD98E',
+                        letterSpacing: 0.3,
+                      }}
+                    >
+                      {t('via_sms', locale)}
+                    </Text>
+                  </View>
+                </View>
 
-      {/* Edit sheet modal */}
+                {/* Raw SMS text */}
+                {item.raw_text ? (
+                  <Text
+                    style={{
+                      fontFamily: FONT.jakarta,
+                      fontSize: 12,
+                      color: '#6B7672',
+                      lineHeight: 18,
+                      textAlign: rtl ? 'right' : 'left',
+                    }}
+                    numberOfLines={2}
+                  >
+                    {item.raw_text}
+                  </Text>
+                ) : null}
+              </View>
+
+              {/* ── Divider ── */}
+              <View
+                style={{ height: 1, backgroundColor: '#2A3331', marginVertical: 12 }}
+              />
+
+              {/* ── Action buttons ── */}
+              <View
+                style={{
+                  flexDirection: rtl ? 'row-reverse' : 'row',
+                  gap: 8,
+                }}
+              >
+                {/* Confirm */}
+                <Pressable
+                  testID={`pending-confirm-${item.id}`}
+                  onPress={() => handleConfirm(item.id)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    borderRadius: 12,
+                    paddingVertical: 10,
+                    alignItems: 'center',
+                    backgroundColor: pressed ? '#1FB877' : '#2BD98E',
+                    opacity: pressed ? 0.9 : 1,
+                  })}
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT.jakartaSb,
+                      fontSize: 13,
+                      color: '#06251A',
+                    }}
+                  >
+                    {t('confirm', locale)}
+                  </Text>
+                </Pressable>
+
+                {/* Edit */}
+                <Pressable
+                  testID={`pending-edit-${item.id}`}
+                  onPress={() => setEditing(item)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    borderRadius: 12,
+                    paddingVertical: 10,
+                    alignItems: 'center',
+                    backgroundColor: pressed ? '#2A3331' : '#1C2322',
+                  })}
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT.jakartaSb,
+                      fontSize: 13,
+                      color: '#A8B2AF',
+                    }}
+                  >
+                    {t('edit', locale)}
+                  </Text>
+                </Pressable>
+
+                {/* Reject */}
+                <Pressable
+                  testID={`pending-reject-${item.id}`}
+                  onPress={() => handleReject(item.id)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    borderRadius: 12,
+                    paddingVertical: 10,
+                    alignItems: 'center',
+                    backgroundColor: pressed ? 'rgba(255,92,108,0.2)' : 'rgba(255,92,108,0.1)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,92,108,0.4)',
+                  })}
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT.jakartaSb,
+                      fontSize: 13,
+                      color: '#FF5C6C',
+                    }}
+                  >
+                    {t('reject', locale)}
+                  </Text>
+                </Pressable>
+              </View>
+            </Card>
+          )}
+        />
+      )}
+
+      {/* ── Edit sheet modal ────────────────────────────────────────── */}
       <Modal
         visible={editing !== null}
         transparent
         animationType="slide"
         onRequestClose={() => setEditing(null)}
       >
-        <Pressable className="flex-1 justify-end bg-black/40" onPress={() => setEditing(null)}>
+        <Pressable
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
+          onPress={() => setEditing(null)}
+        >
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <Pressable onPress={() => {}}>
               {editing ? (
@@ -154,6 +321,6 @@ export default function PendingScreen() {
           </KeyboardAvoidingView>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </Screen>
   );
 }

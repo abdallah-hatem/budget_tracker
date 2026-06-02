@@ -6,6 +6,7 @@ export interface PillProps {
   label: string;
   active?: boolean;
   onPress?: PressableProps['onPress'];
+  testID?: string;
 }
 
 /**
@@ -13,9 +14,10 @@ export interface PillProps {
  * Active: accentSoft background + accent text.
  * Inactive: surface background + ink2 text.
  */
-export function Pill({ label, active = false, onPress }: PillProps) {
+export function Pill({ label, active = false, onPress, testID }: PillProps) {
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       style={({ pressed }) => ({
         paddingHorizontal: 16,
