@@ -170,4 +170,58 @@ end $$;
 
 reset role;
 
+-- ===========================================================================
+-- push_tokens RLS isolation checks (Phase 2 notifications)
+-- ===========================================================================
+
+-- Seed a push token owned by user A (inserted as superuser, bypasses RLS).
+insert into public.push_tokens (user_id, token, platform)
+values ('00000000-0000-0000-0000-00000000000a', 'ExponentPushToken[test-token-aaa]', 'ios');
+
+-- ---- Impersonate user B: cannot SELECT user A's push_tokens ----
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000b","role":"authenticated"}';
+
+do $$
+declare visible int;
+begin
+  select count(*) into visible from public.push_tokens;
+  assert visible = 0,
+    format('FAIL: user B can see %s of user A''s push_tokens (expected 0)', visible);
+  raise notice 'PASS: user B sees 0 of user A''s push_tokens';
+end $$;
+
+-- ---- WRITE isolation: user B cannot INSERT forging user A's user_id ----
+do $$
+begin
+  begin
+    insert into public.push_tokens (user_id, token, platform)
+    values (
+      '00000000-0000-0000-0000-00000000000a',
+      'ExponentPushToken[forge-attempt]',
+      'android'
+    );
+    raise exception 'FAIL: user B could forge a push_tokens INSERT with user A''s user_id';
+  exception when others then
+    raise notice 'PASS: user B INSERT forging user A user_id in push_tokens was denied';
+  end;
+end $$;
+
+reset role;
+
+-- ---- Confirm user A sees their own push token ----
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}';
+
+do $$
+declare visible int;
+begin
+  select count(*) into visible from public.push_tokens;
+  assert visible = 1,
+    format('FAIL: user A sees %s of their own push_tokens (expected 1)', visible);
+  raise notice 'PASS: user A sees their own 1 push_token';
+end $$;
+
+reset role;
+
 rollback;  -- leave the DB clean
