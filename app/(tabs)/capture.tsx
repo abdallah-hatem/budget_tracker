@@ -1,13 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   Pressable,
-  ActivityIndicator,
-  ScrollView,
+  Text,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { MotiView } from 'moti';
+import * as Haptics from 'expo-haptics';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { useSpeechRecognition } from '../../src/hooks/useSpeechRecognition';
 import { requestCategorize } from '../../src/features/capture/categorizeClient';
@@ -16,8 +15,17 @@ import {
   insertTransaction,
   deleteTransaction,
 } from '../../src/features/transactions/api';
-import { categoryLabel, formatAmount } from '../../src/features/transactions/display';
+import { categoryLabel } from '../../src/features/transactions/display';
 import type { Locale, Transaction, TxnSource } from '../../src/types';
+import {
+  Screen,
+  Card,
+  AppText,
+  Money,
+  CategoryAvatar,
+  SectionLabel,
+} from '@/src/ui';
+import { FONT } from '@/src/lib/font';
 
 // Map a UI locale to a default STT BCP-47 tag.
 function sttLocale(locale: Locale): string {
@@ -27,9 +35,21 @@ function sttLocale(locale: Locale): string {
 // Below this LLM confidence we still auto-save, but flag the entry for a glance.
 const LOW_CONFIDENCE = 0.6;
 
+// Design tokens
+const ACCENT = '#2BD98E';
+const SURFACE = '#14191A';
+const OVERLAY = '#1C2322';
+const INK = '#F4F7F5';
+const INK2 = '#A8B2AF';
+const INK3 = '#6B7672';
+const DANGER = '#FF5C6C';
+const ACCENT_SOFT = 'rgba(43,217,142,0.16)';
+const WARNING = '#F5B544';
+
 export default function CaptureScreen() {
   const { user, profile } = useSession();
   const locale: Locale = (profile?.locale as Locale) ?? 'en';
+  const isRTL = locale === 'ar';
 
   const { transcript, isListening, supported, error: sttError, start, stop } =
     useSpeechRecognition();
@@ -59,6 +79,11 @@ export default function CaptureScreen() {
       stop();
     } else {
       setError(null);
+      try {
+        Haptics.selectionAsync();
+      } catch {
+        // haptics optional
+      }
       start(sttLocale(locale));
     }
   };
@@ -89,6 +114,11 @@ export default function CaptureScreen() {
       const row = await insertTransaction(
         buildCaptureRow({ ...parsed, amount }, value, src, user.id, 'confirmed'),
       );
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        // haptics optional
+      }
       setLastSaved(row);
       setText('');
       setSource('text');
@@ -116,150 +146,341 @@ export default function CaptureScreen() {
   const savedLow = saved?.confidence != null && saved.confidence < LOW_CONFIDENCE;
   const savedIncome = saved?.type === 'income';
 
-  return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-    <ScrollView
-      className="flex-1 bg-gray-50"
-      contentContainerClassName="p-4 pb-24"
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      automaticallyAdjustKeyboardInsets
-    >
-      <Text className="mb-4 text-2xl font-bold">
-        {locale === 'ar' ? 'تسجيل معاملة' : 'Capture'}
-      </Text>
+  const isEmpty = !text.trim();
 
-      {/* Mic */}
-      <Pressable
-        testID="capture-mic"
-        onPress={toggleMic}
-        disabled={!supported}
-        className={`mb-4 items-center justify-center rounded-2xl py-8 ${
-          !supported ? 'bg-gray-300' : isListening ? 'bg-red-500' : 'bg-black'
-        }`}
-      >
-        <Text className="text-lg text-white">
+  return (
+    <Screen scroll padded>
+      {/* Header */}
+      <View style={{ marginTop: 8, marginBottom: 32 }}>
+        <Text
+          style={{
+            fontFamily: isRTL ? FONT.readexSb : FONT.sora,
+            fontSize: 28,
+            color: INK,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {isRTL ? 'إضافة' : 'Add'}
+        </Text>
+        <Text
+          style={{
+            fontFamily: isRTL ? FONT.readex : FONT.jakarta,
+            fontSize: 14,
+            color: INK3,
+            marginTop: 4,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {isRTL ? 'سجّل معاملتك بصوتك أو كتابةً' : 'Voice or type to capture a transaction'}
+        </Text>
+      </View>
+
+      {/* Mic button — centered, prominent */}
+      <View style={{ alignItems: 'center', marginBottom: 32 }}>
+        <Pressable
+          testID="capture-mic"
+          onPress={toggleMic}
+          disabled={!supported}
+          style={({ pressed }) => ({
+            width: 88,
+            height: 88,
+            borderRadius: 44,
+            backgroundColor: !supported
+              ? SURFACE
+              : isListening
+                ? ACCENT
+                : OVERLAY,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.85 : 1,
+            // Emerald ring when listening
+            shadowColor: isListening ? ACCENT : 'transparent',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: isListening ? 0.55 : 0,
+            shadowRadius: isListening ? 20 : 0,
+            elevation: isListening ? 12 : 0,
+          })}
+        >
+          <Text style={{ fontSize: 32 }}>
+            {isListening ? '🔴' : '🎤'}
+          </Text>
+        </Pressable>
+
+        <Text
+          style={{
+            fontFamily: isRTL ? FONT.readex : FONT.jakartaMd,
+            fontSize: 13,
+            color: !supported ? INK3 : isListening ? ACCENT : INK2,
+            marginTop: 12,
+            textAlign: 'center',
+          }}
+        >
           {!supported
-            ? locale === 'ar'
-              ? '🎤 الصوت يتطلب نسخة تطوير — اكتب بدلاً من ذلك'
-              : '🎤 Voice needs a dev build — type instead'
+            ? isRTL
+              ? 'Voice needs a dev build — type instead'
+              : 'Voice needs a dev build — type instead'
             : isListening
-              ? locale === 'ar'
+              ? isRTL
                 ? '● استماع… اضغط للإيقاف'
                 : '● Listening… tap to stop'
-              : locale === 'ar'
-                ? '🎤 اضغط للتحدث'
-                : '🎤 Tap to speak'}
+              : isRTL
+                ? 'اضغط للتحدث'
+                : 'Tap to speak'}
         </Text>
-      </Pressable>
+      </View>
 
+      {/* STT error */}
       {sttError ? (
-        <Text testID="capture-stt-error" className="mb-2 text-red-600">
+        <Text
+          testID="capture-stt-error"
+          style={{
+            fontFamily: isRTL ? FONT.readex : FONT.jakarta,
+            fontSize: 13,
+            color: DANGER,
+            marginBottom: 12,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
           {sttError}
         </Text>
       ) : null}
 
-      {/* Text box */}
-      <TextInput
-        testID="capture-text"
-        value={text}
-        onChangeText={(v) => {
-          setText(v);
-          setSource('text');
-        }}
-        placeholder={
-          locale === 'ar'
-            ? 'اكتب أو تحدث… مثل: قهوة بـ ٥٠ جنيه'
-            : 'Type or speak… e.g. coffee 50 EGP'
-        }
-        multiline
-        className="mb-4 min-h-24 rounded-xl border border-gray-300 bg-white p-3 text-base"
-        style={{ textAlign: locale === 'ar' ? 'right' : 'left' }}
-      />
+      {/* Text input — clean pill */}
+      <View style={{ marginBottom: 16 }}>
+        <SectionLabel>{isRTL ? 'أو اكتب هنا' : 'or type below'}</SectionLabel>
+        <View
+          style={{
+            marginTop: 8,
+            backgroundColor: SURFACE,
+            borderRadius: 16,
+            paddingHorizontal: 16,
+            paddingVertical: 4,
+            minHeight: 56,
+            justifyContent: 'center',
+          }}
+        >
+          <TextInput
+            testID="capture-text"
+            value={text}
+            onChangeText={(v) => {
+              setText(v);
+              setSource('text');
+            }}
+            placeholder={
+              isRTL
+                ? 'اكتب… مثل: قهوة بـ ٥٠ جنيه'
+                : 'e.g. coffee 50 EGP, salary 8000'
+            }
+            placeholderTextColor={INK3}
+            multiline
+            style={{
+              fontFamily: isRTL ? FONT.readex : FONT.jakarta,
+              fontSize: 16,
+              color: INK,
+              textAlign: isRTL ? 'right' : 'left',
+              paddingVertical: 12,
+              lineHeight: 22,
+            }}
+          />
+        </View>
+      </View>
 
+      {/* Add button */}
       <Pressable
         testID="capture-categorize"
         onPress={onCategorize}
-        disabled={loading || !text.trim()}
-        className={`mb-4 items-center rounded-xl py-3 ${
-          !text.trim() ? 'bg-gray-300' : 'bg-blue-600'
-        }`}
+        disabled={isEmpty || loading}
+        style={({ pressed }) => ({
+          marginBottom: 16,
+          backgroundColor: isEmpty || loading ? '#1FB877' : ACCENT,
+          borderRadius: 16,
+          paddingVertical: 16,
+          alignItems: 'center' as const,
+          justifyContent: 'center' as const,
+          opacity: isEmpty ? 0.5 : pressed ? 0.88 : 1,
+          shadowColor: (!isEmpty && !loading) ? ACCENT : 'transparent',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: (!isEmpty && !loading) ? 0.3 : 0,
+          shadowRadius: 12,
+          elevation: (!isEmpty && !loading) ? 6 : 0,
+        })}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" />
+          <AppText
+            weight="semibold"
+            style={{ fontSize: 16, color: '#06251A' }}
+          >
+            {'…'}
+          </AppText>
         ) : (
-          <Text className="text-base font-semibold text-white">
-            {locale === 'ar' ? 'إضافة' : 'Add'}
+          <Text
+            style={{
+              fontFamily: isRTL ? FONT.readexSb : FONT.jakartaSb,
+              fontSize: 16,
+              color: '#06251A',
+            }}
+          >
+            {isRTL ? 'إضافة' : 'Add'}
           </Text>
         )}
       </Pressable>
 
+      {/* Capture error */}
       {error ? (
-        <Text testID="capture-error" className="mb-2 text-red-600">
+        <Text
+          testID="capture-error"
+          style={{
+            fontFamily: isRTL ? FONT.readex : FONT.jakarta,
+            fontSize: 13,
+            color: DANGER,
+            marginBottom: 16,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
           {error}
         </Text>
       ) : null}
 
-      {/* Auto-added confirmation — your glance-able review + Undo. */}
+      {/* Saved banner — sleek card with fade/scale-in */}
       {saved ? (
-        <View
+        <MotiView
           testID="capture-saved"
-          className={`mb-4 rounded-xl border p-3 ${
-            savedLow ? 'border-amber-300 bg-amber-50' : 'border-green-200 bg-green-50'
-          }`}
-          style={{ direction: locale === 'ar' ? 'rtl' : 'ltr' }}
+          from={{ opacity: 0, scale: 0.96, translateY: 8 }}
+          animate={{ opacity: 1, scale: 1, translateY: 0 }}
+          transition={{ type: 'spring', damping: 18, stiffness: 260 }}
+          style={{ marginBottom: 24 }}
         >
-          <Text
-            className={`text-base font-semibold ${
-              savedLow ? 'text-amber-800' : 'text-green-800'
-            }`}
+          <Card
+            style={{
+              backgroundColor: savedLow
+                ? 'rgba(245,181,68,0.08)'
+                : ACCENT_SOFT,
+              borderRadius: 20,
+            }}
           >
-            {savedLow
-              ? locale === 'ar'
-                ? '⚠ تحقق من هذه'
-                : '⚠ Check this'
-              : locale === 'ar'
-                ? '✓ تمت الإضافة'
-                : '✓ Added'}
-          </Text>
-
-          <Text className="mt-1">
-            <Text className="text-gray-800">
-              {categoryLabel(saved.category_slug, locale)}
-            </Text>
-            <Text className="text-gray-400">{'   ·   '}</Text>
-            <Text
-              className={`font-semibold ${
-                savedIncome ? 'text-green-700' : 'text-red-600'
-              }`}
+            {/* Status line */}
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                marginBottom: 12,
+              }}
             >
-              {(savedIncome ? '+' : '-') + formatAmount(saved.amount, locale)}
-            </Text>
-          </Text>
-
-          {saved.note ? (
-            <Text className="mt-0.5 text-gray-600">{saved.note}</Text>
-          ) : null}
-
-          <View className="mt-2 flex-row items-center gap-3">
-            <Pressable
-              testID="capture-undo"
-              onPress={undoLast}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5"
-            >
-              <Text className="text-gray-800">
-                {locale === 'ar' ? 'تراجع' : 'Undo'}
+              <Text style={{ fontSize: 18, marginRight: isRTL ? 0 : 8, marginLeft: isRTL ? 8 : 0 }}>
+                {savedLow ? '⚠️' : '✓'}
               </Text>
-            </Pressable>
-            <Text className="flex-1 text-xs text-gray-500">
-              {locale === 'ar'
-                ? 'خطأ؟ عدّله من تبويب المعاملات'
-                : 'Wrong? Edit it in the Transactions tab'}
-            </Text>
-          </View>
-        </View>
+              <Text
+                style={{
+                  fontFamily: isRTL ? FONT.readexSb : FONT.jakartaSb,
+                  fontSize: 15,
+                  color: savedLow ? WARNING : ACCENT,
+                }}
+              >
+                {savedLow
+                  ? isRTL
+                    ? 'تحقق من هذه'
+                    : 'Check this'
+                  : isRTL
+                    ? 'تمت الإضافة'
+                    : 'Added'}
+              </Text>
+            </View>
+
+            {/* Category + amount row */}
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: 12,
+                marginBottom: saved.note ? 10 : 14,
+              }}
+            >
+              <CategoryAvatar slug={saved.category_slug} size={44} />
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text
+                  style={{
+                    fontFamily: isRTL ? FONT.readexSb : FONT.jakartaSb,
+                    fontSize: 15,
+                    color: INK,
+                    textAlign: isRTL ? 'right' : 'left',
+                  }}
+                >
+                  {categoryLabel(saved.category_slug, locale)}
+                </Text>
+                <Money
+                  amount={saved.amount}
+                  sign={savedIncome ? 'always' : 'none'}
+                  tone={savedIncome ? 'accent' : 'ink'}
+                  size={15}
+                />
+              </View>
+            </View>
+
+            {/* Note */}
+            {saved.note ? (
+              <Text
+                style={{
+                  fontFamily: isRTL ? FONT.readex : FONT.jakarta,
+                  fontSize: 13,
+                  color: INK2,
+                  marginBottom: 14,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {saved.note}
+              </Text>
+            ) : null}
+
+            {/* Undo + hint */}
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <Pressable
+                testID="capture-undo"
+                onPress={undoLast}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 16,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  backgroundColor: pressed
+                    ? 'rgba(244,247,245,0.12)'
+                    : 'rgba(244,247,245,0.08)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(244,247,245,0.16)',
+                })}
+              >
+                <Text
+                  style={{
+                    fontFamily: isRTL ? FONT.readexMd : FONT.jakartaMd,
+                    fontSize: 13,
+                    color: INK,
+                  }}
+                >
+                  {isRTL ? 'تراجع' : 'Undo'}
+                </Text>
+              </Pressable>
+
+              <Text
+                style={{
+                  flex: 1,
+                  fontFamily: isRTL ? FONT.readex : FONT.jakarta,
+                  fontSize: 12,
+                  color: INK3,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {isRTL
+                  ? 'خطأ؟ عدّله من تبويب المعاملات'
+                  : 'Wrong? Edit it in the Transactions tab'}
+              </Text>
+            </View>
+          </Card>
+        </MotiView>
       ) : null}
-    </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
