@@ -48,3 +48,65 @@ create table public.transactions (
 -- Indexes tuned for the dashboard (per-user time window) and category filtering.
 create index transactions_user_occurred_idx on public.transactions (user_id, occurred_at desc);
 create index transactions_user_category_idx on public.transactions (user_id, category_slug);
+
+-- ---------------------------------------------------------------------------
+-- Row-Level Security
+-- ---------------------------------------------------------------------------
+
+-- profiles: owner-only, keyed on id ( = auth.uid() )
+alter table public.profiles enable row level security;
+
+create policy "profiles_select_own"
+  on public.profiles for select
+  to authenticated
+  using ( (select auth.uid()) = id );
+
+create policy "profiles_insert_own"
+  on public.profiles for insert
+  to authenticated
+  with check ( (select auth.uid()) = id );
+
+create policy "profiles_update_own"
+  on public.profiles for update
+  to authenticated
+  using ( (select auth.uid()) = id )
+  with check ( (select auth.uid()) = id );
+
+create policy "profiles_delete_own"
+  on public.profiles for delete
+  to authenticated
+  using ( (select auth.uid()) = id );
+
+-- transactions: owner-only, keyed on user_id
+alter table public.transactions enable row level security;
+
+create policy "transactions_select_own"
+  on public.transactions for select
+  to authenticated
+  using ( (select auth.uid()) = user_id );
+
+create policy "transactions_insert_own"
+  on public.transactions for insert
+  to authenticated
+  with check ( (select auth.uid()) = user_id );
+
+create policy "transactions_update_own"
+  on public.transactions for update
+  to authenticated
+  using ( (select auth.uid()) = user_id )
+  with check ( (select auth.uid()) = user_id );
+
+create policy "transactions_delete_own"
+  on public.transactions for delete
+  to authenticated
+  using ( (select auth.uid()) = user_id );
+
+-- categories: global read-only reference data.
+-- RLS on with a permissive SELECT for anon + authenticated, and NO write policy
+-- (so reads work for everyone, writes are denied to all client roles).
+alter table public.categories enable row level security;
+
+create policy "categories_select_all"
+  on public.categories for select
+  to anon, authenticated
+  using ( true );
