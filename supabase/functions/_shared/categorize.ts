@@ -1,8 +1,7 @@
-// Shared categorization core. Calls Claude `claude-haiku-4-5` with a single
-// strict tool `record_transaction`, then maps the parsed tool_use.input to a
-// ParsedTransaction. Designed with an injectable `createMessage` transport so
-// unit tests can supply a fake response (no network, no API key).
-import Anthropic from "npm:@anthropic-ai/sdk@0.69.0";
+// Shared categorization core. Calls Groq's OpenAI-compatible Chat Completions
+// API in JSON mode, then maps the returned JSON object to a ParsedTransaction.
+// Designed with an injectable `createCompletion` transport so unit tests can
+// supply a fake response (no network, no API key).
 import { CATEGORY_SLUGS, FALLBACK_EXPENSE_SLUG, FALLBACK_INCOME_SLUG } from "./categories.ts";
 
 // --- Local mirrors of M2 shared types (Deno cannot import from src/). ---
@@ -21,143 +20,88 @@ export interface ParsedTransaction {
   occurred_at?: string;
 }
 
-// --- Minimal structural shape of the Anthropic Messages response we rely on. ---
-// We intentionally type only the fields we read so a fake response in tests is
-// trivial to construct.
-export interface AnthropicToolUseBlock {
-  type: "tool_use";
-  id: string;
-  name: string;
-  input: Record<string, unknown>;
-}
-export interface AnthropicTextBlock {
-  type: "text";
-  text: string;
-}
-export type AnthropicContentBlock =
-  | AnthropicToolUseBlock
-  | AnthropicTextBlock
-  | { type: string; [k: string]: unknown };
-
-export interface AnthropicMessageResponse {
-  id: string;
-  type: "message";
-  role: "assistant";
-  stop_reason: string | null;
-  content: AnthropicContentBlock[];
+// --- Minimal structural shape of the OpenAI-compatible chat completion we read.
+// We type only the fields we use so a fake response in tests is trivial.
+export interface ChatCompletionResponse {
+  id?: string;
+  choices: Array<{
+    index?: number;
+    finish_reason?: string;
+    message: { role: string; content: string | null };
+  }>;
 }
 
-// The request body we hand to the transport (loosely typed: it is Anthropic's
-// MessageCreateParams, but we keep it `Record` so tests can introspect it).
-export type CreateMessage = (
+// The request body handed to the transport (loosely typed so tests can introspect).
+export type CreateCompletion = (
   body: Record<string, unknown>,
-) => Promise<AnthropicMessageResponse>;
+) => Promise<ChatCompletionResponse>;
 
 export interface CategorizeOptions {
-  /** Inject a fake transport in tests. Defaults to the real Anthropic SDK. */
-  createMessage?: CreateMessage;
+  /** Inject a fake transport in tests. Defaults to a real fetch to Groq. */
+  createCompletion?: CreateCompletion;
 }
 
-const TOOL_NAME = "record_transaction";
-
-/** JSON Schema for the single forced tool. */
-function toolInputSchema() {
-  return {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      type: {
-        type: "string",
-        enum: ["expense", "income"],
-        description: "Whether money left the user (expense) or came in (income).",
-      },
-      amount: {
-        type: "number",
-        description: "The numeric amount, positive. Convert Arabic-Indic digits (٠-٩) to " +
-          "Western digits. If no amount is present, use 0.",
-      },
-      currency: {
-        type: "string",
-        description: "ISO-ish currency code. Map EGP / جنيه / ج.م / pounds to 'EGP'. " +
-          "Default 'EGP' if unspecified.",
-      },
-      category_slug: {
-        type: "string",
-        enum: CATEGORY_SLUGS,
-        description: "Best-fit category slug. Use other_expense / other_income when unsure.",
-      },
-      note: {
-        type: "string",
-        description: "A very short human label for the item (e.g. 'coffee', 'قهوة').",
-      },
-      confidence: {
-        type: "number",
-        description: "Your confidence in this parse, from 0 to 1.",
-      },
-      occurred_at: {
-        type: "string",
-        description: "Optional ISO-8601 timestamp of when it happened, if the text states " +
-          "a date/time. Omit if not stated.",
-      },
-    },
-    required: ["type", "amount", "currency", "category_slug", "note", "confidence"],
-  };
-}
+// Groq model + endpoint. llama-3.3-70b handles Arabic/English well and is on
+// Groq's free tier. Swap the model here if Groq deprecates it.
+export const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function systemPrompt(locale: Locale): string {
   const lang = locale === "ar" ? "Arabic" : "English";
   return [
-    "You categorize a single personal-finance utterance or SMS into ONE fixed",
-    "category. The user's text is most likely in " + lang + ", but it may mix",
-    "Arabic and English. You MUST respond by calling the record_transaction tool",
-    "exactly once and nothing else. Pick the single best category_slug from the",
-    "allowed enum; when genuinely unsure use other_expense (for spending) or",
-    "other_income (for money received). Amounts are in Egyptian Pounds (EGP) by",
-    "default. Convert Arabic-Indic digits to Western digits.",
-  ].join(" ");
+    "You categorize a single personal-finance utterance or SMS into ONE fixed category.",
+    "The text is most likely in " + lang + " but may mix Arabic and English.",
+    "Respond with a SINGLE JSON object and nothing else (no markdown fences, no prose).",
+    "The JSON object must have exactly these keys:",
+    '- "type": one of "expense" (money the user spent) or "income" (money received).',
+    '- "amount": a positive number. Convert Arabic-Indic digits (٠-٩) to Western digits. Use 0 if no amount is present.',
+    '- "currency": map EGP / جنيه / ج.م / pounds to "EGP". Default "EGP".',
+    '- "category_slug": EXACTLY one of these allowed values: ' + CATEGORY_SLUGS.join(", ") + ".",
+    '  Use "other_expense" (spending) or "other_income" (money received) when genuinely unsure.',
+    '- "note": a very short human label for the item (e.g. "coffee", "قهوة").',
+    '- "confidence": a number from 0 to 1.',
+    '- "occurred_at": optional ISO-8601 timestamp if the text states a date/time; omit otherwise.',
+    "Amounts are in Egyptian Pounds (EGP) by default.",
+  ].join("\n");
 }
 
-/** Build the Anthropic Messages request body (shared by real + fake transports). */
+/** Build the Groq Chat Completions request body (shared by real + fake transports). */
 export function buildRequestBody(
   text: string,
   locale: Locale,
 ): Record<string, unknown> {
   return {
-    model: "claude-haiku-4-5",
+    model: GROQ_MODEL,
+    temperature: 0,
     max_tokens: 256,
-    system: systemPrompt(locale),
-    tools: [
-      {
-        name: TOOL_NAME,
-        description: "Record the user's parsed financial transaction. Call this exactly " +
-          "once with your best structured extraction of type, amount, currency, " +
-          "category, a short note, and your confidence.",
-        strict: true,
-        input_schema: toolInputSchema(),
-      },
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: systemPrompt(locale) },
+      { role: "user", content: text },
     ],
-    tool_choice: { type: "tool", name: TOOL_NAME },
-    messages: [{ role: "user", content: text }],
   };
 }
 
-/** Default transport: the real Anthropic SDK using strict tool use. */
-function realTransport(apiKey: string): CreateMessage {
-  const client = new Anthropic({ apiKey });
+/** Default transport: a real fetch to Groq's OpenAI-compatible endpoint. */
+function realTransport(apiKey: string): CreateCompletion {
   return async (body) => {
-    // Strict tool use requires the structured-outputs beta header. We pass it
-    // via the per-request `betas` option on the beta.messages endpoint.
-    // Fallback (non-beta): tool_choice: { type: 'tool' } without beta header.
-    // deno-lint-ignore no-explicit-any
-    const res = await (client as any).beta.messages.create({
-      ...body,
-      betas: ["structured-outputs-2025-11-13"],
+    const res = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
     });
-    return res as AnthropicMessageResponse;
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Groq API error ${res.status}: ${detail.slice(0, 300)}`);
+    }
+    return await res.json() as ChatCompletionResponse;
   };
 }
 
-// --- Field coercion helpers ---
+// --- Field coercion helpers (provider-agnostic; unchanged from before) ---
 function coerceType(v: unknown): TxnType {
   return v === "income" ? "income" : "expense";
 }
@@ -198,13 +142,32 @@ function coerceOccurredAt(v: unknown): string | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
-function findToolUse(
-  res: AnthropicMessageResponse,
-): AnthropicToolUseBlock | undefined {
-  const blocks = Array.isArray(res?.content) ? res.content : [];
-  return blocks.find(
-    (b): b is AnthropicToolUseBlock => b?.type === "tool_use" && b.name === TOOL_NAME,
-  );
+/** Pull the JSON object out of the model's message content (tolerant of fences). */
+export function extractJsonObject(
+  res: ChatCompletionResponse,
+): Record<string, unknown> {
+  const content = res?.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || content.trim().length === 0) {
+    throw new Error("Groq returned an empty completion");
+  }
+  const cleaned = content
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
+  let obj: unknown;
+  try {
+    obj = JSON.parse(cleaned);
+  } catch {
+    // Last resort: grab the first {...} block.
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error("Groq response was not valid JSON");
+    obj = JSON.parse(m[0]);
+  }
+  if (typeof obj !== "object" || obj === null) {
+    throw new Error("Groq JSON was not an object");
+  }
+  return obj as Record<string, unknown>;
 }
 
 /**
@@ -212,8 +175,8 @@ function findToolUse(
  *
  * @param text   Raw user/SMS text.
  * @param locale 'ar' | 'en' — hint for the system prompt.
- * @param apiKey Anthropic API key (ignored when a fake transport is injected).
- * @param opts   { createMessage } to inject a fake transport in tests.
+ * @param apiKey Groq API key (ignored when a fake transport is injected).
+ * @param opts   { createCompletion } to inject a fake transport in tests.
  */
 export async function categorize(
   text: string,
@@ -221,15 +184,10 @@ export async function categorize(
   apiKey: string,
   opts: CategorizeOptions = {},
 ): Promise<ParsedTransaction> {
-  const transport = opts.createMessage ?? realTransport(apiKey);
+  const transport = opts.createCompletion ?? realTransport(apiKey);
   const res = await transport(buildRequestBody(text, locale));
 
-  const toolUse = findToolUse(res);
-  if (!toolUse) {
-    throw new Error("Claude did not return a record_transaction tool_use block");
-  }
-
-  const input = toolUse.input ?? {};
+  const input = extractJsonObject(res);
   const type = coerceType(input.type);
   const amount = coerceAmount(input.amount);
   // Per spec: if there is no usable amount, force amount 0 AND confidence 0.

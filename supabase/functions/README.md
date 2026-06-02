@@ -8,11 +8,13 @@
 **Response (200):** `{ "parsed": ParsedTransaction }`
 
 Status codes: `400` bad/empty/invalid-JSON body, `405` non-POST,
-`413` text longer than 2000 chars, `500` missing `ANTHROPIC_API_KEY`,
-`502` upstream (Claude) failure.
+`413` text longer than 2000 chars, `500` missing `GROQ_API_KEY`,
+`502` upstream (Groq) failure.
 
-Calls Claude `claude-haiku-4-5` (`max_tokens: 256`) with one strict tool
-`record_transaction` whose `category_slug` is an enum of the 17 category slugs.
+Calls **Groq** `llama-3.3-70b-versatile` via the OpenAI-compatible Chat
+Completions API in JSON mode (`max_tokens: 256`, `temperature: 0`). The model's
+`category_slug` is validated against the 17 category slugs, falling back to
+`other_expense` / `other_income` when out of range.
 
 ## Local development
 
@@ -20,7 +22,7 @@ Calls Claude `claude-haiku-4-5` (`max_tokens: 256`) with one strict tool
 
    ```bash
    cp supabase/functions/.env.example supabase/functions/.env
-   # edit supabase/functions/.env -> real ANTHROPIC_API_KEY
+   # edit supabase/functions/.env -> real GROQ_API_KEY (gsk_...) from console.groq.com
    ```
 
 2. Start the function runtime (reads `supabase/functions/.env` automatically):
@@ -50,13 +52,13 @@ Calls Claude `claude-haiku-4-5` (`max_tokens: 256`) with one strict tool
 Local `.env` is dev-only. For deployed functions set the secret separately:
 
 ```bash
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+supabase secrets set GROQ_API_KEY=gsk_...
 supabase functions deploy categorize
 ```
 
 ## Tests
 
-Pure Deno tests with an injected fake Anthropic transport (no network, no key):
+Pure Deno tests with an injected fake Groq transport (no network, no key):
 
 ```bash
 deno test --allow-env --config supabase/functions/deno.json supabase/functions/tests/

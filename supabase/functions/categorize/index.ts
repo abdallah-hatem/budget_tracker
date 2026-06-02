@@ -59,10 +59,10 @@ export async function handleCategorize(
 
   // Guard the API key (missing secret -> 500).
   if (!deps.apiKey) {
-    return json({ error: "Server misconfigured: ANTHROPIC_API_KEY not set." }, 500);
+    return json({ error: "Server misconfigured: GROQ_API_KEY not set." }, 500);
   }
 
-  // Call Claude.
+  // Call the LLM.
   try {
     const parsed = await deps.categorizeFn(text, locale, deps.apiKey);
     return json({ parsed }, 200);
@@ -76,7 +76,7 @@ export async function handleCategorize(
 if (import.meta.main) {
   Deno.serve((req) =>
     handleCategorize(req, {
-      apiKey: Deno.env.get("ANTHROPIC_API_KEY") ?? "",
+      apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
       categorizeFn: (text, locale, apiKey) => categorize(text, locale, apiKey),
     })
   );

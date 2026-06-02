@@ -85,7 +85,7 @@ Deno.test("oversized text (> 2000 chars) returns 413", async () => {
   assert(typeof json.error === "string");
 });
 
-Deno.test("missing ANTHROPIC_API_KEY returns 500", async () => {
+Deno.test("missing GROQ_API_KEY returns 500", async () => {
   const res = await handleCategorize(
     postReq({ text: "coffee 50", locale: "en" }),
     deps({ apiKey: "" }),
@@ -109,7 +109,7 @@ Deno.test("categorize throwing returns 502", async () => {
   const res = await handleCategorize(
     postReq({ text: "coffee 50", locale: "en" }),
     deps({
-      categorizeFn: () => Promise.reject(new Error("claude exploded")),
+      categorizeFn: () => Promise.reject(new Error("groq exploded")),
     }),
   );
   assertEquals(res.status, 502);
