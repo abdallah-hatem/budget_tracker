@@ -70,4 +70,41 @@ describe('EditTransactionSheet', () => {
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockDelete).not.toHaveBeenCalled();
   });
+
+  it('shows error and does NOT call updateTransaction when amount is blank', async () => {
+    const onDone = jest.fn();
+    render(
+      <EditTransactionSheet transaction={txn} locale="en" onDone={onDone} onCancel={jest.fn()} />
+    );
+    fireEvent.changeText(screen.getByTestId('edit-amount'), '');
+    fireEvent.press(screen.getByTestId('edit-save'));
+    await waitFor(() => expect(screen.getByTestId('edit-error')).toBeTruthy());
+    expect(screen.getByTestId('edit-error').props.children).toBe('Enter an amount greater than 0');
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('shows error and does NOT call updateTransaction when amount is zero', async () => {
+    const onDone = jest.fn();
+    render(
+      <EditTransactionSheet transaction={txn} locale="en" onDone={onDone} onCancel={jest.fn()} />
+    );
+    fireEvent.changeText(screen.getByTestId('edit-amount'), '0');
+    fireEvent.press(screen.getByTestId('edit-save'));
+    await waitFor(() => expect(screen.getByTestId('edit-error')).toBeTruthy());
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('shows error message and does NOT call onDone when updateTransaction rejects', async () => {
+    mockUpdate.mockRejectedValueOnce(new Error('DB error: amount > 0'));
+    const onDone = jest.fn();
+    render(
+      <EditTransactionSheet transaction={txn} locale="en" onDone={onDone} onCancel={jest.fn()} />
+    );
+    fireEvent.press(screen.getByTestId('edit-save'));
+    await waitFor(() => expect(screen.getByTestId('edit-error')).toBeTruthy());
+    expect(screen.getByTestId('edit-error').props.children).toBe('DB error: amount > 0');
+    expect(onDone).not.toHaveBeenCalled();
+  });
 });

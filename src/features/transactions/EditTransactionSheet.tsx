@@ -25,21 +25,29 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel }: 
   const [categorySlug, setCategorySlug] = useState<string>(transaction.category_slug);
   const [note, setNote] = useState<string>(transaction.note ?? '');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const cats = type === 'income' ? incomeCategories() : expenseCategories();
 
   async function handleSave() {
     if (busy) return;
+    const parsed = parseFloat(amount);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setError('Enter an amount greater than 0');
+      return;
+    }
+    setError(null);
     setBusy(true);
     try {
-      const parsed = parseFloat(amount);
       await updateTransaction(transaction.id, {
         type,
-        amount: Number.isFinite(parsed) ? parsed : 0,
+        amount: parsed,
         category_slug: categorySlug,
         note: note.trim() === '' ? null : note.trim(),
       });
       onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -47,10 +55,13 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel }: 
 
   async function handleDelete() {
     if (busy) return;
+    setError(null);
     setBusy(true);
     try {
       await deleteTransaction(transaction.id);
       onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -123,6 +134,10 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel }: 
           style={{ textAlign: rtl ? 'right' : 'left' }}
         />
       </View>
+
+      {error ? (
+        <Text testID="edit-error" className="text-red-600">{error}</Text>
+      ) : null}
 
       {/* Actions */}
       <View className="flex-row gap-2 pt-2">
