@@ -129,13 +129,23 @@ export async function handleIngest(
   }
 
   // --- Resolve occurred_at ---
+  // Clamp to reject far-future dates (e.g. wrong device clock / replayed SMS).
+  const FUTURE_CLAMP_MS = 5 * 60 * 1000; // 5 minutes
   const receivedAt = typeof body.received_at === "string"
     ? body.received_at
     : undefined;
   let occurredAt: string;
   if (receivedAt !== undefined) {
     const d = new Date(receivedAt);
-    occurredAt = Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    if (Number.isNaN(d.getTime())) {
+      // Unparseable date → fall back to now.
+      occurredAt = new Date().toISOString();
+    } else if (d.getTime() > Date.now() + FUTURE_CLAMP_MS) {
+      // Far-future date → clamp to now.
+      occurredAt = new Date().toISOString();
+    } else {
+      occurredAt = d.toISOString();
+    }
   } else {
     occurredAt = new Date().toISOString();
   }

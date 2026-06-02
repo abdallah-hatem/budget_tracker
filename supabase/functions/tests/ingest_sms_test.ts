@@ -415,3 +415,42 @@ Deno.test("amount is rounded to 2 decimal places before insert", async () => {
   // 99.999 rounded to 2dp = 100.00
   assertEquals((insertedRow as unknown as Record<string, unknown>).amount, 100);
 });
+
+// ---------------------------------------------------------------------------
+// Tests: far-future received_at is clamped to ~now
+// ---------------------------------------------------------------------------
+
+Deno.test("far-future received_at is clamped: occurred_at is not in the far future", async () => {
+  let insertedRow: Record<string, unknown> | null = null;
+
+  // A date 1 year in the future — well beyond the 5-minute clamp window.
+  const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP", received_at: farFuture }),
+    makeDeps({
+      insertPending: (row) => {
+        insertedRow = row;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  assert(insertedRow !== null);
+  const row = insertedRow as Record<string, unknown>;
+  assert(typeof row.occurred_at === "string");
+
+  const insertedTime = new Date(row.occurred_at as string).getTime();
+  // The clamped occurred_at must not be the far-future value.
+  const farFutureMs = new Date(farFuture).getTime();
+  assert(
+    insertedTime < farFutureMs,
+    `expected occurred_at (${row.occurred_at}) to be less than far-future (${farFuture})`,
+  );
+  // And it should be within a generous 60-second window of now.
+  const nowMs = Date.now();
+  assert(
+    Math.abs(insertedTime - nowMs) < 60_000,
+    `expected occurred_at to be ~now (within 60 s), got diff ${Math.abs(insertedTime - nowMs)} ms`,
+  );
+});
