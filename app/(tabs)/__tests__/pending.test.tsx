@@ -10,9 +10,9 @@ jest.mock('expo-router', () => {
   };
 });
 
-// Mock usePending so we can control the data in tests
-jest.mock('../../../src/features/transactions/usePending', () => ({
-  usePending: jest.fn(),
+// Mock usePendingContext so we can control the data in tests without a real provider
+jest.mock('../../../src/features/transactions/PendingProvider', () => ({
+  usePendingContext: jest.fn(),
 }));
 
 // Mock api layer (used directly by the screen for confirm/reject and by EditTransactionSheet)
@@ -26,11 +26,11 @@ jest.mock('../../../src/features/auth/SessionProvider', () => ({
   useSession: jest.fn(),
 }));
 
-import { usePending } from '../../../src/features/transactions/usePending';
+import { usePendingContext } from '../../../src/features/transactions/PendingProvider';
 import { updateTransaction, deleteTransaction } from '../../../src/features/transactions/api';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 
-const mockUsePending = usePending as jest.MockedFunction<typeof usePending>;
+const mockUsePendingContext = usePendingContext as jest.MockedFunction<typeof usePendingContext>;
 const mockUpdate = updateTransaction as jest.Mock;
 const mockDelete = deleteTransaction as jest.Mock;
 const mockSession = useSession as jest.Mock;
@@ -69,7 +69,7 @@ beforeEach(() => {
 
 describe('PendingScreen', () => {
   it('renders pending rows with category label and signed amount', async () => {
-    mockUsePending.mockReturnValue({
+    mockUsePendingContext.mockReturnValue({
       data: [
         pendingTx({ id: 'p1', category_slug: 'food', amount: 120, type: 'expense' }),
         pendingTx({ id: 'p2', category_slug: 'salary', amount: 5000, type: 'income' }),
@@ -93,7 +93,7 @@ describe('PendingScreen', () => {
   });
 
   it('shows the empty state when there are no pending transactions', async () => {
-    mockUsePending.mockReturnValue({
+    mockUsePendingContext.mockReturnValue({
       data: [],
       count: 0,
       loading: false,
@@ -110,7 +110,7 @@ describe('PendingScreen', () => {
     mockUpdate.mockResolvedValue({ ...pendingTx(), status: 'confirmed' });
     const refreshFn = jest.fn().mockResolvedValue(undefined);
 
-    mockUsePending.mockReturnValue({
+    mockUsePendingContext.mockReturnValue({
       data: [pendingTx({ id: 'p1' })],
       count: 1,
       loading: false,
@@ -132,7 +132,7 @@ describe('PendingScreen', () => {
     mockDelete.mockResolvedValue(undefined);
     const refreshFn = jest.fn().mockResolvedValue(undefined);
 
-    mockUsePending.mockReturnValue({
+    mockUsePendingContext.mockReturnValue({
       data: [pendingTx({ id: 'p1' })],
       count: 1,
       loading: false,
@@ -149,7 +149,7 @@ describe('PendingScreen', () => {
   });
 
   it('Edit opens the EditTransactionSheet for the selected row', async () => {
-    mockUsePending.mockReturnValue({
+    mockUsePendingContext.mockReturnValue({
       data: [pendingTx({ id: 'p1', note: 'grocery run' })],
       count: 1,
       loading: false,
@@ -166,7 +166,7 @@ describe('PendingScreen', () => {
   });
 
   it('shows the raw SMS text and via SMS tag', async () => {
-    mockUsePending.mockReturnValue({
+    mockUsePendingContext.mockReturnValue({
       data: [pendingTx({ id: 'p1', raw_text: 'Bank: deducted EGP 120' })],
       count: 1,
       loading: false,

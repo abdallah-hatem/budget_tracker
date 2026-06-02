@@ -2,12 +2,12 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
-import { usePending } from '@/src/features/transactions/usePending';
+import { PendingProvider, usePendingContext } from '@/src/features/transactions/PendingProvider';
 
-export default function TabsLayout() {
+function TabsInner() {
   const { profile } = useSession();
   const locale = profile?.locale ?? 'en';
-  const { count: pendingCount } = usePending();
+  const { count: pendingCount } = usePendingContext();
 
   return (
     <Tabs screenOptions={{ tabBarActiveTintColor: '#2563eb', headerShown: true }}>
@@ -58,5 +58,13 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+  );
+}
+
+export default function TabsLayout() {
+  return (
+    <PendingProvider>
+      <TabsInner />
+    </PendingProvider>
   );
 }

@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
-import { usePending } from '../../src/features/transactions/usePending';
+import { usePendingContext } from '../../src/features/transactions/PendingProvider';
 import { updateTransaction, deleteTransaction } from '../../src/features/transactions/api';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import { categoryLabel, formatAmount } from '../../src/features/transactions/display';
@@ -25,7 +25,7 @@ export default function PendingScreen() {
   const rtl = isRTL(locale);
   const dir = rtl ? 'rtl' : 'ltr';
 
-  const { data, loading, refresh } = usePending();
+  const { data, loading, refresh } = usePendingContext();
   const [editing, setEditing] = useState<Transaction | null>(null);
 
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
