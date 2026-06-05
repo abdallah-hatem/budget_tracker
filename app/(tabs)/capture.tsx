@@ -10,13 +10,14 @@ import * as Haptics from 'expo-haptics';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { useSpeechRecognition } from '../../src/hooks/useSpeechRecognition';
 import { requestCategorize } from '../../src/features/capture/categorizeClient';
+import { requestVoiceCapture } from '../../src/features/capture/voiceCaptureClient';
 import { buildCaptureRow } from '../../src/features/capture/toTransactionRow';
 import {
   insertTransaction,
   deleteTransaction,
 } from '../../src/features/transactions/api';
 import { categoryLabel } from '../../src/features/transactions/display';
-import type { Locale, Transaction, TxnSource } from '../../src/types';
+import type { Locale, ParsedTransaction, Transaction, TxnSource } from '../../src/types';
 import {
   Screen,
   Card,
@@ -52,13 +53,15 @@ export default function CaptureScreen() {
   const locale: Locale = (profile?.locale as Locale) ?? 'en';
   const isRTL = locale === 'ar';
 
-  // Holds the latest "process this capture" fn so the speech callback (registered
-  // once) always runs current logic. Voice never touches the text box — when the
+  // Holds the latest voice handler so the speech callback (registered once)
+  // always runs current logic. Voice never touches the text box — when the
   // utterance finishes, we process it straight away.
-  const processRef = useRef<(raw: string, src: TxnSource) => void>(() => {});
+  const voiceRef = useRef<(transcript: string, audioUri: string | null) => void>(
+    () => {},
+  );
 
   const { isListening, supported, error: sttError, start, stop } =
-    useSpeechRecognition((finalText) => processRef.current(finalText, 'voice'));
+    useSpeechRecognition((transcript, audioUri) => voiceRef.current(transcript, audioUri));
 
   const [text, setText] = useState('');
   const [source, setSource] = useState<TxnSource>('text');
@@ -84,9 +87,36 @@ export default function CaptureScreen() {
     }
   };
 
-  // Categorize AND save in one go — no confirmation step. Shared by the typed
-  // "Add" button and (automatically) by voice once the utterance finishes, so a
-  // spoken entry goes straight from speech to a saved transaction.
+  // Persist a parsed transaction. Rounds to the column precision (numeric(14,2))
+  // and guards amount > 0 to match the DB CHECK.
+  const saveParsed = useCallback(
+    async (parsed: ParsedTransaction, rawText: string, src: TxnSource) => {
+      if (!user) return;
+      const amount = Math.round((parsed.amount ?? 0) * 100) / 100;
+      if (!(amount > 0)) {
+        setError(
+          locale === 'ar'
+            ? 'لم أتمكن من إيجاد مبلغ — أضِف المبلغ وحاول مرة أخرى'
+            : "Couldn't find an amount — add it and try again",
+        );
+        return;
+      }
+      const row = await insertTransaction(
+        buildCaptureRow({ ...parsed, amount }, rawText, src, user.id, 'confirmed'),
+      );
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        // haptics optional
+      }
+      setLastSaved(row);
+      setText('');
+      setSource('text');
+    },
+    [user, locale],
+  );
+
+  // Typed "Add" (and the on-device-transcript fallback): categorize text, save.
   const processCapture = useCallback(
     async (raw: string, src: TxnSource) => {
       if (submittingRef.current || loading) return;
@@ -98,28 +128,7 @@ export default function CaptureScreen() {
       if (isListening) stop();
       try {
         const parsed = await requestCategorize(value, locale);
-        // Round to the column's precision (numeric(14,2)) so the client guard
-        // matches what the DB will actually store (CHECK amount > 0).
-        const amount = Math.round((parsed.amount ?? 0) * 100) / 100;
-        if (!(amount > 0)) {
-          setError(
-            locale === 'ar'
-              ? 'لم أتمكن من إيجاد مبلغ — أضِف المبلغ وحاول مرة أخرى'
-              : "Couldn't find an amount — add it and try again",
-          );
-          return;
-        }
-        const row = await insertTransaction(
-          buildCaptureRow({ ...parsed, amount }, value, src, user.id, 'confirmed'),
-        );
-        try {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } catch {
-          // haptics optional
-        }
-        setLastSaved(row);
-        setText('');
-        setSource('text');
+        await saveParsed(parsed, value, src);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to add');
       } finally {
@@ -127,10 +136,37 @@ export default function CaptureScreen() {
         submittingRef.current = false;
       }
     },
-    [user, locale, loading, isListening, stop],
+    [user, locale, loading, isListening, stop, saveParsed],
   );
-  // Keep the speech callback pointing at the latest processCapture.
-  processRef.current = processCapture;
+
+  // Voice: upload the recorded audio to Whisper (auto-detects ANY spoken
+  // language) + categorize server-side, then save — no visible transcript.
+  const processVoice = useCallback(
+    async (audioUri: string) => {
+      if (submittingRef.current || loading || !user) return;
+      submittingRef.current = true;
+      setError(null);
+      setLoading(true);
+      if (isListening) stop();
+      try {
+        const { text: heard, parsed } = await requestVoiceCapture(audioUri, locale);
+        await saveParsed(parsed, heard, 'voice');
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to add');
+      } finally {
+        setLoading(false);
+        submittingRef.current = false;
+      }
+    },
+    [user, locale, loading, isListening, stop, saveParsed],
+  );
+
+  // Prefer Whisper (any language) when audio was recorded; else fall back to the
+  // on-device transcript.
+  voiceRef.current = (transcript, audioUri) => {
+    if (audioUri) void processVoice(audioUri);
+    else if (transcript) void processCapture(transcript, 'voice');
+  };
 
   const onCategorize = () => void processCapture(text, source);
 

@@ -41,7 +41,7 @@ export interface SpeechRecognition {
 }
 
 export function useSpeechRecognition(
-  onFinalResult?: (transcript: string) => void,
+  onFinalResult?: (transcript: string, audioUri: string | null) => void,
 ): SpeechRecognition {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -50,21 +50,30 @@ export function useSpeechRecognition(
   // Always invoke the latest callback without re-subscribing each render.
   const finalCbRef = useRef(onFinalResult);
   finalCbRef.current = onFinalResult;
-  // Latest transcript, read synchronously the moment recognition ends.
+  // Latest transcript + recorded-audio path, read synchronously when it ends.
   const transcriptRef = useRef('');
+  const audioUriRef = useRef<string | null>(null);
 
   subscribe('start', () => {
     setIsListening(true);
     setError(null);
   });
 
+  // The recorded audio file path arrives on `audioend` (recordingOptions.persist).
+  subscribe('audioend', (event) => {
+    audioUriRef.current = event?.uri ?? null;
+  });
+
   subscribe('end', () => {
     setIsListening(false);
-    // Recognition finished: hand the whole utterance to the caller "at once",
-    // so it can categorize + save without ever showing a streaming transcript.
+    // Recognition finished: hand the caller the whole utterance AND the recorded
+    // audio "at once" (no streaming). The audio lets the caller re-transcribe in
+    // ANY language via Whisper, regardless of the on-device locale.
     const finalText = transcriptRef.current.trim();
+    const audioUri = audioUriRef.current;
     transcriptRef.current = '';
-    if (finalText) finalCbRef.current?.(finalText);
+    audioUriRef.current = null;
+    if (finalText || audioUri) finalCbRef.current?.(finalText, audioUri);
   });
 
   subscribe('result', (event) => {
@@ -90,6 +99,7 @@ export function useSpeechRecognition(
     setError(null);
     setTranscript('');
     transcriptRef.current = '';
+    audioUriRef.current = null;
 
     const perms = await mod.requestPermissionsAsync();
     if (!perms.granted) {
@@ -111,6 +121,7 @@ export function useSpeechRecognition(
       lang,
       interimResults: false, // only the final utterance — no live/streaming text
       continuous: false,     // auto-stop after a natural pause
+      recordingOptions: { persist: true }, // keep the audio for Whisper (any language)
     };
 
     if (preferOnDevice) {

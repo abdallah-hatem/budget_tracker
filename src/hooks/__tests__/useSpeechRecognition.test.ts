@@ -89,7 +89,18 @@ it('calls onFinalResult with the whole utterance when recognition ends', () => {
 
   act(() => __emit('end'));
   expect(onFinal).toHaveBeenCalledTimes(1);
-  expect(onFinal).toHaveBeenCalledWith('coffee 50 pounds');
+  expect(onFinal).toHaveBeenCalledWith('coffee 50 pounds', null);
+});
+
+it('passes the recorded audio path (for Whisper) alongside the transcript', () => {
+  const onFinal = jest.fn();
+  renderHook(() => useSpeechRecognition(onFinal));
+
+  act(() => __emit('result', { results: [{ transcript: 'qahwa' }], isFinal: true }));
+  act(() => __emit('audioend', { uri: 'file:///caches/audio_x.wav' }));
+  act(() => __emit('end'));
+
+  expect(onFinal).toHaveBeenCalledWith('qahwa', 'file:///caches/audio_x.wav');
 });
 
 it('does not call onFinalResult when nothing was transcribed', () => {
