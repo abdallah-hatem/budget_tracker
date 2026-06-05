@@ -20,6 +20,7 @@ export interface MoneyProps {
   size?: number;
   className?: string;
   style?: TextStyle;
+  testID?: string;
 }
 
 const TONE_COLORS: Record<Exclude<MoneyTone, 'auto'>, string> = {
@@ -38,6 +39,7 @@ export function Money({
   size = 16,
   className = '',
   style,
+  testID,
 }: MoneyProps) {
   const resolvedTone: Exclude<MoneyTone, 'auto'> =
     tone === 'auto' ? (amount > 0 ? 'accent' : 'ink') : tone;
@@ -47,6 +49,7 @@ export function Money({
 
   return (
     <Text
+      testID={testID}
       className={className}
       style={[
         {

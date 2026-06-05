@@ -37,6 +37,27 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'settings.langArabic': { en: 'Arabic', ar: 'العربية' },
   'settings.signOut': { en: 'Sign out', ar: 'تسجيل الخروج' },
 
+  // ── Accounts ──────────────────────────────────────────────────────────────
+  'settings.accounts': { en: 'Accounts', ar: 'الحسابات' },
+  'accounts.title': { en: 'Accounts', ar: 'الحسابات' },
+  'accounts.total': { en: 'Total', ar: 'الإجمالي' },
+  'accounts.add': { en: 'Add account', ar: 'إضافة حساب' },
+  'accounts.name': { en: 'Name', ar: 'الاسم' },
+  'accounts.starting_balance': { en: 'Starting balance', ar: 'الرصيد الابتدائي' },
+  'accounts.make_default': { en: 'Make default', ar: 'تعيين كافتراضي' },
+  'accounts.default': { en: 'Default', ar: 'افتراضي' },
+  'accounts.set_default': { en: 'Set default', ar: 'تعيين افتراضي' },
+  'accounts.edit': { en: 'Edit', ar: 'تعديل' },
+  'accounts.delete': { en: 'Delete', ar: 'حذف' },
+  'accounts.delete_confirm': {
+    en: 'Delete this account? Its transactions stay in your totals but become unassigned.',
+    ar: 'حذف هذا الحساب؟ ستبقى معاملاته ضمن إجماليّاتك لكن بدون حساب.',
+  },
+  'accounts.save': { en: 'Save', ar: 'حفظ' },
+  'accounts.cancel': { en: 'Cancel', ar: 'إلغاء' },
+  'accounts.account': { en: 'Account', ar: 'الحساب' },
+  'accounts.none': { en: 'No account', ar: 'بدون حساب' },
+
   // ── Stub placeholders (replaced by M5/M6) ─────────────────────────────────
   'home.placeholder': { en: 'Dashboard coming soon', ar: 'لوحة المعلومات قريباً' },
   'capture.placeholder': { en: 'Capture coming soon', ar: 'الإضافة قريباً' },

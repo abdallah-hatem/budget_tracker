@@ -26,15 +26,25 @@ jest.mock('moti', () => {
 jest.mock('../../../src/features/dashboard/useMonthSummary', () => ({
   useMonthSummary: jest.fn(),
 }));
+jest.mock('../../../src/features/accounts/useAccountBalances', () => ({
+  useAccountBalances: jest.fn(),
+}));
 jest.mock('../../../src/features/auth/SessionProvider', () => ({
   useSession: jest.fn(),
 }));
 
 import { useMonthSummary } from '../../../src/features/dashboard/useMonthSummary';
+import { useAccountBalances } from '../../../src/features/accounts/useAccountBalances';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 
 const mockSummary = useMonthSummary as jest.Mock;
+const mockAccounts = useAccountBalances as jest.Mock;
 const mockSession = useSession as jest.Mock;
+
+const acctBal = (over: Record<string, unknown>) => ({
+  id: 'a', user_id: 'u1', name: 'Main', opening_balance: 0,
+  is_default: true, currency: 'EGP', created_at: '', balance: 0, ...over,
+});
 
 function tx(over: Partial<Transaction>): Transaction {
   return {
@@ -61,6 +71,13 @@ beforeEach(() => {
     user: { id: 'u1' },
     profile: { id: 'u1', locale: 'en', display_name: 'Test', currency: 'EGP' },
     loading: false,
+  });
+  mockAccounts.mockReturnValue({
+    accounts: [],
+    total: 0,
+    loading: false,
+    error: null,
+    refresh: jest.fn(),
   });
   mockSummary.mockReturnValue({
     monthKey: { year: 2026, month: 5 },
@@ -104,6 +121,23 @@ describe('Dashboard', () => {
     // Recent transactions show notes.
     expect(screen.getByText('lunch')).toBeTruthy();
     expect(screen.getByText('June pay')).toBeTruthy();
+  });
+
+  it('renders the accounts card with each balance and a total', () => {
+    mockAccounts.mockReturnValue({
+      accounts: [
+        acctBal({ id: 'a', name: 'Main', is_default: true, balance: 100000 }),
+        acctBal({ id: 'b', name: 'Cash', is_default: false, balance: 250 }),
+      ],
+      total: 100250,
+      loading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    render(<Dashboard />);
+    expect(screen.getByTestId('account-card-a')).toBeTruthy();
+    expect(screen.getByTestId('account-card-b')).toBeTruthy();
+    expect(screen.getByTestId('accounts-total')).toBeTruthy();
   });
 
   it('renders Arabic category labels when locale = ar', () => {

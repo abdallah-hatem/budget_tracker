@@ -14,6 +14,7 @@ import { TransactionRow } from '../../src/ui/TransactionRow';
 import { EmptyState } from '../../src/ui/EmptyState';
 import { PressableScale } from '../../src/ui/PressableScale';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
+import { useAccountBalances } from '../../src/features/accounts/useAccountBalances';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { categoryLabel } from '../../src/features/transactions/display';
 import { categoryStyle } from '../../src/lib/categoryStyle';
@@ -56,8 +57,14 @@ export default function Dashboard() {
 
   const { monthKey, summary, transactions, loading, prevMonth, nextMonth, refresh } =
     useMonthSummary();
+  const { accounts, total: accountsTotal, refresh: refreshAccounts } = useAccountBalances();
 
-  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+      void refreshAccounts();
+    }, [refresh, refreshAccounts]),
+  );
 
   const recent = transactions.slice(0, 5);
   const hasData = transactions.length > 0;
@@ -151,6 +158,64 @@ export default function Dashboard() {
             <Hero label={t('net_this_month', locale)} amount={summary.net} />
           </View>
         </Reveal>
+
+        {/* ── Accounts: live balances (all-time, not month-filtered) ──── */}
+        {accounts.length > 0 && (
+          <Reveal index={revealIndex++}>
+            <Card style={{ marginBottom: 28 }}>
+              <SectionLabel>{t('accounts.title', locale)}</SectionLabel>
+              <View style={{ marginTop: 12, gap: 10 }}>
+                {accounts.map((a) => (
+                  <View
+                    key={a.id}
+                    testID={`account-card-${a.id}`}
+                    style={{
+                      flexDirection: rtl ? 'row-reverse' : 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: uiFontSemiBold(locale),
+                        fontSize: 15,
+                        color: a.is_default ? '#F4F7F5' : '#A8B2AF',
+                      }}
+                    >
+                      {a.name}
+                      {a.is_default ? '  •' : ''}
+                    </Text>
+                    <Money amount={a.balance} tone="ink" sign="auto" size={16} />
+                  </View>
+                ))}
+                <View
+                  style={{
+                    flexDirection: rtl ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderTopWidth: 1,
+                    borderTopColor: '#1C2322',
+                    paddingTop: 10,
+                    marginTop: 2,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: uiFontSemiBold(locale),
+                      fontSize: 12,
+                      color: '#6B7672',
+                      textTransform: 'uppercase',
+                      letterSpacing: 1,
+                    }}
+                  >
+                    {t('accounts.total', locale)}
+                  </Text>
+                  <Money testID="accounts-total" amount={accountsTotal} tone="accent" sign="auto" size={18} />
+                </View>
+              </View>
+            </Card>
+          </Reveal>
+        )}
 
         {!hasData && !loading ? (
           /* ── Empty state ──────────────────────────────────────────── */
