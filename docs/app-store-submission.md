@@ -132,8 +132,8 @@ Start tracking in seconds.
 budget,expense,money,spending,finance,tracker,wallet,مصاريف,ميزانية,مصروف,حساب,توفير,نقود
 ```
 
-- **Support URL:** `<your hosted legal/index.html URL>`
-- **Privacy Policy URL:** `<your hosted legal/privacy.html URL>`
+- **Support URL:** `https://abdallah-hatem.github.io/budget_tracker/`
+- **Privacy Policy URL:** `https://abdallah-hatem.github.io/budget_tracker/privacy.html`
 - **Marketing URL:** optional
 - **Copyright:** `2026 Abdallah Hatem`
 - **Screenshots:** 6.7" iPhone — capture Dashboard, Add/voice, Transactions, Accounts
