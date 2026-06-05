@@ -1,13 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateTransaction, deleteTransaction } from './api';
+import { listAccountBalances } from '../accounts/api';
 import { categoryLabel } from './display';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
 import { t, isRTL } from '../../lib/i18n';
 import { CategoryAvatar, PressableScale } from '../../ui';
 import { FONT } from '../../lib/font';
-import type { Transaction, TxnType, Locale } from '../../types';
+import type { Transaction, TxnType, Locale, AccountBalance } from '../../types';
 
 interface Props {
   transaction: Transaction;
@@ -30,8 +31,14 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
   const [amount, setAmount] = useState<string>(String(transaction.amount));
   const [categorySlug, setCategorySlug] = useState<string>(transaction.category_slug);
   const [note, setNote] = useState<string>(transaction.note ?? '');
+  const [accountId, setAccountId] = useState<string | null>(transaction.account_id);
+  const [accounts, setAccounts] = useState<AccountBalance[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listAccountBalances().then(setAccounts).catch(() => {});
+  }, []);
 
   // Auto-scroll the selected category chip into view (on open + on tap).
   const catScrollRef = useRef<ScrollView>(null);
@@ -59,6 +66,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
         amount: parsed,
         category_slug: categorySlug,
         note: note.trim() === '' ? null : note.trim(),
+        account_id: accountId,
         ...(confirmOnSave ? { status: 'confirmed' as const } : {}),
       });
       onDone();
@@ -285,6 +293,62 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           }}
         />
       </View>
+
+      {/* ── Account picker ── */}
+      {accounts.length > 0 && (
+        <View style={{ gap: 6 }}>
+          <Text
+            style={{
+              fontFamily: FONT.jakartaMd,
+              fontSize: 12,
+              color: '#6B7672',
+              letterSpacing: 0.8,
+              textTransform: 'uppercase',
+              textAlign: rtl ? 'right' : 'left',
+            }}
+          >
+            {t('accounts.account', locale)}
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              gap: 8,
+              paddingRight: 4,
+              flexDirection: rtl ? 'row-reverse' : 'row',
+            }}
+          >
+            {accounts.map((a) => {
+              const on = accountId === a.id;
+              return (
+                <PressableScale
+                  key={a.id}
+                  testID={`edit-account-${a.id}`}
+                  onPress={() => setAccountId(a.id)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 999,
+                    backgroundColor: on ? 'rgba(43,217,142,0.16)' : '#14191A',
+                    borderWidth: on ? 1 : 0,
+                    borderColor: on ? 'rgba(43,217,142,0.4)' : 'transparent',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT.jakartaSb,
+                      fontSize: 13,
+                      color: on ? '#2BD98E' : '#A8B2AF',
+                    }}
+                  >
+                    {a.name}
+                  </Text>
+                </PressableScale>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* ── Error ── */}
       {error ? (

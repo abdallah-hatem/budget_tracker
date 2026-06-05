@@ -7,9 +7,19 @@ jest.mock('./api', () => ({
   updateTransaction: jest.fn(),
   deleteTransaction: jest.fn(),
 }));
+jest.mock('../accounts/api', () => ({
+  listAccountBalances: jest.fn().mockResolvedValue([]),
+}));
 import { updateTransaction, deleteTransaction } from './api';
+import { listAccountBalances } from '../accounts/api';
 const mockUpdate = updateTransaction as jest.MockedFunction<typeof updateTransaction>;
 const mockDelete = deleteTransaction as jest.MockedFunction<typeof deleteTransaction>;
+const mockListAccounts = listAccountBalances as jest.MockedFunction<typeof listAccountBalances>;
+
+const acctBal = (over: Record<string, unknown>) => ({
+  id: 'a', user_id: 'u1', name: 'Main', opening_balance: 0,
+  is_default: true, currency: 'EGP', created_at: '', balance: 0, ...over,
+}) as any;
 
 const txn: Transaction = {
   id: 't1',
@@ -32,6 +42,28 @@ describe('EditTransactionSheet', () => {
   beforeEach(() => {
     mockUpdate.mockReset();
     mockDelete.mockReset();
+    mockListAccounts.mockReset();
+    mockListAccounts.mockResolvedValue([]);
+  });
+
+  it('shows an account chip per account and saves the chosen account_id', async () => {
+    mockListAccounts.mockResolvedValueOnce([
+      acctBal({ id: 'a', name: 'Main', is_default: true }),
+      acctBal({ id: 'b', name: 'Bank', is_default: false, balance: 100000 }),
+    ]);
+    mockUpdate.mockResolvedValueOnce({ ...txn });
+    const onDone = jest.fn();
+    render(
+      <EditTransactionSheet transaction={txn} locale="en" onDone={onDone} onCancel={jest.fn()} />,
+    );
+
+    fireEvent.press(await screen.findByTestId('edit-account-b'));
+    fireEvent.press(screen.getByTestId('edit-save'));
+
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith('t1', expect.objectContaining({ account_id: 'b' })),
+    );
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
   });
 
   it('saves an edited amount via updateTransaction then calls onDone', async () => {
