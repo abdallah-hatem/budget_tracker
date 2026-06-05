@@ -145,9 +145,9 @@ budget,expense,money,spending,finance,tracker,wallet,مصاريف,ميزانية
 The app requires sign-in, so reviewers need a working account.
 
 - **Sign-in required:** Yes
-- **Demo account:** create one on production and enter it here
-  - User name: `review@masareef.app` *(or any real account you create)*
-  - Password: `<the password you set>`
+- **Demo account:** ✅ created on production, seeded with demo data
+  - User name: `review@masareef.app`
+  - Password: _kept out of this public repo — enter the password (shared privately) directly into App Store Connect_
 - **Notes:**
 ```
 Masareef is a personal expense tracker (track-only; it never links to a bank or moves money).
