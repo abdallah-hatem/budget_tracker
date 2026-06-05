@@ -9,7 +9,8 @@ Everything needed to create and submit the app in **App Store Connect**
 
 | Thing | Value | Where users see it |
 |---|---|---|
-| App name | **Masareef** | App icon label + App Store title |
+| App Store title | **Masareef – Budget Tracker** | App Store listing title (globally unique) |
+| Home-screen name | **Masareef** | Label under the app icon (`app.json` `name`) |
 | Bundle ID | `com.abdallah.masareef` | Nowhere (permanent technical id) |
 | EAS slug | `tmp-app` | Nowhere (internal Expo project id) |
 | URL scheme | `masareef://` | Nowhere (deep links) |
@@ -37,7 +38,7 @@ Everything needed to create and submit the app in **App Store Connect**
 | Field | Value |
 |---|---|
 | Platforms | iOS |
-| Name | `Masareef` *(must be unique on the store; fallback `Masareef Budget`, ≤30 chars)* |
+| Name | `Masareef – Budget Tracker` *(App Store title — globally unique; ≤30 chars)* |
 | Primary Language | English (U.S.) — add Arabic localization in step 5 |
 | Bundle ID | `com.abdallah.masareef` |
 | SKU | `masareef` |
