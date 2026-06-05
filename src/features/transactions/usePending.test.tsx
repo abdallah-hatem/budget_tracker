@@ -22,6 +22,7 @@ function pendingTx(id: string): Transaction {
     status: 'pending',
     confidence: 0.9,
     occurred_at: '2026-06-01T10:00:00.000Z',
+    account_id: null,
     created_at: '2026-06-01T10:00:01.000Z',
   };
 }

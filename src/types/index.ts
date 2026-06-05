@@ -28,9 +28,27 @@ export interface Transaction {
   source: TxnSource;
   status: TxnStatus;
   confidence: number | null;
+  account_id: string | null;
   occurred_at: string;
   created_at: string;
 }
+
+export interface Account {
+  id: string;
+  user_id: string;
+  name: string;
+  opening_balance: number;
+  is_default: boolean;
+  currency: string;
+  created_at: string;
+}
+
+// Row shape returned by the account_balances view.
+export interface AccountBalance extends Account {
+  balance: number;
+}
+
+export type NewAccount = Pick<Account, 'name' | 'opening_balance' | 'is_default'>;
 
 export interface ParsedTransaction {
   type: TxnType;
@@ -42,4 +60,8 @@ export interface ParsedTransaction {
   occurred_at?: string;
 }
 
-export type NewTransaction = Omit<Transaction, 'id' | 'created_at'>;
+// account_id is optional on insert — the DB trigger fills it from the user's
+// default account when omitted; callers may still set it explicitly.
+export type NewTransaction = Omit<Transaction, 'id' | 'created_at' | 'account_id'> & {
+  account_id?: string | null;
+};

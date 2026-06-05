@@ -52,6 +52,7 @@ const savedRow: Transaction = {
   status: 'confirmed',
   confidence: 0.9,
   occurred_at: '2026-06-02T00:00:00.000Z',
+  account_id: null,
   created_at: '2026-06-02T00:00:00.000Z',
 };
 

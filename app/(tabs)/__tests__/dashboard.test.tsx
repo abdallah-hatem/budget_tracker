@@ -50,6 +50,7 @@ function tx(over: Partial<Transaction>): Transaction {
     status: 'confirmed',
     confidence: null,
     occurred_at: over.occurred_at ?? '2026-06-10T00:00:00.000Z',
+    account_id: null,
     created_at: '2026-06-10T00:00:00.000Z',
   };
 }

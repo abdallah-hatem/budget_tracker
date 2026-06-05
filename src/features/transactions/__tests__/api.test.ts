@@ -21,6 +21,7 @@ const sampleRow: Transaction = {
   status: 'confirmed',
   confidence: 0.9,
   occurred_at: '2026-06-02T10:00:00.000Z',
+  account_id: null,
   created_at: '2026-06-02T10:00:01.000Z',
 };
 
