@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Masareef — Support</title>
+  <meta name="description" content="Support and help for the Masareef budget tracker app." />
+  <style>
+    :root{
+      --canvas:#0B0F0E; --surface:#14191A; --overlay:#1C2322;
+      --ink:#F4F7F5; --ink2:#A8B2AF; --ink3:#6B7672; --accent:#2BD98E;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--canvas); color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      line-height:1.65; -webkit-font-smoothing:antialiased;
+    }
+    .wrap{max-width:760px; margin:0 auto; padding:48px 22px 80px}
+    .brand{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+    .dot{width:12px; height:12px; border-radius:999px; background:var(--accent)}
+    .brand b{font-size:15px; letter-spacing:.3px}
+    h1{font-size:32px; margin:18px 0 6px}
+    .tag{color:var(--ink2); font-size:16px; margin-bottom:32px}
+    h2{font-size:20px; margin:34px 0 12px; color:#fff}
+    p,li{color:var(--ink2); font-size:15.5px}
+    a{color:var(--accent); text-decoration:none}
+    a:hover{text-decoration:underline}
+    ul{padding-left:20px} li{margin:7px 0}
+    .grid{display:grid; gap:14px; margin-top:14px}
+    .card{background:var(--surface); border:1px solid var(--overlay); border-radius:16px; padding:18px 20px}
+    .card h3{margin:0 0 6px; font-size:16px; color:#fff}
+    .card p{margin:0; font-size:14.5px}
+    .cta{display:inline-block; margin-top:8px; background:var(--accent); color:#06251A; font-weight:600; padding:12px 20px; border-radius:14px}
+    .links{display:flex; gap:18px; flex-wrap:wrap; margin-top:10px}
+    hr{border:none; border-top:1px solid var(--overlay); margin:40px 0}
+    footer{color:var(--ink3); font-size:13px}
+    strong{color:var(--ink)}
+    .q{color:#fff; font-weight:600; margin:18px 0 4px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="brand"><span class="dot"></span><b>Masareef · مصاريف</b></div>
+    <h1>Support</h1>
+    <p class="tag">The effortless way to track your money — by voice or text, in Arabic or English.</p>
+
+    <a class="cta" href="mailto:support@masareef.app">Email support</a>
+    <div class="links">
+      <a href="./privacy.html">Privacy Policy</a>
+    </div>
+
+    <h2>Getting started</h2>
+    <div class="grid">
+      <div class="card"><h3>1 · Create an account</h3><p>Open the app and sign up with your email — you're in instantly.</p></div>
+      <div class="card"><h3>2 · Add a transaction</h3><p>Tap <strong>Add</strong>, then speak or type what you spent — e.g. "coffee 45 pounds" / "قهوة بـ٤٥ جنيه". Masareef detects the amount and category for you.</p></div>
+      <div class="card"><h3>3 · Track your money</h3><p>The dashboard shows your monthly income, spending, account balances, and a category breakdown.</p></div>
+    </div>
+
+    <h2>Frequently asked questions</h2>
+
+    <div class="q">Does Masareef connect to my bank?</div>
+    <p>No. Masareef is a personal, track-only app. It never links to your bank account and never moves money — you stay fully in control.</p>
+
+    <div class="q">How does voice entry work?</div>
+    <p>Speech recognition runs on your device. Tap the microphone, allow Microphone &amp; Speech Recognition, and speak your expense in Arabic or English.</p>
+
+    <div class="q">What is SMS auto-capture?</div>
+    <p>An optional iOS Shortcut that turns your bank's SMS alerts into pending transactions automatically. It's set up manually in the Shortcuts app and is completely optional — see the in-app guide under Settings.</p>
+
+    <div class="q">How are accounts and balances calculated?</div>
+    <p>Add accounts like "Bank" or "Cash" with a starting balance. Each balance updates live as you add income and expenses. New transactions go to your default account; you can reassign any transaction when editing it.</p>
+
+    <div class="q">Is my data private?</div>
+    <p>Yes. Your data is yours — no ads, no tracking. See our <a href="./privacy.html">Privacy Policy</a> for details.</p>
+
+    <div class="q">How do I delete my account or data?</div>
+    <p>You can delete individual transactions and accounts in the app. To delete your entire account and all data, email us and we'll remove it.</p>
+
+    <h2>Contact</h2>
+    <p>Need help or have feedback? Email <a href="mailto:support@masareef.app">support@masareef.app</a> — we usually reply within a couple of days.</p>
+
+    <hr/>
+    <footer>© 2026 Masareef. Made for tracking money in Egypt, in Arabic &amp; English.</footer>
+  </main>
+</body>
+</html>
