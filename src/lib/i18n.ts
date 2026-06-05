@@ -36,6 +36,11 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'settings.langEnglish': { en: 'English', ar: 'الإنجليزية' },
   'settings.langArabic': { en: 'Arabic', ar: 'العربية' },
   'settings.signOut': { en: 'Sign out', ar: 'تسجيل الخروج' },
+  'settings.signOutConfirm': {
+    en: 'Sign out of your account?',
+    ar: 'تسجيل الخروج من حسابك؟',
+  },
+  'settings.cancel': { en: 'Cancel', ar: 'إلغاء' },
 
   // ── Accounts ──────────────────────────────────────────────────────────────
   'settings.accounts': { en: 'Accounts', ar: 'الحسابات' },

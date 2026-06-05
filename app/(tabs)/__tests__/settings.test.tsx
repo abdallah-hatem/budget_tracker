@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
 import Settings from '../settings';
 
@@ -49,11 +50,14 @@ import {
   hasActiveIngestToken,
 } from '../../../src/features/ingest/api';
 import * as Clipboard from 'expo-clipboard';
+import { supabase } from '../../../src/lib/supabase';
 import {
   listAccountBalances,
   createAccount,
   setDefaultAccount,
 } from '../../../src/features/accounts/api';
+
+const mockSignOut = supabase.auth.signOut as jest.Mock;
 
 const mockSession = useSession as jest.Mock;
 const mockCreate = createIngestToken as jest.Mock;
@@ -107,6 +111,45 @@ describe('Settings screen — existing settings', () => {
   it('renders sign-out button', async () => {
     render(<Settings />);
     expect(screen.getByTestId('sign-out')).toBeTruthy();
+  });
+});
+
+describe('Settings screen — sign out confirmation', () => {
+  it('asks for confirmation and signs out only after confirming', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    render(<Settings />);
+
+    fireEvent.press(screen.getByTestId('sign-out'));
+
+    // The confirm dialog is shown; sign-out has NOT happened yet.
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(mockSignOut).not.toHaveBeenCalled();
+
+    // Invoke the destructive "Sign out" button from the alert config.
+    const buttons = (alertSpy.mock.calls[0][2] ?? []) as Array<{
+      style?: string;
+      onPress?: () => void;
+    }>;
+    const confirm = buttons.find((b) => b.style === 'destructive');
+    await act(async () => {
+      confirm?.onPress?.();
+    });
+
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+    alertSpy.mockRestore();
+  });
+
+  it('does NOT sign out when cancelled', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    render(<Settings />);
+
+    fireEvent.press(screen.getByTestId('sign-out'));
+    const buttons = (alertSpy.mock.calls[0][2] ?? []) as Array<{ style?: string }>;
+    const cancel = buttons.find((b) => b.style === 'cancel');
+
+    expect(cancel).toBeTruthy();
+    expect(mockSignOut).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 });
 

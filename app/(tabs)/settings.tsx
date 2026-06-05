@@ -168,11 +168,18 @@ export default function Settings() {
     ]);
   }
 
-  async function onSignOut() {
+  async function signOut() {
     setBusy(true);
     await supabase.auth.signOut();
     // onAuthStateChange fires SIGNED_OUT -> root gate redirects to (auth)/sign-in.
     setBusy(false);
+  }
+
+  function onSignOut() {
+    Alert.alert(t('settings.signOut', locale), t('settings.signOutConfirm', locale), [
+      { text: t('settings.cancel', locale), style: 'cancel' },
+      { text: t('settings.signOut', locale), style: 'destructive', onPress: () => void signOut() },
+    ]);
   }
 
   const selected = locale;
