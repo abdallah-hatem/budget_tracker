@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { FONT } from '@/src/lib/font';
+import { PressableScale } from './PressableScale';
 
 export interface EmptyStateProps {
   /** Emoji or short string to display in the soft accent circle */
@@ -74,7 +75,7 @@ export function EmptyState({ emoji = '🌿', title, subtitle, cta }: EmptyStateP
 
       {/* Optional CTA */}
       {cta !== undefined && (
-        <Pressable
+        <PressableScale
           onPress={cta.onPress}
           style={{
             paddingHorizontal: 24,
@@ -92,7 +93,7 @@ export function EmptyState({ emoji = '🌿', title, subtitle, cta }: EmptyStateP
           >
             {cta.label}
           </Text>
-        </Pressable>
+        </PressableScale>
       )}
     </View>
   );

@@ -12,6 +12,7 @@ import { CategoryAvatar } from '../../src/ui/CategoryAvatar';
 import { SpendingDonut } from '../../src/ui/SpendingDonut';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { EmptyState } from '../../src/ui/EmptyState';
+import { PressableScale } from '../../src/ui/PressableScale';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { categoryLabel } from '../../src/features/transactions/display';
@@ -92,7 +93,7 @@ export default function Dashboard() {
                 paddingVertical: 4,
               }}
             >
-              <Pressable
+              <PressableScale
                 accessibilityRole="button"
                 accessibilityLabel={t('prev_month', locale)}
                 onPress={() => handleMonthStep(prevMonth)}
@@ -108,7 +109,7 @@ export default function Dashboard() {
                 <Text style={{ fontFamily: FONT.sora, fontSize: 18, color: '#A8B2AF' }}>
                   {rtl ? '›' : '‹'}
                 </Text>
-              </Pressable>
+              </PressableScale>
 
               <Text
                 style={{
@@ -123,7 +124,7 @@ export default function Dashboard() {
                 {monthLabel(monthKey.month, locale)} {monthKey.year}
               </Text>
 
-              <Pressable
+              <PressableScale
                 accessibilityRole="button"
                 accessibilityLabel={t('next_month', locale)}
                 onPress={() => handleMonthStep(nextMonth)}
@@ -139,7 +140,7 @@ export default function Dashboard() {
                 <Text style={{ fontFamily: FONT.sora, fontSize: 18, color: '#A8B2AF' }}>
                   {rtl ? '‹' : '›'}
                 </Text>
-              </Pressable>
+              </PressableScale>
             </View>
           </View>
         </Reveal>

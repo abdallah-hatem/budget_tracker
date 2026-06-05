@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, Text, type PressableProps } from 'react-native';
+import { Text, type PressableProps } from 'react-native';
 import { FONT } from '@/src/lib/font';
+import { PressableScale } from './PressableScale';
 
 export interface PillProps {
   label: string;
@@ -18,7 +19,7 @@ export interface PillProps {
  */
 export function Pill({ label, active = false, onPress, testID, emoji }: PillProps) {
   return (
-    <Pressable
+    <PressableScale
       testID={testID}
       onPress={onPress}
       style={{
@@ -43,6 +44,6 @@ export function Pill({ label, active = false, onPress, testID, emoji }: PillProp
       >
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }

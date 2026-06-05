@@ -30,6 +30,9 @@ export type { PillProps } from './Pill';
 export { PrimaryButton } from './PrimaryButton';
 export type { PrimaryButtonProps } from './PrimaryButton';
 
+export { PressableScale } from './PressableScale';
+export type { PressableScaleProps } from './PressableScale';
+
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 

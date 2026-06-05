@@ -18,7 +18,7 @@ import { categoryStyle } from '../../src/lib/categoryStyle';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/features/dashboard/monthRange';
 import { t, isRTL } from '../../src/lib/i18n';
-import { Screen, Pill, EmptyState, TransactionRow, Money } from '../../src/ui';
+import { Screen, Pill, EmptyState, TransactionRow, Money, PressableScale } from '../../src/ui';
 import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT } from '../../src/lib/font';
@@ -127,7 +127,7 @@ export default function TransactionsScreen() {
             paddingVertical: 4,
           }}
         >
-          <Pressable
+          <PressableScale
             accessibilityRole="button"
             accessibilityLabel={t('prev_month', locale)}
             onPress={() => setMonthKey((k) => addMonth(k, -1))}
@@ -140,7 +140,7 @@ export default function TransactionsScreen() {
             <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>
               {rtl ? '›' : '‹'}
             </Text>
-          </Pressable>
+          </PressableScale>
 
           <Text
             style={{

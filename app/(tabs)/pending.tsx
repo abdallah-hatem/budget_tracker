@@ -15,7 +15,7 @@ import { EditTransactionSheet } from '../../src/features/transactions/EditTransa
 import { categoryLabel } from '../../src/features/transactions/display';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { t, isRTL } from '../../src/lib/i18n';
-import { Screen, Card, CategoryAvatar, EmptyState, Money } from '../../src/ui';
+import { Screen, Card, CategoryAvatar, EmptyState, Money, PressableScale } from '../../src/ui';
 import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT } from '../../src/lib/font';
@@ -212,7 +212,7 @@ export default function PendingScreen() {
                 }}
               >
                 {/* Confirm */}
-                <Pressable
+                <PressableScale
                   testID={`pending-confirm-${item.id}`}
                   onPress={() => handleConfirm(item.id)}
                   style={{
@@ -232,10 +232,10 @@ export default function PendingScreen() {
                   >
                     {t('confirm', locale)}
                   </Text>
-                </Pressable>
+                </PressableScale>
 
                 {/* Edit */}
-                <Pressable
+                <PressableScale
                   testID={`pending-edit-${item.id}`}
                   onPress={() => setEditing(item)}
                   style={{
@@ -255,10 +255,10 @@ export default function PendingScreen() {
                   >
                     {t('edit', locale)}
                   </Text>
-                </Pressable>
+                </PressableScale>
 
                 {/* Reject */}
-                <Pressable
+                <PressableScale
                   testID={`pending-reject-${item.id}`}
                   onPress={() => handleReject(item.id)}
                   style={{
@@ -280,7 +280,7 @@ export default function PendingScreen() {
                   >
                     {t('reject', locale)}
                   </Text>
-                </Pressable>
+                </PressableScale>
               </View>
             </Card>
           )}

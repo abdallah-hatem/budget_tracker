@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
+import { View, Text, TextInput, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateTransaction, deleteTransaction } from './api';
 import { categoryLabel } from './display';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
 import { t, isRTL } from '../../lib/i18n';
-import { CategoryAvatar } from '../../ui';
+import { CategoryAvatar, PressableScale } from '../../ui';
 import { FONT } from '../../lib/font';
 import type { Transaction, TxnType, Locale } from '../../types';
 
@@ -121,7 +121,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
         {(['expense', 'income'] as TxnType[]).map((ty) => {
           const active = type === ty;
           return (
-            <Pressable
+            <PressableScale
               key={ty}
               testID={`edit-type-${ty}`}
               onPress={() => {
@@ -148,7 +148,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
               >
                 {t(ty, locale)}
               </Text>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>
@@ -210,7 +210,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           {cats.map((c) => {
             const active = categorySlug === c.slug;
             return (
-              <Pressable
+              <PressableScale
                 key={c.slug}
                 testID={`edit-cat-${c.slug}`}
                 onLayout={(e) => {
@@ -248,7 +248,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
                 >
                   {categoryLabel(c.slug, locale)}
                 </Text>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </ScrollView>
@@ -310,7 +310,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
         }}
       >
         {/* Cancel */}
-        <Pressable
+        <PressableScale
           testID="edit-cancel"
           onPress={onCancel}
           disabled={busy}
@@ -332,10 +332,10 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           >
             {t('cancel', locale)}
           </Text>
-        </Pressable>
+        </PressableScale>
 
         {/* Delete */}
-        <Pressable
+        <PressableScale
           testID="edit-delete"
           onPress={handleDelete}
           disabled={busy}
@@ -359,10 +359,10 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           >
             {t('delete', locale)}
           </Text>
-        </Pressable>
+        </PressableScale>
 
         {/* Save */}
-        <Pressable
+        <PressableScale
           testID="edit-save"
           onPress={handleSave}
           disabled={busy}
@@ -384,7 +384,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           >
             {t('save', locale)}
           </Text>
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );

@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   View,
   TextInput,
-  Pressable,
   Text,
 } from 'react-native';
 import { MotiView } from 'moti';
@@ -25,6 +24,7 @@ import {
   Money,
   CategoryAvatar,
   SectionLabel,
+  PressableScale,
 } from '@/src/ui';
 import { FONT } from '@/src/lib/font';
 
@@ -178,7 +178,7 @@ export default function CaptureScreen() {
 
       {/* Mic button — centered, prominent */}
       <View style={{ alignItems: 'center', marginBottom: 32 }}>
-        <Pressable
+        <PressableScale
           testID="capture-mic"
           onPress={toggleMic}
           disabled={!supported}
@@ -204,7 +204,7 @@ export default function CaptureScreen() {
           <Text style={{ fontSize: 32 }}>
             {isListening ? '🔴' : '🎤'}
           </Text>
-        </Pressable>
+        </PressableScale>
 
         <Text
           style={{
@@ -286,7 +286,7 @@ export default function CaptureScreen() {
       </View>
 
       {/* Add button */}
-      <Pressable
+      <PressableScale
         testID="capture-categorize"
         onPress={onCategorize}
         disabled={isEmpty || loading}
@@ -318,7 +318,7 @@ export default function CaptureScreen() {
             {isRTL ? 'إضافة' : 'Add'}
           </Text>
         )}
-      </Pressable>
+      </PressableScale>
 
       {/* Capture error */}
       {error ? (
@@ -434,7 +434,7 @@ export default function CaptureScreen() {
                 gap: 12,
               }}
             >
-              <Pressable
+              <PressableScale
                 testID="capture-undo"
                 onPress={undoLast}
                 style={{
@@ -455,7 +455,7 @@ export default function CaptureScreen() {
                 >
                   {isRTL ? 'تراجع' : 'Undo'}
                 </Text>
-              </Pressable>
+              </PressableScale>
 
               <Text
                 style={{
