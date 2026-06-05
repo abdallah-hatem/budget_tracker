@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -20,6 +21,9 @@ export interface SessionContextValue {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  /** Optimistically patch the in-memory profile (e.g. locale) so the whole UI
+   *  reacts immediately, without waiting for a refetch / app restart. */
+  updateProfile: (patch: Partial<Profile>) => void;
 }
 
 const SessionContext = createContext<SessionContextValue>({
@@ -27,6 +31,7 @@ const SessionContext = createContext<SessionContextValue>({
   user: null,
   profile: null,
   loading: true,
+  updateProfile: () => {},
 });
 
 async function fetchProfile(userId: string): Promise<Profile | null> {
@@ -80,14 +85,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const updateProfile = useCallback((patch: Partial<Profile>) => {
+    setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
   const value = useMemo<SessionContextValue>(
     () => ({
       session,
       user: session?.user ?? null,
       profile,
       loading,
+      updateProfile,
     }),
-    [session, profile, loading],
+    [session, profile, loading, updateProfile],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

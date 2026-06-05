@@ -21,7 +21,7 @@ import { Screen, Card, AppText, SectionLabel, Pill, Money } from '@/src/ui';
 import { FONT } from '@/src/lib/font';
 
 export default function Settings() {
-  const { user, profile } = useSession();
+  const { user, profile, updateProfile } = useSession();
   const locale: Locale = profile?.locale ?? 'en';
   const rtl = isRTL(locale);
   const [busy, setBusy] = useState(false);
@@ -86,12 +86,12 @@ export default function Settings() {
   async function setLocale(next: Locale) {
     if (!user || next === locale) return;
     setBusy(true);
+    // Flip the whole UI immediately by patching the in-memory profile — no app
+    // restart needed. RTL is JS-driven (locale + row-reverse + writingDirection);
+    // DO NOT call I18nManager.forceRTL (it double-flips after reload).
+    updateProfile({ locale: next });
     // Persist on the profile row (RLS restricts to the current user).
     await supabase.from('profiles').update({ locale: next }).eq('id', user.id);
-    // RTL is driven purely by JS (locale + manual row-reverse + writingDirection).
-    // DO NOT call I18nManager.forceRTL — it would double-flip layouts after reload.
-    // SessionProvider will pick up the new locale on the next auth/profile refresh;
-    // the toggle UI below still reflects the chosen value optimistically via `selected`.
     setBusy(false);
   }
 
