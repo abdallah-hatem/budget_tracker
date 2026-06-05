@@ -19,6 +19,7 @@
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition to transcribe spoken expenses.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone to capture spoken expenses.",
+        "NSPhotoLibraryUsageDescription": "Masareef accesses your photo library only if you choose to attach an image to a transaction; it never reads your photos otherwise.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.abdallah.masareef"
