@@ -1,4 +1,4 @@
-import { formatMoney, splitMoney } from '../money';
+import { formatMoney, formatMoneyCompact, splitMoney } from '../money';
 
 // Real Unicode minus (U+2212)
 const MINUS = '−';
@@ -66,6 +66,35 @@ describe('formatMoney', () => {
       expect(result).toMatch(/^[^٠-٩]+$/);
       expect(result).toBe('E£ 1,250.00');
     });
+  });
+});
+
+describe('formatMoneyCompact', () => {
+  it('drops cents for sub-million amounts', () => {
+    expect(formatMoneyCompact(932)).toBe('E£ 932');
+    expect(formatMoneyCompact(1332)).toBe('E£ 1,332');
+    expect(formatMoneyCompact(123456)).toBe('E£ 123,456');
+  });
+
+  it('rounds to the nearest whole unit', () => {
+    expect(formatMoneyCompact(1332.99)).toBe('E£ 1,333');
+    expect(formatMoneyCompact(0)).toBe('E£ 0');
+  });
+
+  it('collapses millions to M with one trimmed decimal', () => {
+    expect(formatMoneyCompact(1_000_000)).toBe('E£ 1M');
+    expect(formatMoneyCompact(1_332_000)).toBe('E£ 1.3M');
+    expect(formatMoneyCompact(12_345_678)).toBe('E£ 12.3M');
+  });
+
+  it('collapses billions to B', () => {
+    expect(formatMoneyCompact(2_400_000_000)).toBe('E£ 2.4B');
+  });
+
+  it('defaults to no sign but honors sign options', () => {
+    expect(formatMoneyCompact(-1332)).toBe('E£ 1,332');
+    expect(formatMoneyCompact(-1332, { sign: 'auto' })).toBe(`${MINUS}E£ 1,332`);
+    expect(formatMoneyCompact(1332, { sign: 'always' })).toBe('+E£ 1,332');
   });
 });
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
-import { Money } from './Money';
+import { formatMoneyCompact } from '@/src/lib/money';
 import { categoryStyle } from '@/src/lib/categoryStyle';
 import { FONT } from '@/src/lib/font';
 import type { Locale } from '@/src/types';
@@ -21,6 +21,9 @@ export interface SpendingDonutProps {
 
 const RADIUS = 96;
 const INNER_RADIUS = 70; // ≈73% — thin ring
+// Usable width inside the inner circle (diameter − padding) the center number
+// must fit within. adjustsFontSizeToFit shrinks the number to this on overflow.
+const CENTER_WIDTH = INNER_RADIUS * 2 - 24;
 const SURFACE = '#14191A';
 const OTHER_COLOR = '#64748B'; // muted slate for rolled-up "Other"
 const GHOST = '#1C2322'; // overlay step for the empty ghost ring
@@ -86,8 +89,29 @@ export function SpendingDonut({ data, total, locale }: SpendingDonutProps) {
         strokeColor={SURFACE}
         strokeWidth={2}
         centerLabelComponent={() => (
-          <View style={{ alignItems: 'center' }}>
-            <Money amount={total} tone="ink" sign="none" size={26} />
+          <View
+            style={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: CENTER_WIDTH,
+            }}
+          >
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+              style={{
+                fontFamily: FONT.soraSb,
+                fontSize: 26,
+                lineHeight: 30,
+                color: '#F4F7F5',
+                fontVariant: ['tabular-nums', 'lining-nums'],
+                writingDirection: 'ltr',
+                textAlign: 'center',
+              }}
+            >
+              {formatMoneyCompact(total, { sign: 'none' })}
+            </Text>
             <Text
               style={{
                 fontFamily: FONT.jakartaMd,
