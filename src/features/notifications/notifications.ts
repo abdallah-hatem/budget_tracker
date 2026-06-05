@@ -37,12 +37,6 @@ export async function registerForPushNotificationsAsync(
   userId: string,
 ): Promise<string | null> {
   try {
-    // Push tokens only work on physical devices.
-    if (!Device.isDevice) {
-      console.log('[Notifications] Skipping registration: not a physical device.');
-      return null;
-    }
-
     // Android: create a notification channel so banners are visible.
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
@@ -51,7 +45,8 @@ export async function registerForPushNotificationsAsync(
       });
     }
 
-    // Request permission if not already granted.
+    // Request permission if not already granted. (Runs on the simulator too, so
+    // local notifications and `xcrun simctl push` can display and be tapped.)
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
@@ -59,7 +54,17 @@ export async function registerForPushNotificationsAsync(
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      console.log('[Notifications] Push permission denied.');
+      console.log('[Notifications] Notification permission denied.');
+      return null;
+    }
+
+    // A real Expo PUSH token requires a physical device (+ EAS projectId). On the
+    // simulator we stop here: permission is granted so notifications can show,
+    // but there is no push token to store.
+    if (!Device.isDevice) {
+      console.log(
+        '[Notifications] Physical device required for a push token; permission granted, token skipped.',
+      );
       return null;
     }
 
