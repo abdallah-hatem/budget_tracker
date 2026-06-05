@@ -12,10 +12,16 @@ export interface AppTextProps extends TextProps {
   className?: string;
 }
 
+// Detects whether a className already specifies a text COLOR (not a size/align
+// like text-base/text-center) from our theme palette.
+const HAS_TEXT_COLOR =
+  /\btext-(ink2|ink3|ink|accent(Press)?|income|expense|danger|warning|white|black|transparent|gray-\d+|red-\d+|green-\d+|emerald-\d+|blue-\d+|amber-\d+)\b/;
+
 /**
  * AppText — locale-aware text wrapper.
- * Automatically selects Jakarta (en) or Readex (ar) based on the session locale.
- * Add color/size via className; this component sets fontFamily only.
+ * Selects Jakarta (en) or Readex (ar) from the session locale, and DEFAULTS the
+ * color to `ink` so text is never invisible-black on the dark canvas. Pass a
+ * `text-*` color in className (or `color` in style) to override.
  */
 export function AppText({
   children,
@@ -42,9 +48,14 @@ export function AppText({
       fontFamily = uiFont(locale);
   }
 
+  // Default to ink unless an explicit color class is present. (An explicit
+  // `color` in the `style` prop still wins via style precedence.)
+  const hasColor = HAS_TEXT_COLOR.test(className) || /\btext-\[/.test(className);
+  const finalClassName = hasColor ? className : `text-ink ${className}`.trim();
+
   return (
     <Text
-      className={className}
+      className={finalClassName}
       style={[{ fontFamily }, style]}
       {...rest}
     >
