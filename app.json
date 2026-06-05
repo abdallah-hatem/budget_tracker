@@ -14,7 +14,7 @@
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition to transcribe spoken expenses.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone to capture spoken expenses."
       },
-      "bundleIdentifier": "com.leo-pepsi-2.tmp-app"
+      "bundleIdentifier": "com.abdallah.masareef"
     },
     "android": {
       "adaptiveIcon": {

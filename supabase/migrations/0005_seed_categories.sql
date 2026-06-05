@@ -1,6 +1,7 @@
--- seed.sql — global category reference data (bilingual). Runs on `supabase db reset`.
--- Source of truth mirrored by src/lib/categories.ts (kept in sync via a unit test).
--- Slug set MUST match src/lib/categories.ts and supabase/functions/_shared/categories.ts
+-- 0005_seed_categories.sql — global category reference data (bilingual).
+-- Idempotent so it can ship via `supabase db push` to any environment and be
+-- re-applied safely. Mirrors supabase/seed.sql (local) and src/lib/categories.ts
+-- (kept in sync by the seedParity unit test).
 
 insert into public.categories (slug, name_en, name_ar, kind, icon, color, sort_order) values
   -- Expense
@@ -22,4 +23,10 @@ insert into public.categories (slug, name_en, name_ar, kind, icon, color, sort_o
   ('gift',          'Gift',               'هدية',           'income',  'gift',                '#D946EF', 30),
   ('refund',        'Refund',             'استرداد',        'income',  'cash-refund',         '#10B981', 40),
   ('other_income',  'Other',              'أخرى',           'income',  'dots-horizontal',     '#64748B', 50)
-on conflict (slug) do nothing;
+on conflict (slug) do update set
+  name_en    = excluded.name_en,
+  name_ar    = excluded.name_ar,
+  kind       = excluded.kind,
+  icon       = excluded.icon,
+  color      = excluded.color,
+  sort_order = excluded.sort_order;
