@@ -16,6 +16,14 @@ jest.mock('../../../src/features/ingest/api', () => ({
   hasActiveIngestToken: jest.fn(),
 }));
 
+jest.mock('../../../src/features/accounts/api', () => ({
+  listAccountBalances: jest.fn(),
+  createAccount: jest.fn(),
+  updateAccount: jest.fn(),
+  setDefaultAccount: jest.fn(),
+  deleteAccount: jest.fn(),
+}));
+
 jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn().mockResolvedValue(undefined),
 }));
@@ -41,12 +49,25 @@ import {
   hasActiveIngestToken,
 } from '../../../src/features/ingest/api';
 import * as Clipboard from 'expo-clipboard';
+import {
+  listAccountBalances,
+  createAccount,
+  setDefaultAccount,
+} from '../../../src/features/accounts/api';
 
 const mockSession = useSession as jest.Mock;
 const mockCreate = createIngestToken as jest.Mock;
 const mockRevoke = revokeIngestTokens as jest.Mock;
 const mockHasToken = hasActiveIngestToken as jest.Mock;
 const mockClipboard = Clipboard.setStringAsync as jest.Mock;
+const mockListAccounts = listAccountBalances as jest.Mock;
+const mockCreateAccount = createAccount as jest.Mock;
+const mockSetDefault = setDefaultAccount as jest.Mock;
+
+const acctBal = (over: Record<string, unknown>) => ({
+  id: 'a', user_id: 'u1', name: 'Main', opening_balance: 0,
+  is_default: true, currency: 'EGP', created_at: '', balance: 0, ...over,
+});
 
 function setupSession(locale: 'en' | 'ar' = 'en') {
   mockSession.mockReturnValue({
@@ -64,6 +85,10 @@ beforeEach(() => {
   mockHasToken.mockResolvedValue(false);
   mockCreate.mockResolvedValue('test-raw-token-abc123');
   mockRevoke.mockResolvedValue(undefined);
+  // Default: one default 'Main' account
+  mockListAccounts.mockResolvedValue([acctBal({ id: 'a', name: 'Main', is_default: true, balance: 100000 })]);
+  mockCreateAccount.mockResolvedValue({ id: 'new' });
+  mockSetDefault.mockResolvedValue(undefined);
 });
 
 describe('Settings screen — existing settings', () => {
@@ -82,6 +107,33 @@ describe('Settings screen — existing settings', () => {
   it('renders sign-out button', async () => {
     render(<Settings />);
     expect(screen.getByTestId('sign-out')).toBeTruthy();
+  });
+});
+
+describe('Settings screen — Accounts', () => {
+  it('lists the user accounts', async () => {
+    render(<Settings />);
+    expect(await screen.findByTestId('account-row-a')).toBeTruthy();
+    expect(screen.getByText('Main')).toBeTruthy();
+  });
+
+  it('creates a new account from the inline form', async () => {
+    render(<Settings />);
+    await screen.findByTestId('account-row-a');
+
+    fireEvent.press(screen.getByTestId('accounts-add'));
+    fireEvent.changeText(screen.getByTestId('account-name-input'), 'Bank');
+    fireEvent.changeText(screen.getByTestId('account-balance-input'), '100000');
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('account-create-submit'));
+    });
+
+    await waitFor(() =>
+      expect(mockCreateAccount).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Bank', opening_balance: 100000 }),
+      ),
+    );
   });
 });
 
