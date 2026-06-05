@@ -190,3 +190,24 @@ After it lands in TestFlight, attach the build to the 1.0 version and **Submit f
 
 > "Submit" uploads the binary; going live still needs the metadata above + Apple's
 > review (~1–3 days). EAS can't automate Apple's review step.
+
+---
+
+## OTA updates (EAS Update)
+
+Wired up so you can ship JS/asset changes **without** an App Store review. Native
+changes (new native module, native `app.json` config, SDK bump) still need a build.
+
+- `expo-updates` installed; `app.json` has `updates.url` + `runtimeVersion`
+  (policy `appVersion`); each `eas.json` profile has a `channel`.
+- ⚠️ **Only builds made AFTER this wiring receive OTA** — i.e. build #3 onward.
+  Build #2 (in TestFlight) cannot be updated over the air.
+
+Publish a JS update to the production channel:
+```bash
+eas update --channel production --message "Describe the change"
+```
+
+A production build (runtimeVersion = the app `version`, e.g. `1.0.0`) fetches the
+latest matching update on next launch. Bump the version / make a new build for
+native changes.
