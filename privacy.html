@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Masareef — Privacy Policy</title>
+  <meta name="description" content="Privacy Policy for the Masareef budget tracker app." />
+  <style>
+    :root{
+      --canvas:#0B0F0E; --surface:#14191A; --overlay:#1C2322;
+      --ink:#F4F7F5; --ink2:#A8B2AF; --ink3:#6B7672; --accent:#2BD98E;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--canvas); color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      line-height:1.65; -webkit-font-smoothing:antialiased;
+    }
+    .wrap{max-width:760px; margin:0 auto; padding:48px 22px 80px}
+    .brand{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+    .dot{width:12px; height:12px; border-radius:999px; background:var(--accent)}
+    .brand b{font-size:15px; letter-spacing:.3px}
+    h1{font-size:30px; margin:18px 0 6px}
+    .meta{color:var(--ink3); font-size:14px; margin-bottom:34px}
+    h2{font-size:19px; margin:34px 0 10px; color:#fff}
+    p,li{color:var(--ink2); font-size:15.5px}
+    a{color:var(--accent); text-decoration:none}
+    a:hover{text-decoration:underline}
+    ul{padding-left:20px}
+    li{margin:6px 0}
+    .card{background:var(--surface); border:1px solid var(--overlay); border-radius:16px; padding:18px 20px; margin:18px 0}
+    .pill{display:inline-block; background:rgba(43,217,142,.14); color:var(--accent); font-size:12px; padding:4px 10px; border-radius:999px}
+    hr{border:none; border-top:1px solid var(--overlay); margin:40px 0}
+    footer{color:var(--ink3); font-size:13px; margin-top:36px}
+    strong{color:var(--ink)}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="brand"><span class="dot"></span><b>Masareef · مصاريف</b></div>
+    <h1>Privacy Policy</h1>
+    <div class="meta">Last updated: 5 June 2026</div>
+
+    <p>Masareef ("the app", "we", "us") is a personal budget tracker that lets you record your spending and income by voice or text, in Arabic or English. We built Masareef to be <strong>private by design</strong>: your financial data belongs to you, we don't show ads, and we don't track you across other apps or websites. This policy explains what we collect, why, and the choices you have.</p>
+
+    <div class="card"><span class="pill">In short</span>
+      <p style="margin-bottom:0">We collect only what's needed to run the app — your account email and the transactions you create. We never sell your data, never use it for advertising, and never connect to your bank.</p>
+    </div>
+
+    <h2>1. Information we collect</h2>
+    <ul>
+      <li><strong>Account information</strong> — your email address, used to create and sign in to your account. Your password is handled by our authentication provider and stored only as a secure hash; we never see it in plain text.</li>
+      <li><strong>Transactions you create</strong> — the amount, category, date, type (expense/income), any note, and the original text you spoke or typed (kept so the app can categorize it and show your history).</li>
+      <li><strong>Accounts &amp; balances</strong> — the account names and starting balances you add (e.g. "Bank", "Cash").</li>
+      <li><strong>Notification token</strong> — if you enable notifications, a push token so we can alert you about pending SMS transactions.</li>
+      <li><strong>SMS auto-capture (optional)</strong> — if you set up the iOS Shortcut, the text of a bank SMS you forward is sent to our server to extract the amount and category, then saved as a pending transaction.</li>
+    </ul>
+    <p>We do <strong>not</strong> collect your contacts, location, advertising identifiers, or analytics about how you use the app.</p>
+
+    <h2>2. How we use your information</h2>
+    <p>We use the data above only to provide the app's core features: recording, categorizing, and displaying your finances; calculating account balances; and (if you opt in) sending you notifications. We do not use your data for advertising or profiling.</p>
+
+    <h2>3. Voice &amp; speech</h2>
+    <p>Voice entry is optional. When you use it, <strong>speech recognition happens on your device</strong> and only the resulting <em>text</em> is processed by the app. We do not record, upload, or store raw audio. The app requests Microphone and Speech Recognition permission solely for this optional feature.</p>
+
+    <h2>4. AI categorization</h2>
+    <p>To detect the amount and category of a purchase, the <em>text</em> of your entry (for example "coffee 45 pounds") is sent to a third-party AI provider, <strong>Groq</strong>, which returns a suggested category. This text is processed to generate that result and is not used by us to build advertising profiles. See Groq's privacy practices at <a href="https://groq.com/privacy-policy/">groq.com/privacy-policy</a>.</p>
+
+    <h2>5. Where your data is stored</h2>
+    <p>Your data is stored securely with our backend provider, <strong>Supabase</strong> (PostgreSQL hosting), protected by row-level security so that only your authenticated account can read or write your data. Data is transmitted over encrypted HTTPS connections. See Supabase's privacy practices at <a href="https://supabase.com/privacy">supabase.com/privacy</a>.</p>
+
+    <h2>6. Sharing</h2>
+    <p>We do not sell or rent your personal data. We share data only with the service providers needed to operate the app:</p>
+    <ul>
+      <li><strong>Supabase</strong> — authentication and database storage.</li>
+      <li><strong>Groq</strong> — AI categorization of transaction text.</li>
+      <li><strong>Apple</strong> — push notification delivery (if enabled).</li>
+    </ul>
+
+    <h2>7. Data retention &amp; your choices</h2>
+    <p>We keep your data until you delete it or close your account. You can delete individual transactions and accounts at any time inside the app. To delete your entire account and all associated data, contact us at the email below and we will remove it.</p>
+
+    <h2>8. Children</h2>
+    <p>Masareef is not directed to children under 13, and we do not knowingly collect data from them.</p>
+
+    <h2>9. Changes to this policy</h2>
+    <p>We may update this policy from time to time. We'll revise the "Last updated" date above and, for significant changes, provide a notice in the app.</p>
+
+    <h2>10. Contact</h2>
+    <p>Questions or data requests? Email <a href="mailto:support@masareef.app">support@masareef.app</a>.</p>
+
+    <hr/>
+    <footer>© 2026 Masareef. A personal, track-only budget app — it never links to your bank or moves money.</footer>
+  </main>
+</body>
+</html>
