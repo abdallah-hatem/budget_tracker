@@ -131,12 +131,11 @@ export default function TransactionsScreen() {
             accessibilityRole="button"
             accessibilityLabel={t('prev_month', locale)}
             onPress={() => setMonthKey((k) => addMonth(k, -1))}
-            style={({ pressed }) => ({
+            style={{
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: 999,
-              opacity: pressed ? 0.6 : 1,
-            })}
+            }}
           >
             <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>
               {rtl ? '›' : '‹'}
@@ -157,12 +156,11 @@ export default function TransactionsScreen() {
             accessibilityRole="button"
             accessibilityLabel={t('next_month', locale)}
             onPress={() => setMonthKey((k) => addMonth(k, 1))}
-            style={({ pressed }) => ({
+            style={{
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: 999,
-              opacity: pressed ? 0.6 : 1,
-            })}
+            }}
           >
             <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>
               {rtl ? '‹' : '›'}

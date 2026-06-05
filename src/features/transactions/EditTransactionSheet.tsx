@@ -131,14 +131,13 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
                   setCategorySlug(next[0]?.slug ?? categorySlug);
                 }
               }}
-              style={({ pressed }) => ({
+              style={{
                 flex: 1,
                 borderRadius: 10,
                 paddingVertical: 10,
                 alignItems: 'center',
                 backgroundColor: active ? '#2BD98E' : 'transparent',
-                opacity: pressed ? 0.85 : 1,
-              })}
+              }}
             >
               <Text
                 style={{
@@ -225,7 +224,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
                   setCategorySlug(c.slug);
                   scrollToSlug(c.slug, true);
                 }}
-                style={({ pressed }) => ({
+                style={{
                   flexDirection: rtl ? 'row-reverse' : 'row',
                   alignItems: 'center',
                   gap: 6,
@@ -237,8 +236,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
                     : '#14191A',
                   borderWidth: active ? 1 : 0,
                   borderColor: active ? 'rgba(43,217,142,0.4)' : 'transparent',
-                  opacity: pressed ? 0.8 : 1,
-                })}
+                }}
               >
                 <CategoryAvatar slug={c.slug} size={24} />
                 <Text
@@ -316,14 +314,14 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           testID="edit-cancel"
           onPress={onCancel}
           disabled={busy}
-          style={({ pressed }) => ({
+          style={{
             flex: 1,
             borderRadius: 14,
             paddingVertical: 14,
             alignItems: 'center',
-            backgroundColor: pressed ? '#2A3331' : '#14191A',
+            backgroundColor: '#14191A',
             opacity: busy ? 0.5 : 1,
-          })}
+          }}
         >
           <Text
             style={{
@@ -341,18 +339,16 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           testID="edit-delete"
           onPress={handleDelete}
           disabled={busy}
-          style={({ pressed }) => ({
+          style={{
             flex: 1,
             borderRadius: 14,
             paddingVertical: 14,
             alignItems: 'center',
-            backgroundColor: pressed
-              ? 'rgba(255,92,108,0.2)'
-              : 'rgba(255,92,108,0.1)',
+            backgroundColor: 'rgba(255,92,108,0.1)',
             borderWidth: 1,
             borderColor: 'rgba(255,92,108,0.4)',
             opacity: busy ? 0.5 : 1,
-          })}
+          }}
         >
           <Text
             style={{
@@ -370,14 +366,14 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           testID="edit-save"
           onPress={handleSave}
           disabled={busy}
-          style={({ pressed }) => ({
+          style={{
             flex: 1,
             borderRadius: 14,
             paddingVertical: 14,
             alignItems: 'center',
-            backgroundColor: pressed ? '#1FB877' : '#2BD98E',
+            backgroundColor: '#2BD98E',
             opacity: busy ? 0.7 : 1,
-          })}
+          }}
         >
           <Text
             style={{

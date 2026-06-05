@@ -215,14 +215,13 @@ export default function PendingScreen() {
                 <Pressable
                   testID={`pending-confirm-${item.id}`}
                   onPress={() => handleConfirm(item.id)}
-                  style={({ pressed }) => ({
+                  style={{
                     flex: 1,
                     borderRadius: 12,
                     paddingVertical: 10,
                     alignItems: 'center',
-                    backgroundColor: pressed ? '#1FB877' : '#2BD98E',
-                    opacity: pressed ? 0.9 : 1,
-                  })}
+                    backgroundColor: '#2BD98E',
+                  }}
                 >
                   <Text
                     style={{
@@ -239,13 +238,13 @@ export default function PendingScreen() {
                 <Pressable
                   testID={`pending-edit-${item.id}`}
                   onPress={() => setEditing(item)}
-                  style={({ pressed }) => ({
+                  style={{
                     flex: 1,
                     borderRadius: 12,
                     paddingVertical: 10,
                     alignItems: 'center',
-                    backgroundColor: pressed ? '#2A3331' : '#1C2322',
-                  })}
+                    backgroundColor: '#1C2322',
+                  }}
                 >
                   <Text
                     style={{
@@ -262,15 +261,15 @@ export default function PendingScreen() {
                 <Pressable
                   testID={`pending-reject-${item.id}`}
                   onPress={() => handleReject(item.id)}
-                  style={({ pressed }) => ({
+                  style={{
                     flex: 1,
                     borderRadius: 12,
                     paddingVertical: 10,
                     alignItems: 'center',
-                    backgroundColor: pressed ? 'rgba(255,92,108,0.2)' : 'rgba(255,92,108,0.1)',
+                    backgroundColor: 'rgba(255,92,108,0.1)',
                     borderWidth: 1,
                     borderColor: 'rgba(255,92,108,0.4)',
-                  })}
+                  }}
                 >
                   <Text
                     style={{

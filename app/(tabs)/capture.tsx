@@ -182,7 +182,7 @@ export default function CaptureScreen() {
           testID="capture-mic"
           onPress={toggleMic}
           disabled={!supported}
-          style={({ pressed }) => ({
+          style={{
             width: 88,
             height: 88,
             borderRadius: 44,
@@ -193,14 +193,13 @@ export default function CaptureScreen() {
                 : OVERLAY,
             alignItems: 'center',
             justifyContent: 'center',
-            opacity: pressed ? 0.85 : 1,
             // Emerald ring when listening
             shadowColor: isListening ? ACCENT : 'transparent',
             shadowOffset: { width: 0, height: 0 },
             shadowOpacity: isListening ? 0.55 : 0,
             shadowRadius: isListening ? 20 : 0,
             elevation: isListening ? 12 : 0,
-          })}
+          }}
         >
           <Text style={{ fontSize: 32 }}>
             {isListening ? '🔴' : '🎤'}
@@ -291,20 +290,20 @@ export default function CaptureScreen() {
         testID="capture-categorize"
         onPress={onCategorize}
         disabled={isEmpty || loading}
-        style={({ pressed }) => ({
+        style={{
           marginBottom: 16,
           backgroundColor: isEmpty || loading ? '#1FB877' : ACCENT,
           borderRadius: 16,
           paddingVertical: 16,
           alignItems: 'center' as const,
           justifyContent: 'center' as const,
-          opacity: isEmpty ? 0.5 : pressed ? 0.88 : 1,
+          opacity: isEmpty ? 0.5 : 1,
           shadowColor: (!isEmpty && !loading) ? ACCENT : 'transparent',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: (!isEmpty && !loading) ? 0.3 : 0,
           shadowRadius: 12,
           elevation: (!isEmpty && !loading) ? 6 : 0,
-        })}
+        }}
       >
         {loading ? (
           <ActivityIndicator color="#06251A" />
@@ -438,16 +437,14 @@ export default function CaptureScreen() {
               <Pressable
                 testID="capture-undo"
                 onPress={undoLast}
-                style={({ pressed }) => ({
+                style={{
                   paddingHorizontal: 16,
                   paddingVertical: 7,
                   borderRadius: 999,
-                  backgroundColor: pressed
-                    ? 'rgba(244,247,245,0.12)'
-                    : 'rgba(244,247,245,0.08)',
+                  backgroundColor: 'rgba(244,247,245,0.08)',
                   borderWidth: 1,
                   borderColor: 'rgba(244,247,245,0.16)',
-                })}
+                }}
               >
                 <Text
                   style={{

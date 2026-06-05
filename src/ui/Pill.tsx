@@ -21,7 +21,7 @@ export function Pill({ label, active = false, onPress, testID, emoji }: PillProp
     <Pressable
       testID={testID}
       onPress={onPress}
-      style={({ pressed }) => ({
+      style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
@@ -31,8 +31,7 @@ export function Pill({ label, active = false, onPress, testID, emoji }: PillProp
         backgroundColor: active
           ? 'rgba(43,217,142,0.16)' // accentSoft
           : '#14191A',              // surface
-        opacity: pressed ? 0.7 : 1,
-      })}
+      }}
     >
       {emoji ? <Text style={{ fontSize: 13 }}>{emoji}</Text> : null}
       <Text

@@ -76,12 +76,12 @@ export function EmptyState({ emoji = '🌿', title, subtitle, cta }: EmptyStateP
       {cta !== undefined && (
         <Pressable
           onPress={cta.onPress}
-          style={({ pressed }) => ({
+          style={{
             paddingHorizontal: 24,
             paddingVertical: 12,
             borderRadius: 999,
-            backgroundColor: pressed ? '#1FB877' : '#2BD98E',
-          })}
+            backgroundColor: '#2BD98E',
+          }}
         >
           <Text
             style={{

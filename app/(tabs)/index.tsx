@@ -97,14 +97,13 @@ export default function Dashboard() {
                 accessibilityLabel={t('prev_month', locale)}
                 onPress={() => handleMonthStep(prevMonth)}
                 hitSlop={8}
-                style={({ pressed }) => ({
+                style={{
                   width: 32,
                   height: 32,
                   borderRadius: 999,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  opacity: pressed ? 0.5 : 1,
-                })}
+                }}
               >
                 <Text style={{ fontFamily: FONT.sora, fontSize: 18, color: '#A8B2AF' }}>
                   {rtl ? '›' : '‹'}
@@ -129,14 +128,13 @@ export default function Dashboard() {
                 accessibilityLabel={t('next_month', locale)}
                 onPress={() => handleMonthStep(nextMonth)}
                 hitSlop={8}
-                style={({ pressed }) => ({
+                style={{
                   width: 32,
                   height: 32,
                   borderRadius: 999,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  opacity: pressed ? 0.5 : 1,
-                })}
+                }}
               >
                 <Text style={{ fontFamily: FONT.sora, fontSize: 18, color: '#A8B2AF' }}>
                   {rtl ? '‹' : '›'}

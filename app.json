@@ -9,7 +9,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition to transcribe spoken expenses.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone to capture spoken expenses."
+      },
+      "bundleIdentifier": "com.leo-pepsi-2.tmp-app"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +24,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -61,6 +69,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "71a16c6f-6abc-4172-b12a-9958a6d05f44"
+      }
+    },
+    "owner": "leo_pepsi_2"
   }
 }
