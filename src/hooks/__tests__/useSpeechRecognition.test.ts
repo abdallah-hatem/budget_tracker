@@ -79,6 +79,26 @@ it('updates transcript on a result event', async () => {
   expect(result.current.transcript).toBe('hello');
 });
 
+it('calls onFinalResult with the whole utterance when recognition ends', () => {
+  const onFinal = jest.fn();
+  renderHook(() => useSpeechRecognition(onFinal));
+
+  act(() => __emit('result', { results: [{ transcript: 'coffee 50 pounds' }], isFinal: true }));
+  // Nothing fires until recognition actually ends — no streaming/partial processing.
+  expect(onFinal).not.toHaveBeenCalled();
+
+  act(() => __emit('end'));
+  expect(onFinal).toHaveBeenCalledTimes(1);
+  expect(onFinal).toHaveBeenCalledWith('coffee 50 pounds');
+});
+
+it('does not call onFinalResult when nothing was transcribed', () => {
+  const onFinal = jest.fn();
+  renderHook(() => useSpeechRecognition(onFinal));
+  act(() => __emit('end'));
+  expect(onFinal).not.toHaveBeenCalled();
+});
+
 it('captures errors and stops listening', async () => {
   const { result } = renderHook(() => useSpeechRecognition());
 

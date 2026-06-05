@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type * as ESR from 'expo-speech-recognition';
 
 // expo-speech-recognition is a NATIVE module: it only exists in a development
@@ -40,10 +40,18 @@ export interface SpeechRecognition {
   stop: () => void;
 }
 
-export function useSpeechRecognition(): SpeechRecognition {
+export function useSpeechRecognition(
+  onFinalResult?: (transcript: string) => void,
+): SpeechRecognition {
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Always invoke the latest callback without re-subscribing each render.
+  const finalCbRef = useRef(onFinalResult);
+  finalCbRef.current = onFinalResult;
+  // Latest transcript, read synchronously the moment recognition ends.
+  const transcriptRef = useRef('');
 
   subscribe('start', () => {
     setIsListening(true);
@@ -52,11 +60,17 @@ export function useSpeechRecognition(): SpeechRecognition {
 
   subscribe('end', () => {
     setIsListening(false);
+    // Recognition finished: hand the whole utterance to the caller "at once",
+    // so it can categorize + save without ever showing a streaming transcript.
+    const finalText = transcriptRef.current.trim();
+    transcriptRef.current = '';
+    if (finalText) finalCbRef.current?.(finalText);
   });
 
   subscribe('result', (event) => {
     const next = event?.results?.[0]?.transcript;
     if (typeof next === 'string') {
+      transcriptRef.current = next;
       setTranscript(next);
     }
   });
@@ -75,6 +89,7 @@ export function useSpeechRecognition(): SpeechRecognition {
 
     setError(null);
     setTranscript('');
+    transcriptRef.current = '';
 
     const perms = await mod.requestPermissionsAsync();
     if (!perms.granted) {
@@ -94,8 +109,8 @@ export function useSpeechRecognition(): SpeechRecognition {
 
     const baseOptions = {
       lang,
-      interimResults: true,
-      continuous: false,
+      interimResults: false, // only the final utterance — no live/streaming text
+      continuous: false,     // auto-stop after a natural pause
     };
 
     if (preferOnDevice) {

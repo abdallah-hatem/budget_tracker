@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   View,
@@ -52,8 +52,13 @@ export default function CaptureScreen() {
   const locale: Locale = (profile?.locale as Locale) ?? 'en';
   const isRTL = locale === 'ar';
 
-  const { transcript, isListening, supported, error: sttError, start, stop } =
-    useSpeechRecognition();
+  // Holds the latest "process this capture" fn so the speech callback (registered
+  // once) always runs current logic. Voice never touches the text box — when the
+  // utterance finishes, we process it straight away.
+  const processRef = useRef<(raw: string, src: TxnSource) => void>(() => {});
+
+  const { isListening, supported, error: sttError, start, stop } =
+    useSpeechRecognition((finalText) => processRef.current(finalText, 'voice'));
 
   const [text, setText] = useState('');
   const [source, setSource] = useState<TxnSource>('text');
@@ -63,16 +68,6 @@ export default function CaptureScreen() {
   const [lastSaved, setLastSaved] = useState<Transaction | null>(null);
   // Render-timing-independent reentrancy guard against double-submit.
   const submittingRef = useRef(false);
-
-  // Mirror live transcript into the text box — but never while a submit is in
-  // flight, so a late transcript can't clobber the text/source we're saving.
-  useEffect(() => {
-    if (submittingRef.current) return;
-    if (transcript) {
-      setText(transcript);
-      setSource('voice');
-    }
-  }, [transcript]);
 
   const toggleMic = () => {
     if (!supported) return;
@@ -89,47 +84,55 @@ export default function CaptureScreen() {
     }
   };
 
-  // Categorize AND save in one tap — no confirmation step.
-  const onCategorize = async () => {
-    if (submittingRef.current || loading) return;
-    const value = text.trim();
-    if (!value || !user) return;
-    const src = source; // snapshot now; transcript effect can't change it mid-flight
-    submittingRef.current = true;
-    setError(null);
-    setLoading(true);
-    if (isListening) stop();
-    try {
-      const parsed = await requestCategorize(value, locale);
-      // Round to the column's precision (numeric(14,2)) so the client guard
-      // matches what the DB will actually store (CHECK amount > 0).
-      const amount = Math.round((parsed.amount ?? 0) * 100) / 100;
-      if (!(amount > 0)) {
-        setError(
-          locale === 'ar'
-            ? 'لم أتمكن من إيجاد مبلغ — أضِف المبلغ وحاول مرة أخرى'
-            : "Couldn't find an amount — add it and try again",
-        );
-        return;
-      }
-      const row = await insertTransaction(
-        buildCaptureRow({ ...parsed, amount }, value, src, user.id, 'confirmed'),
-      );
+  // Categorize AND save in one go — no confirmation step. Shared by the typed
+  // "Add" button and (automatically) by voice once the utterance finishes, so a
+  // spoken entry goes straight from speech to a saved transaction.
+  const processCapture = useCallback(
+    async (raw: string, src: TxnSource) => {
+      if (submittingRef.current || loading) return;
+      const value = raw.trim();
+      if (!value || !user) return;
+      submittingRef.current = true;
+      setError(null);
+      setLoading(true);
+      if (isListening) stop();
       try {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {
-        // haptics optional
+        const parsed = await requestCategorize(value, locale);
+        // Round to the column's precision (numeric(14,2)) so the client guard
+        // matches what the DB will actually store (CHECK amount > 0).
+        const amount = Math.round((parsed.amount ?? 0) * 100) / 100;
+        if (!(amount > 0)) {
+          setError(
+            locale === 'ar'
+              ? 'لم أتمكن من إيجاد مبلغ — أضِف المبلغ وحاول مرة أخرى'
+              : "Couldn't find an amount — add it and try again",
+          );
+          return;
+        }
+        const row = await insertTransaction(
+          buildCaptureRow({ ...parsed, amount }, value, src, user.id, 'confirmed'),
+        );
+        try {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch {
+          // haptics optional
+        }
+        setLastSaved(row);
+        setText('');
+        setSource('text');
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to add');
+      } finally {
+        setLoading(false);
+        submittingRef.current = false;
       }
-      setLastSaved(row);
-      setText('');
-      setSource('text');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to add');
-    } finally {
-      setLoading(false);
-      submittingRef.current = false;
-    }
-  };
+    },
+    [user, locale, loading, isListening, stop],
+  );
+  // Keep the speech callback pointing at the latest processCapture.
+  processRef.current = processCapture;
+
+  const onCategorize = () => void processCapture(text, source);
 
   const undoLast = async () => {
     if (!lastSaved) return;
@@ -181,7 +184,7 @@ export default function CaptureScreen() {
         <PressableScale
           testID="capture-mic"
           onPress={toggleMic}
-          disabled={!supported}
+          disabled={!supported || loading}
           style={{
             width: 88,
             height: 88,
@@ -202,7 +205,7 @@ export default function CaptureScreen() {
           }}
         >
           <Text style={{ fontSize: 32 }}>
-            {isListening ? '🔴' : '🎤'}
+            {loading ? '⏳' : isListening ? '🔴' : '🎤'}
           </Text>
         </PressableScale>
 
@@ -210,7 +213,7 @@ export default function CaptureScreen() {
           style={{
             fontFamily: isRTL ? FONT.readex : FONT.jakartaMd,
             fontSize: 13,
-            color: !supported ? INK3 : isListening ? ACCENT : INK2,
+            color: !supported ? INK3 : isListening || loading ? ACCENT : INK2,
             marginTop: 12,
             textAlign: 'center',
           }}
@@ -219,13 +222,17 @@ export default function CaptureScreen() {
             ? isRTL
               ? 'الصوت يتطلب بناء مطوّر — اكتب بدلاً من ذلك'
               : 'Voice needs a dev build — type instead'
-            : isListening
+            : loading
               ? isRTL
-                ? '● استماع… اضغط للإيقاف'
-                : '● Listening… tap to stop'
-              : isRTL
-                ? 'اضغط للتحدث'
-                : 'Tap to speak'}
+                ? 'جارٍ الإضافة…'
+                : 'Adding…'
+              : isListening
+                ? isRTL
+                  ? '● استماع…'
+                  : '● Listening…'
+                : isRTL
+                  ? 'اضغط وتحدّث'
+                  : 'Tap and speak'}
         </Text>
       </View>
 
