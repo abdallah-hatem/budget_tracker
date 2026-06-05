@@ -5,14 +5,15 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "tmpapp",
+    "scheme": "masareef",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition to transcribe spoken expenses.",
-        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone to capture spoken expenses."
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone to capture spoken expenses.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.abdallah.masareef"
     },
