@@ -15,6 +15,7 @@ import * as Notifications from 'expo-notifications';
 import { useRouter, useRootNavigationState } from 'expo-router';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { registerForPushNotificationsAsync } from './notifications';
+import { ensureIngestToken } from '@/src/features/ingest/api';
 
 export function useNotifications(): void {
   const router = useRouter();
@@ -74,5 +75,7 @@ export function useNotifications(): void {
 
     registeredUserIdRef.current = user.id;
     void registerForPushNotificationsAsync(user.id);
+    // Provision the SMS-ingest token into the Keychain for the App Intent.
+    void ensureIngestToken();
   }, [user]);
 }

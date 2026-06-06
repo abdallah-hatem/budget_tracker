@@ -73,7 +73,8 @@
           "sounds": []
         }
       ],
-      "./plugins/withSmsAppIntent"
+      "./plugins/withSmsAppIntent",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

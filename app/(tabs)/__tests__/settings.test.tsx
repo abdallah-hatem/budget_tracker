@@ -15,6 +15,8 @@ jest.mock('../../../src/features/ingest/api', () => ({
   createIngestToken: jest.fn(),
   revokeIngestTokens: jest.fn(),
   hasActiveIngestToken: jest.fn(),
+  storeIngestToken: jest.fn(),
+  clearStoredIngestToken: jest.fn(),
 }));
 
 jest.mock('../../../src/features/accounts/api', () => ({

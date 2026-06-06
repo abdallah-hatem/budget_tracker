@@ -7,6 +7,8 @@ import {
   createIngestToken,
   revokeIngestTokens,
   hasActiveIngestToken,
+  storeIngestToken,
+  clearStoredIngestToken,
 } from '@/src/features/ingest/api';
 import {
   listAccountBalances,
@@ -46,6 +48,7 @@ export default function Settings() {
     setTokenError(null);
     try {
       const token = await createIngestToken();
+      await storeIngestToken(token); // keep the App Intent's stored token current
       setRawToken(token);
       setHasToken(true);
       setCopyLabel('copy');
@@ -61,6 +64,7 @@ export default function Settings() {
     setTokenError(null);
     try {
       await revokeIngestTokens();
+      await clearStoredIngestToken();
       setHasToken(false);
       setRawToken(null);
     } catch (e) {
