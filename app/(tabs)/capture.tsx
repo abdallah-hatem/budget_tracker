@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { MotiView } from 'moti';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { useSpeechRecognition } from '../../src/hooks/useSpeechRecognition';
@@ -401,23 +402,35 @@ export default function CaptureScreen() {
         )}
       </PressableScale>
 
-      {/* Manual quick-add — the no-AI fallback */}
+      {/* Manual quick-add — outlined secondary button (the no-AI fallback) */}
       <PressableScale
         testID="capture-manual"
         onPress={() => {
           setError(null);
           setManualOpen(true);
         }}
-        style={{ alignSelf: 'center', paddingVertical: 6, marginBottom: 12 }}
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          marginBottom: 16,
+          paddingVertical: 15,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: 'rgba(43,217,142,0.35)',
+          backgroundColor: 'transparent',
+        }}
       >
+        <Ionicons name="create-outline" size={18} color={ACCENT} />
         <Text
           style={{
-            fontFamily: isRTL ? FONT.readexMd : FONT.jakartaMd,
-            fontSize: 14,
-            color: INK2,
+            fontFamily: isRTL ? FONT.readexSb : FONT.jakartaSb,
+            fontSize: 15,
+            color: ACCENT,
           }}
         >
-          {isRTL ? '✏️ إضافة يدوية' : '✏️ Add manually'}
+          {isRTL ? 'إضافة يدوية' : 'Add manually'}
         </Text>
       </PressableScale>
 
