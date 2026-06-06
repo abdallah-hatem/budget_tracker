@@ -343,10 +343,37 @@ export default function Settings() {
         <SectionLabel>{t('sms_capture', locale)}</SectionLabel>
         <AppText
           className="text-ink2"
-          style={{ fontSize: 14, marginTop: 10, marginBottom: 16, lineHeight: 20, textAlign: rtl ? 'right' : 'left' }}
+          style={{ fontSize: 14, marginTop: 10, marginBottom: 12, lineHeight: 20, textAlign: rtl ? 'right' : 'left' }}
         >
           {t('sms_token_intro', locale)}
         </AppText>
+
+        {/* Recommended: the built-in App Intent (auto-appears, no token/import) */}
+        <View style={{ backgroundColor: 'rgba(43,217,142,0.10)', borderRadius: 14, padding: 14, marginBottom: 16, gap: 6 }}>
+          <AppText weight="semibold" className="text-accent" style={{ fontSize: 13, textAlign: rtl ? 'right' : 'left' }}>
+            {t('sms_recommended', locale)}
+          </AppText>
+          {(locale === 'ar'
+            ? [
+                '١. افتح مصاريف مرة وأنت مسجّل الدخول.',
+                '٢. الاختصارات ← الأتمتة ← + ← رسالة ← «الرسالة تحتوي على EGP» (أو اسم بنكك) ← تشغيل فوري.',
+                '٣. أضف إجراء ← «Log SMS to Masareef» ← اضبط Message على «مدخلات الاختصار». تم — بدون رمز.',
+              ]
+            : [
+                '1. Open Masareef once while signed in.',
+                '2. Shortcuts → Automation → + → Message → "Message Contains EGP" (or your bank) → Run Immediately.',
+                '3. Add Action → "Log SMS to Masareef" → set Message → Shortcut Input. Done — no token.',
+              ]
+          ).map((step, i) => (
+            <AppText
+              key={i}
+              className="text-ink2"
+              style={{ fontSize: 13, lineHeight: 19, textAlign: rtl ? 'right' : 'left' }}
+            >
+              {step}
+            </AppText>
+          ))}
+        </View>
 
         {/* Token error */}
         {tokenError ? (

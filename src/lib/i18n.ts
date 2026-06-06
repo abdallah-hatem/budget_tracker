@@ -128,8 +128,12 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'rules.delete': { en: 'Delete', ar: 'حذف' },
   'rules.empty': { en: 'No rules yet.', ar: 'لا توجد قواعد بعد.' },
   sms_token_intro: {
-    en: 'Generate a secret token to link your iOS Shortcut.',
-    ar: 'أنشئ رمزاً سرياً لربط اختصار iOS الخاص بك.',
+    en: 'Have your bank SMS logged automatically.',
+    ar: 'خلّي رسائل البنك تتسجّل كمعاملات تلقائيًا.',
+  },
+  sms_recommended: {
+    en: '✨ Easiest — the built-in action (no token to copy)',
+    ar: '✨ الأسهل — إجراء جاهز (بدون نسخ رمز)',
   },
   generate_token: { en: 'Generate token', ar: 'إنشاء رمز' },
   regenerate_token: { en: 'Regenerate token', ar: 'إعادة إنشاء الرمز' },
@@ -140,7 +144,7 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   },
   copy: { en: 'Copy', ar: 'نسخ' },
   copied: { en: 'Copied!', ar: 'تم النسخ!' },
-  shortcut_guide: { en: 'iOS Shortcut guide', ar: 'دليل اختصار iOS' },
+  shortcut_guide: { en: 'Manual setup (advanced)', ar: 'الإعداد اليدوي (متقدم)' },
 };
 
 export function isRTL(locale: Locale): boolean {
