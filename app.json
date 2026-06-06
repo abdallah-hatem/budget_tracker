@@ -72,7 +72,8 @@
         {
           "sounds": []
         }
-      ]
+      ],
+      "./plugins/withSmsAppIntent"
     ],
     "experiments": {
       "typedRoutes": true,
