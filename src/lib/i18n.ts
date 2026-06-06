@@ -75,8 +75,12 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   // Dashboard screen
   dashboard_title: { en: 'Dashboard', ar: 'لوحة المعلومات' },
   net_this_month: { en: 'Net this month', ar: 'الصافي هذا الشهر' },
+  spent_this_month: { en: 'Spent this month', ar: 'مصروفات هذا الشهر' },
+  income_this_month: { en: 'Income this month', ar: 'دخل هذا الشهر' },
   income: { en: 'Income', ar: 'الدخل' },
   expense: { en: 'Expenses', ar: 'المصروفات' },
+  earned_caption: { en: 'EARNED', ar: 'الدخل' },
+  no_income: { en: 'No income', ar: 'لا دخل' },
   by_category: { en: 'By category', ar: 'حسب الفئة' },
   recent: { en: 'Recent', ar: 'الأخيرة' },
   no_transactions: { en: 'No transactions yet', ar: 'لا توجد معاملات بعد' },

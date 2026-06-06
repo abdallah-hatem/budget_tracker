@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { MotiView } from 'moti';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -48,6 +48,70 @@ function Reveal({ index, children }: { index: number; children: React.ReactNode 
   );
 }
 
+type DashboardView = 'expense' | 'income';
+
+/** Small segmented pill that flips the dashboard between expenses and income. */
+function ViewToggle({
+  value,
+  onChange,
+  locale,
+  rtl,
+}: {
+  value: DashboardView;
+  onChange: (v: DashboardView) => void;
+  locale: Locale;
+  rtl: boolean;
+}) {
+  const segments: { key: DashboardView; label: string }[] = [
+    { key: 'expense', label: t('expense', locale) },
+    { key: 'income', label: t('income', locale) },
+  ];
+  return (
+    <View
+      style={{
+        flexDirection: rtl ? 'row-reverse' : 'row',
+        alignSelf: 'center',
+        backgroundColor: '#14191A',
+        borderRadius: 999,
+        padding: 4,
+      }}
+    >
+      {segments.map((s) => {
+        const active = s.key === value;
+        return (
+          <PressableScale
+            key={s.key}
+            testID={`view-toggle-${s.key}`}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            onPress={() => {
+              if (active) return;
+              void Haptics.selectionAsync();
+              onChange(s.key);
+            }}
+            style={{
+              paddingHorizontal: 22,
+              paddingVertical: 8,
+              borderRadius: 999,
+              backgroundColor: active ? 'rgba(43,217,142,0.16)' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: uiFontSemiBold(locale),
+                fontSize: 14,
+                color: active ? '#2BD98E' : '#A8B2AF',
+              }}
+            >
+              {s.label}
+            </Text>
+          </PressableScale>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const { profile } = useSession();
@@ -69,8 +133,14 @@ export default function Dashboard() {
   const recent = transactions.slice(0, 5);
   const hasData = transactions.length > 0;
 
-  // Category rows sorted desc with a max for progress-bar scaling.
-  const categoryRows = [...summary.byCategory].sort((a, b) => b.total - a.total);
+  // Expenses by default; a small toggle flips the whole view to income.
+  const [view, setView] = useState<DashboardView>('expense');
+  const isIncome = view === 'income';
+  const breakdown = isIncome ? summary.incomeByCategory : summary.expenseByCategory;
+  const viewTotal = isIncome ? summary.income : summary.expense;
+
+  // Category rows (already sorted desc) with a max for progress-bar scaling.
+  const categoryRows = breakdown;
   const maxTotal = categoryRows.reduce((m, r) => Math.max(m, r.total), 0);
 
   function handleMonthStep(step: () => void) {
@@ -152,10 +222,20 @@ export default function Dashboard() {
           </View>
         </Reveal>
 
-        {/* ── Hero: net this month ───────────────────────────────────── */}
+        {/* ── View toggle: Expenses | Income ─────────────────────────── */}
+        <Reveal index={revealIndex++}>
+          <View style={{ alignItems: 'center', marginBottom: 18 }}>
+            <ViewToggle value={view} onChange={setView} locale={locale} rtl={rtl} />
+          </View>
+        </Reveal>
+
+        {/* ── Hero: total for the selected view ──────────────────────── */}
         <Reveal index={revealIndex++}>
           <View style={{ marginBottom: 28 }}>
-            <Hero label={t('net_this_month', locale)} amount={summary.net} />
+            <Hero
+              label={t(isIncome ? 'income_this_month' : 'spent_this_month', locale)}
+              amount={viewTotal}
+            />
           </View>
         </Reveal>
 
@@ -242,34 +322,12 @@ export default function Dashboard() {
             <Reveal index={revealIndex++}>
               <View style={{ alignItems: 'center', marginBottom: 28 }}>
                 <SpendingDonut
-                  data={summary.byCategory}
-                  total={summary.expense}
+                  data={breakdown}
+                  total={viewTotal}
                   locale={locale}
+                  label={isIncome ? t('earned_caption', locale) : undefined}
+                  emptyHint={isIncome ? t('no_income', locale) : undefined}
                 />
-              </View>
-            </Reveal>
-
-            {/* ── Income / Expense stat cards ──────────────────────── */}
-            <Reveal index={revealIndex++}>
-              <View
-                style={{
-                  flexDirection: rtl ? 'row-reverse' : 'row',
-                  gap: 12,
-                  marginBottom: 28,
-                }}
-              >
-                <Card className="flex-1">
-                  <SectionLabel>{t('income', locale)}</SectionLabel>
-                  <View style={{ marginTop: 6 }}>
-                    <Money amount={summary.income} tone="accent" sign="always" size={20} />
-                  </View>
-                </Card>
-                <Card className="flex-1">
-                  <SectionLabel>{t('expense', locale)}</SectionLabel>
-                  <View style={{ marginTop: 6 }}>
-                    <Money amount={summary.expense} tone="ink" sign="none" size={20} />
-                  </View>
-                </Card>
               </View>
             </Reveal>
 

@@ -45,10 +45,8 @@ describe('useMonthSummary', () => {
       income: 1000,
       expense: 250,
       net: 750,
-      byCategory: [
-        { slug: 'salary', total: 1000 },
-        { slug: 'food', total: 250 },
-      ],
+      expenseByCategory: [{ slug: 'food', total: 250 }],
+      incomeByCategory: [{ slug: 'salary', total: 1000 }],
     });
     // Confirmed-only, June 2026 half-open range.
     expect(mockList).toHaveBeenCalledWith({

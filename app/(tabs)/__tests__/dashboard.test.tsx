@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import Dashboard from '../index';
 import type { Transaction } from '../../../src/types';
 
@@ -85,10 +85,8 @@ beforeEach(() => {
       income: 1000,
       expense: 250,
       net: 750,
-      byCategory: [
-        { slug: 'salary', total: 1000 },
-        { slug: 'food', total: 250 },
-      ],
+      expenseByCategory: [{ slug: 'food', total: 250 }],
+      incomeByCategory: [{ slug: 'salary', total: 1000 }],
     },
     transactions: [
       tx({ id: 'a', type: 'income', amount: 1000, category_slug: 'salary', note: 'June pay' }),
@@ -103,24 +101,30 @@ beforeEach(() => {
 });
 
 describe('Dashboard', () => {
-  it('renders the net amount, totals, and bilingual category breakdown (en)', () => {
+  it('defaults to the expense view: spent total + expense-only breakdown', () => {
     render(<Dashboard />);
-    // Net big number in the Hero. The label is uppercased via CSS only, so the
-    // text node still reads "Net this month". The Hero splits the amount into
-    // symbol / integer / decimals, so we assert on the integer + decimals parts.
-    expect(screen.getByText('Net this month')).toBeTruthy();
-    expect(screen.getByText('750')).toBeTruthy();
-    expect(screen.getByText('.00')).toBeTruthy();
-    // Income & expense totals, rendered via the Money component (E£ + grouping).
-    // Each also appears in the by-category list, so use getAllByText.
-    expect(screen.getAllByText('E£ 1,000.00').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('E£ 250.00').length).toBeGreaterThan(0);
-    // By-category breakdown uses English labels (locale = en).
+    // Hero now shows expenses, not net. (Net is gone entirely.)
+    expect(screen.getByText('Spent this month')).toBeTruthy();
+    expect(screen.queryByText('Net this month')).toBeNull();
+    expect(screen.queryByText('Income this month')).toBeNull();
+    // Hero integer = the expense total (250), split by the Hero component.
+    expect(screen.getByText('250')).toBeTruthy();
+    // By-category shows the expense category only; income (Salary) is not listed.
     expect(screen.getByText('Food & Drink')).toBeTruthy();
-    expect(screen.getByText('Salary')).toBeTruthy();
-    // Recent transactions show notes.
+    expect(screen.queryByText('Salary')).toBeNull();
+    // Recent still lists every transaction regardless of the view.
     expect(screen.getByText('lunch')).toBeTruthy();
     expect(screen.getByText('June pay')).toBeTruthy();
+  });
+
+  it('toggles to the income view (income total + income breakdown)', () => {
+    render(<Dashboard />);
+    fireEvent.press(screen.getByTestId('view-toggle-income'));
+    expect(screen.getByText('Income this month')).toBeTruthy();
+    // Hero integer = the income total (1,000).
+    expect(screen.getByText('1,000')).toBeTruthy();
+    // The income breakdown now lists Salary.
+    expect(screen.getByText('Salary')).toBeTruthy();
   });
 
   it('renders the accounts card with each balance and a total', () => {
@@ -154,7 +158,7 @@ describe('Dashboard', () => {
   it('shows the empty state when there are no transactions', () => {
     mockSummary.mockReturnValue({
       monthKey: { year: 2026, month: 5 },
-      summary: { income: 0, expense: 0, net: 0, byCategory: [] },
+      summary: { income: 0, expense: 0, net: 0, expenseByCategory: [], incomeByCategory: [] },
       transactions: [],
       loading: false,
       error: null,
@@ -171,7 +175,7 @@ describe('Dashboard', () => {
     const refresh = jest.fn();
     mockSummary.mockReturnValue({
       monthKey: { year: 2026, month: 5 },
-      summary: { income: 0, expense: 0, net: 0, byCategory: [] },
+      summary: { income: 0, expense: 0, net: 0, expenseByCategory: [], incomeByCategory: [] },
       transactions: [],
       loading: false,
       error: null,

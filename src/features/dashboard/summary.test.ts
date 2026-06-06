@@ -28,7 +28,8 @@ describe('summarize', () => {
       income: 0,
       expense: 0,
       net: 0,
-      byCategory: [],
+      expenseByCategory: [],
+      incomeByCategory: [],
     });
   });
 
@@ -37,7 +38,8 @@ describe('summarize', () => {
     expect(result.expense).toBe(50);
     expect(result.income).toBe(0);
     expect(result.net).toBe(-50);
-    expect(result.byCategory).toEqual([{ slug: 'food', total: 50 }]);
+    expect(result.expenseByCategory).toEqual([{ slug: 'food', total: 50 }]);
+    expect(result.incomeByCategory).toEqual([]);
   });
 
   it('sums a single confirmed income', () => {
@@ -45,7 +47,8 @@ describe('summarize', () => {
     expect(result.income).toBe(1000);
     expect(result.expense).toBe(0);
     expect(result.net).toBe(1000);
-    expect(result.byCategory).toEqual([{ slug: 'salary', total: 1000 }]);
+    expect(result.incomeByCategory).toEqual([{ slug: 'salary', total: 1000 }]);
+    expect(result.expenseByCategory).toEqual([]);
   });
 
   it('mixes income and expense; net = income - expense', () => {
@@ -68,7 +71,8 @@ describe('summarize', () => {
     expect(result.expense).toBe(100);
     expect(result.income).toBe(0);
     expect(result.net).toBe(-100);
-    expect(result.byCategory).toEqual([{ slug: 'food', total: 100 }]);
+    expect(result.expenseByCategory).toEqual([{ slug: 'food', total: 100 }]);
+    expect(result.incomeByCategory).toEqual([]);
   });
 
   it('aggregates multiple transactions in the same category', () => {
@@ -76,19 +80,19 @@ describe('summarize', () => {
       txn({ id: 'a', type: 'expense', amount: 30, category_slug: 'food' }),
       txn({ id: 'b', type: 'expense', amount: 20, category_slug: 'food' }),
     ]);
-    expect(result.byCategory).toEqual([{ slug: 'food', total: 50 }]);
+    expect(result.expenseByCategory).toEqual([{ slug: 'food', total: 50 }]);
   });
 
-  it('sorts byCategory descending by total', () => {
+  it('sorts each breakdown descending by total, split by type', () => {
     const result = summarize([
       txn({ id: 'a', type: 'expense', amount: 10, category_slug: 'transport' }),
       txn({ id: 'b', type: 'expense', amount: 90, category_slug: 'food' }),
       txn({ id: 'c', type: 'income', amount: 50, category_slug: 'salary' }),
     ]);
-    expect(result.byCategory).toEqual([
+    expect(result.expenseByCategory).toEqual([
       { slug: 'food', total: 90 },
-      { slug: 'salary', total: 50 },
       { slug: 'transport', total: 10 },
     ]);
+    expect(result.incomeByCategory).toEqual([{ slug: 'salary', total: 50 }]);
   });
 });

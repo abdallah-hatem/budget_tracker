@@ -14,9 +14,13 @@ export interface SpendingDonutDatum {
 
 export interface SpendingDonutProps {
   data: SpendingDonutDatum[];
-  /** Total spent (shown in the center). */
+  /** Total (shown in the center). */
   total: number;
   locale: Locale;
+  /** Center caption under the number. Defaults to the localized "SPENT". */
+  label?: string;
+  /** Hint shown in the empty ring. Defaults to the localized "No spend". */
+  emptyHint?: string;
 }
 
 const RADIUS = 96;
@@ -38,12 +42,12 @@ const GHOST = '#1C2322'; // overlay step for the empty ghost ring
  *
  * With no data it renders a faint ghost ring and a muted hint instead.
  */
-export function SpendingDonut({ data, total, locale }: SpendingDonutProps) {
+export function SpendingDonut({ data, total, locale, label, emptyHint }: SpendingDonutProps) {
   const slices = buildSlices(data);
   const hasData = slices.length > 0 && total > 0;
 
-  const spentLabel = locale === 'ar' ? 'المصروف' : 'SPENT';
-  const emptyHint = locale === 'ar' ? 'لا مصروفات' : 'No spend';
+  const spentLabel = label ?? (locale === 'ar' ? 'المصروف' : 'SPENT');
+  const emptyHintText = emptyHint ?? (locale === 'ar' ? 'لا مصروفات' : 'No spend');
 
   if (!hasData) {
     return (
@@ -69,7 +73,7 @@ export function SpendingDonut({ data, total, locale }: SpendingDonutProps) {
                   marginTop: 4,
                 }}
               >
-                {emptyHint}
+                {emptyHintText}
               </Text>
             </View>
           )}
