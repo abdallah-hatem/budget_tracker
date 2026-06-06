@@ -20,3 +20,16 @@
   `ReferenceError: window is not defined`, which aborts an all-platform update.
 - `--branch` accepts a single value — publish to each branch separately.
   Channels map 1:1 to same-name branches (`production`, `preview`).
+
+## Rotating the Groq key (server-side only — never in the app)
+
+The `GROQ_API_KEY` lives ONLY server-side, used by the `categorize`, `transcribe`,
+and `ingest-sms` Edge Functions. Changing it needs **no app rebuild / OTA / store
+update** — clients never see it.
+
+- **Production:** `supabase secrets set GROQ_API_KEY=<new> --project-ref pzyadiwfjmjsafssxshc`
+  — applies on the next function invocation (functions read `Deno.env.get` at
+  runtime; no redeploy required). Verify with
+  `supabase secrets list --project-ref pzyadiwfjmjsafssxshc` (digest changes).
+- **Local dev:** edit `supabase/functions/.env` (gitignored) → `GROQ_API_KEY=<new>`,
+  then restart `supabase functions serve`.
