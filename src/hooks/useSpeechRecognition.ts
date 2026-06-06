@@ -120,7 +120,11 @@ export function useSpeechRecognition(
     const baseOptions = {
       lang,
       interimResults: false, // only the final utterance — no live/streaming text
-      continuous: false,     // auto-stop after a natural pause
+      // KEEP listening through pauses. With `continuous: false`, the platform's
+      // voice-activity detection ends the session at the first short silence, so
+      // it cut people off mid-sentence — especially when listing several
+      // expenses (which has natural gaps). The user taps the mic to stop.
+      continuous: true,
       recordingOptions: { persist: true }, // keep the audio for Whisper (any language)
     };
 

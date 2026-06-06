@@ -303,11 +303,11 @@ export default function CaptureScreen() {
                 : 'Adding…'
               : isListening
                 ? isRTL
-                  ? '● استماع…'
-                  : '● Listening…'
+                  ? '● استماع… اضغط للإيقاف'
+                  : '● Listening… tap to stop'
                 : isRTL
-                  ? 'اضغط وتحدّث'
-                  : 'Tap and speak'}
+                  ? 'اضغط وتحدّث، ثم اضغط للإيقاف'
+                  : 'Tap, speak, then tap to stop'}
         </Text>
       </View>
 
