@@ -16,7 +16,7 @@ const CATEGORY_STYLES: Record<string, CategoryStyleResult> = {
   clothes:        { emoji: '👕', color: '#A855F7' },
   bills:          { emoji: '🧾', color: '#EAB308' },
   health:         { emoji: '💊', color: '#EC4899' },
-  entertainment:  { emoji: '🎬', color: '#14B8A6' },
+  entertainment:  { emoji: '🎮', color: '#14B8A6' },
   education:      { emoji: '📚', color: '#6366F1' },
   home:           { emoji: '🏠', color: '#0EA5E9' },
   travel:         { emoji: '✈️', color: '#F43F5E' },
