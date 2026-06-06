@@ -27,6 +27,9 @@ export function Screen({ children, scroll = false, padded = true }: ScreenProps)
       <SafeAreaView edges={['top']} className="bg-canvas flex-1">
         <ScrollView
           keyboardShouldPersistTaps="handled"
+          // Inset the scroll view when the keyboard shows so the focused input
+          // can be scrolled into view instead of being hidden behind it (iOS).
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={[
             paddingStyle,
             { paddingBottom: insets.bottom + TAB_BAR_CLEARANCE },
