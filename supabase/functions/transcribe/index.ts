@@ -14,7 +14,9 @@ import {
 } from "../_shared/categorize.ts";
 
 const GROQ_WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
-const WHISPER_MODEL = "whisper-large-v3-turbo";
+// Full large-v3 (not turbo): noticeably more accurate on dialect + loanwords
+// like "padel" — worth the small extra latency for short expense clips.
+const WHISPER_MODEL = "whisper-large-v3";
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // Groq's ~25MB limit
 
 // Whisper `prompt` biases recognition WITHOUT forcing the language (no `language`
@@ -24,12 +26,14 @@ const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // Groq's ~25MB limit
 // and finance terms so dialect/foreign words and numbers transcribe correctly.
 const WHISPER_PROMPTS: Record<Locale, string> = {
   ar:
-    "مصاريف بالعامية المصرية، الأرقام تتكتب أرقام. كلمات متكررة: بادل، تنس، " +
-    "بينج بونج، كورة، ماتش، جيم، ملعب، تاكسي، أوبر، بنزين، قهوة، غدا، عشا، فاتورة، " +
-    "كهربا، إيجار، صيدلية، مرتب، جنيه.",
+    "مصاريف بالعامية المصرية، الأرقام تتكتب أرقام. لعبت بادل (padel) بميتين، " +
+    "حجزت ملعب، اشتركت في الجيم. كلمات متكررة: بادل padel، بادل، تنس، بينج بونج، " +
+    "كورة، ماتش، جيم، ملعب، تاكسي، أوبر، بنزين، قهوة، غدا، عشا، فاتورة، كهربا، " +
+    "إيجار، صيدلية، مرتب، جنيه.",
   en:
-    "Egyptian expense notes; amounts as digits. Frequent words: padel, tennis, " +
-    "ping pong, football, match, gym, taxi, uber, fuel, coffee, lunch, bill, " +
+    "Egyptian expense notes; amounts as digits. Played padel for 200, booked a " +
+    "court, gym subscription. Frequent words: padel, padel, tennis, ping pong, " +
+    "football, match, gym, court, taxi, uber, fuel, coffee, lunch, bill, " +
     "electricity, rent, pharmacy, salary, pounds.",
 };
 
