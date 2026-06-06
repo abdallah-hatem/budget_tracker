@@ -98,4 +98,21 @@ describe('TransactionsScreen', () => {
     // another call. Wait for both to settle.
     await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
   });
+
+  it('defaults to expenses and re-queries with type=income when toggled', async () => {
+    mockList.mockResolvedValue([]);
+    render(<TransactionsScreen />);
+    // The default view filters to expenses.
+    await waitFor(() => expect(mockList).toHaveBeenCalled());
+    expect(mockList.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ type: 'expense' }),
+    );
+    // Flipping the toggle re-queries with the income type.
+    fireEvent.press(screen.getByTestId('view-toggle-income'));
+    await waitFor(() =>
+      expect(
+        mockList.mock.calls.some((c) => c[0]?.type === 'income'),
+      ).toBe(true),
+    );
+  });
 });

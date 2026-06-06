@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import type { NewTransaction, Transaction, TxnStatus } from '../../types';
+import type { NewTransaction, Transaction, TxnStatus, TxnType } from '../../types';
 
 // Canonical filter shape (consumed by M6's useTransactions / useMonthSummary).
 export interface TransactionFilter {
@@ -7,6 +7,7 @@ export interface TransactionFilter {
   to?: string;            // ISO-8601, exclusive upper bound on occurred_at
   category_slug?: string;
   status?: TxnStatus;
+  type?: TxnType;         // 'expense' | 'income'
 }
 
 export async function insertTransaction(row: NewTransaction): Promise<Transaction> {
@@ -56,6 +57,9 @@ export async function listTransactions(
   let query = supabase.from('transactions').select('*');
   if (filter.category_slug) {
     query = query.eq('category_slug', filter.category_slug);
+  }
+  if (filter.type) {
+    query = query.eq('type', filter.type);
   }
   if (filter.status) {
     query = query.eq('status', filter.status);

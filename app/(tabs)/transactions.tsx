@@ -18,11 +18,11 @@ import { categoryStyle } from '../../src/lib/categoryStyle';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/features/dashboard/monthRange';
 import { t, isRTL } from '../../src/lib/i18n';
-import { Screen, Pill, EmptyState, TransactionRow, Money, PressableScale } from '../../src/ui';
+import { Screen, Pill, EmptyState, TransactionRow, Money, PressableScale, ViewToggle } from '../../src/ui';
 import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT } from '../../src/lib/font';
-import type { Transaction, Locale } from '../../src/types';
+import type { Transaction, Locale, TxnType } from '../../src/types';
 
 const MONTH_LABELS_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -76,7 +76,14 @@ export default function TransactionsScreen() {
 
   const [monthKey, setMonthKey] = useState<MonthKey>(() => currentMonthKey());
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [view, setView] = useState<TxnType>('expense');
   const [editing, setEditing] = useState<Transaction | null>(null);
+
+  // Switching expenses↔income clears the category chip (its options change).
+  const changeView = useCallback((v: TxnType) => {
+    setView(v);
+    setCategoryFilter(null);
+  }, []);
 
   const filter = useMemo(() => {
     const { from, to } = monthRange(monthKey);
@@ -84,9 +91,10 @@ export default function TransactionsScreen() {
       from,
       to,
       status: 'confirmed' as const,
+      type: view,
       ...(categoryFilter ? { category_slug: categoryFilter } : {}),
     };
-  }, [monthKey, categoryFilter]);
+  }, [monthKey, categoryFilter, view]);
 
   const { data, loading, refresh } = useTransactions(filter);
 
@@ -94,10 +102,14 @@ export default function TransactionsScreen() {
 
   const sections = useMemo(() => groupByDay(data ?? []), [data]);
 
+  // Only show the categories that belong to the active view (expense vs income).
   const filterItems = useMemo(() => [
     { slug: null as string | null, label: t('all_categories', locale) },
-    ...CATEGORIES.map((c) => ({ slug: c.slug, label: categoryLabel(c.slug, locale) })),
-  ], [locale]);
+    ...CATEGORIES.filter((c) => c.kind === view).map((c) => ({
+      slug: c.slug,
+      label: categoryLabel(c.slug, locale),
+    })),
+  ], [locale, view]);
 
   return (
     <Screen padded={false}>
@@ -167,6 +179,9 @@ export default function TransactionsScreen() {
             </Text>
           </Pressable>
         </View>
+
+        {/* Expenses | Income toggle (defaults to expenses) */}
+        <ViewToggle value={view} onChange={changeView} locale={locale} />
 
         {/* Category filter chips */}
         <FlatList

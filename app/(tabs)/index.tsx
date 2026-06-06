@@ -13,6 +13,7 @@ import { SpendingDonut } from '../../src/ui/SpendingDonut';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { EmptyState } from '../../src/ui/EmptyState';
 import { PressableScale } from '../../src/ui/PressableScale';
+import { ViewToggle } from '../../src/ui/ViewToggle';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
 import { useAccountBalances } from '../../src/features/accounts/useAccountBalances';
 import { useSession } from '../../src/features/auth/SessionProvider';
@@ -20,7 +21,7 @@ import { categoryLabel } from '../../src/features/transactions/display';
 import { categoryStyle } from '../../src/lib/categoryStyle';
 import { t, isRTL } from '../../src/lib/i18n';
 import { FONT, uiFontSemiBold } from '../../src/lib/font';
-import type { Locale } from '../../src/types';
+import type { Locale, TxnType } from '../../src/types';
 
 const MONTH_LABELS_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -48,70 +49,6 @@ function Reveal({ index, children }: { index: number; children: React.ReactNode 
   );
 }
 
-type DashboardView = 'expense' | 'income';
-
-/** Small segmented pill that flips the dashboard between expenses and income. */
-function ViewToggle({
-  value,
-  onChange,
-  locale,
-  rtl,
-}: {
-  value: DashboardView;
-  onChange: (v: DashboardView) => void;
-  locale: Locale;
-  rtl: boolean;
-}) {
-  const segments: { key: DashboardView; label: string }[] = [
-    { key: 'expense', label: t('expense', locale) },
-    { key: 'income', label: t('income', locale) },
-  ];
-  return (
-    <View
-      style={{
-        flexDirection: rtl ? 'row-reverse' : 'row',
-        alignSelf: 'center',
-        backgroundColor: '#14191A',
-        borderRadius: 999,
-        padding: 4,
-      }}
-    >
-      {segments.map((s) => {
-        const active = s.key === value;
-        return (
-          <PressableScale
-            key={s.key}
-            testID={`view-toggle-${s.key}`}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            onPress={() => {
-              if (active) return;
-              void Haptics.selectionAsync();
-              onChange(s.key);
-            }}
-            style={{
-              paddingHorizontal: 22,
-              paddingVertical: 8,
-              borderRadius: 999,
-              backgroundColor: active ? 'rgba(43,217,142,0.16)' : 'transparent',
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: uiFontSemiBold(locale),
-                fontSize: 14,
-                color: active ? '#2BD98E' : '#A8B2AF',
-              }}
-            >
-              {s.label}
-            </Text>
-          </PressableScale>
-        );
-      })}
-    </View>
-  );
-}
-
 export default function Dashboard() {
   const router = useRouter();
   const { profile } = useSession();
@@ -134,7 +71,7 @@ export default function Dashboard() {
   const hasData = transactions.length > 0;
 
   // Expenses by default; a small toggle flips the whole view to income.
-  const [view, setView] = useState<DashboardView>('expense');
+  const [view, setView] = useState<TxnType>('expense');
   const isIncome = view === 'income';
   const breakdown = isIncome ? summary.incomeByCategory : summary.expenseByCategory;
   const viewTotal = isIncome ? summary.income : summary.expense;
@@ -225,7 +162,7 @@ export default function Dashboard() {
         {/* ── View toggle: Expenses | Income ─────────────────────────── */}
         <Reveal index={revealIndex++}>
           <View style={{ alignItems: 'center', marginBottom: 18 }}>
-            <ViewToggle value={view} onChange={setView} locale={locale} rtl={rtl} />
+            <ViewToggle value={view} onChange={setView} locale={locale} />
           </View>
         </Reveal>
 

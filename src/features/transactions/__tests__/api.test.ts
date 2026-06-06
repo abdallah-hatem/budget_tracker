@@ -149,6 +149,17 @@ describe('listTransactions', () => {
     expect(lt).toHaveBeenCalledWith('occurred_at', '2026-07-01T00:00:00.000Z');
   });
 
+  it('filters by transaction type when provided', async () => {
+    const order = jest.fn().mockResolvedValue({ data: [], error: null });
+    const eqType = jest.fn().mockReturnValue({ order });
+    const select = jest.fn().mockReturnValue({ eq: eqType });
+    mockedFrom.mockReturnValue({ select });
+
+    await listTransactions({ type: 'income' });
+
+    expect(eqType).toHaveBeenCalledWith('type', 'income');
+  });
+
   it('throws on error', async () => {
     const order = jest.fn().mockResolvedValue({ data: null, error: { message: 'rls' } });
     const select = jest.fn().mockReturnValue({ order });
