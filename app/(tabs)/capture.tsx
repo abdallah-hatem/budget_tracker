@@ -20,8 +20,10 @@ import { buildCaptureRow } from '../../src/features/capture/toTransactionRow';
 import {
   insertTransactions,
   deleteTransaction,
+  getTransaction,
 } from '../../src/features/transactions/api';
 import { categoryLabel } from '../../src/features/transactions/display';
+import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import {
   ManualEntrySheet,
   type ManualEntryValues,
@@ -80,6 +82,8 @@ export default function CaptureScreen() {
   const [lastSaved, setLastSaved] = useState<Transaction[]>([]);
   // Manual quick-add sheet (the no-AI fallback).
   const [manualOpen, setManualOpen] = useState(false);
+  // A just-added row the user tapped to edit/discard inline.
+  const [editingSaved, setEditingSaved] = useState<Transaction | null>(null);
   // Render-timing-independent reentrancy guard against double-submit.
   const submittingRef = useRef(false);
 
@@ -232,6 +236,27 @@ export default function CaptureScreen() {
       setError(e instanceof Error ? e.message : 'Failed to undo');
     }
   };
+
+  // Hide the card WITHOUT touching the saved entries (they stay in the DB).
+  const dismissCard = () => setLastSaved([]);
+
+  // After editing a tapped row in the edit sheet: re-fetch it — replace it in the
+  // card if it was edited, drop it if it was discarded (deleted).
+  const onSavedEditDone = useCallback(async () => {
+    const id = editingSaved?.id;
+    setEditingSaved(null);
+    if (!id) return;
+    try {
+      const fresh = await getTransaction(id);
+      setLastSaved((prev) =>
+        fresh
+          ? prev.map((t) => (t.id === id ? fresh : t))
+          : prev.filter((t) => t.id !== id),
+      );
+    } catch {
+      // Leave the card as-is if the re-fetch fails.
+    }
+  }, [editingSaved]);
 
   const saved = lastSaved;
   const savedLow =
@@ -481,36 +506,54 @@ export default function CaptureScreen() {
               borderRadius: 20,
             }}
           >
-            {/* Status line */}
+            {/* Status line + dismiss (hide the card; entries stay saved) */}
             <View
               style={{
                 flexDirection: isRTL ? 'row-reverse' : 'row',
                 alignItems: 'center',
+                justifyContent: 'space-between',
                 marginBottom: 12,
               }}
             >
-              <Text style={{ fontSize: 18, marginRight: isRTL ? 0 : 8, marginLeft: isRTL ? 8 : 0 }}>
-                {savedLow ? '⚠️' : '✓'}
-              </Text>
-              <Text
+              <View
                 style={{
-                  fontFamily: isRTL ? FONT.readexSb : FONT.jakartaSb,
-                  fontSize: 15,
-                  color: savedLow ? WARNING : ACCENT,
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  alignItems: 'center',
                 }}
               >
-                {savedLow
-                  ? isRTL
-                    ? 'تحقق من هذه'
-                    : 'Check this'
-                  : saved.length > 1
+                <Text style={{ fontSize: 18, marginRight: isRTL ? 0 : 8, marginLeft: isRTL ? 8 : 0 }}>
+                  {savedLow ? '⚠️' : '✓'}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: isRTL ? FONT.readexSb : FONT.jakartaSb,
+                    fontSize: 15,
+                    color: savedLow ? WARNING : ACCENT,
+                  }}
+                >
+                  {savedLow
                     ? isRTL
-                      ? `تمت إضافة ${saved.length}`
-                      : `Added ${saved.length}`
-                    : isRTL
-                      ? 'تمت الإضافة'
-                      : 'Added'}
-              </Text>
+                      ? 'تحقق من هذه'
+                      : 'Check this'
+                    : saved.length > 1
+                      ? isRTL
+                        ? `تمت إضافة ${saved.length}`
+                        : `Added ${saved.length}`
+                      : isRTL
+                        ? 'تمت الإضافة'
+                        : 'Added'}
+                </Text>
+              </View>
+              <PressableScale
+                testID="capture-dismiss"
+                accessibilityRole="button"
+                accessibilityLabel={isRTL ? 'إخفاء' : 'Dismiss'}
+                onPress={dismissCard}
+                hitSlop={10}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="close" size={20} color={INK3} />
+              </PressableScale>
             </View>
 
             {/* One row per added transaction */}
@@ -518,8 +561,10 @@ export default function CaptureScreen() {
               {saved.map((t) => {
                 const income = t.type === 'income';
                 return (
-                  <View
+                  <PressableScale
                     key={t.id}
+                    testID={`saved-item-${t.id}`}
+                    onPress={() => setEditingSaved(t)}
                     style={{
                       flexDirection: isRTL ? 'row-reverse' : 'row',
                       alignItems: 'center',
@@ -558,7 +603,12 @@ export default function CaptureScreen() {
                       tone={income ? 'accent' : 'ink'}
                       size={15}
                     />
-                  </View>
+                    <Ionicons
+                      name={isRTL ? 'chevron-back' : 'chevron-forward'}
+                      size={16}
+                      color={INK3}
+                    />
+                  </PressableScale>
                 );
               })}
             </View>
@@ -604,8 +654,8 @@ export default function CaptureScreen() {
                 }}
               >
                 {isRTL
-                  ? 'خطأ؟ عدّله من تبويب المعاملات'
-                  : 'Wrong? Edit it in the Transactions tab'}
+                  ? 'اضغط على عنصر لتعديله أو حذفه'
+                  : 'Tap an item to edit or remove it'}
               </Text>
             </View>
           </Card>
@@ -630,6 +680,32 @@ export default function CaptureScreen() {
                 onSubmit={onManualSubmit}
                 onCancel={() => setManualOpen(false)}
               />
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
+
+      {/* Edit / discard a just-added row (tapped in the card) */}
+      <Modal
+        visible={editingSaved !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditingSaved(null)}
+      >
+        <Pressable
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
+          onPress={() => setEditingSaved(null)}
+        >
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <Pressable onPress={() => {}}>
+              {editingSaved ? (
+                <EditTransactionSheet
+                  transaction={editingSaved}
+                  locale={locale}
+                  onCancel={() => setEditingSaved(null)}
+                  onDone={onSavedEditDone}
+                />
+              ) : null}
             </Pressable>
           </KeyboardAvoidingView>
         </Pressable>

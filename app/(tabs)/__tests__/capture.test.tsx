@@ -22,6 +22,12 @@ jest.mock('../../../src/features/auth/SessionProvider', () => ({
 jest.mock('../../../src/features/transactions/api', () => ({
   insertTransactions: jest.fn(),
   deleteTransaction: jest.fn(),
+  getTransaction: jest.fn(),
+  updateTransaction: jest.fn(),
+}));
+// EditTransactionSheet (opened from a tapped card row) loads account balances.
+jest.mock('../../../src/features/accounts/api', () => ({
+  listAccountBalances: jest.fn().mockResolvedValue([]),
 }));
 
 const mockedCategorize = requestCategorize as unknown as jest.Mock;
@@ -227,6 +233,38 @@ it('toggles the mic via the speech hook', () => {
   const { getByTestId } = render(<CaptureScreen />);
   fireEvent.press(getByTestId('capture-mic'));
   expect(start).toHaveBeenCalledWith('en-US');
+});
+
+it('Dismiss hides the card but keeps the entries (no delete)', async () => {
+  mockedCategorize.mockResolvedValue([parsed]);
+  mockedInsert.mockResolvedValue([savedRow]);
+
+  const { getByTestId, queryByTestId } = render(<CaptureScreen />);
+  fireEvent.changeText(getByTestId('capture-text'), 'spent 50 on coffee');
+  fireEvent.press(getByTestId('capture-categorize'));
+
+  await waitFor(() => expect(queryByTestId('capture-saved')).toBeTruthy());
+  fireEvent.press(getByTestId('capture-dismiss'));
+
+  // Card is gone, but nothing was deleted.
+  await waitFor(() => expect(queryByTestId('capture-saved')).toBeNull());
+  expect(mockedDelete).not.toHaveBeenCalled();
+});
+
+it('tapping a saved item opens the edit sheet', async () => {
+  mockedCategorize.mockResolvedValue([parsed]);
+  mockedInsert.mockResolvedValue([savedRow]);
+
+  const { getByTestId, queryByTestId } = render(<CaptureScreen />);
+  fireEvent.changeText(getByTestId('capture-text'), 'spent 50 on coffee');
+  fireEvent.press(getByTestId('capture-categorize'));
+
+  await waitFor(() => expect(queryByTestId('saved-item-txn-1')).toBeTruthy());
+  fireEvent.press(getByTestId('saved-item-txn-1'));
+
+  // The edit sheet (with its amount field + delete action) appears.
+  await waitFor(() => expect(queryByTestId('edit-amount')).toBeTruthy());
+  expect(queryByTestId('edit-delete')).toBeTruthy();
 });
 
 it('manual quick-add saves the entry WITHOUT calling the AI', async () => {

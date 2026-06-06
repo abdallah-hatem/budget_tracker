@@ -74,3 +74,14 @@ export async function listTransactions(
   if (error) throw new Error(error.message);
   return (data ?? []) as Transaction[];
 }
+
+/** Fetch one transaction by id (null if it no longer exists, e.g. just deleted). */
+export async function getTransaction(id: string): Promise<Transaction | null> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as Transaction) ?? null;
+}
