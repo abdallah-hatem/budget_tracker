@@ -11,6 +11,7 @@ insert into public.categories (slug, name_en, name_ar, kind, icon, color, sort_o
   ('bills',         'Bills & Utilities',  'فواتير ومرافق',  'expense', 'file-document',       '#EAB308', 50),
   ('health',        'Health',             'صحة',            'expense', 'heart-pulse',         '#EF4444', 60),
   ('entertainment', 'Entertainment',      'ترفيه',          'expense', 'movie-open',          '#A855F7', 70),
+  ('sports',        'Sports',             'رياضة',          'expense', 'tennis',              '#84CC16', 75),
   ('education',     'Education',           'تعليم',          'expense', 'school',              '#06B6D4', 80),
   ('home',          'Home',               'منزل',           'expense', 'home',                '#14B8A6', 90),
   ('travel',        'Travel',             'سفر',            'expense', 'airplane',            '#0EA5E9', 100),

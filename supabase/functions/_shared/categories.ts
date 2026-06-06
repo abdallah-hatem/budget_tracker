@@ -5,7 +5,7 @@
 //   - supabase/seed.sql            (categories rows, owned by M2)
 // If you add/rename/remove a category, update all three in the same commit.
 
-/** Expense category slugs (12). */
+/** Expense category slugs (13). */
 export const EXPENSE_SLUGS = [
   "food",
   "groceries",
@@ -14,6 +14,7 @@ export const EXPENSE_SLUGS = [
   "bills",
   "health",
   "entertainment",
+  "sports",
   "education",
   "home",
   "travel",
@@ -30,7 +31,7 @@ export const INCOME_SLUGS = [
   "other_income",
 ] as const;
 
-/** All 17 valid category slugs, used as the strict-tool `category_slug` enum. */
+/** All 18 valid category slugs, used as the strict-tool `category_slug` enum. */
 export const CATEGORY_SLUGS: string[] = [...EXPENSE_SLUGS, ...INCOME_SLUGS];
 
 /** Fallback slug for an unrecognised / missing expense category. */

@@ -10,7 +10,7 @@ import {
 // The contract's slug sets (source of truth).
 const EXPENSE_SLUGS = [
   'food', 'groceries', 'transport', 'clothes', 'bills', 'health',
-  'entertainment', 'education', 'home', 'travel', 'shopping', 'other_expense',
+  'entertainment', 'sports', 'education', 'home', 'travel', 'shopping', 'other_expense',
 ];
 const INCOME_SLUGS = [
   'salary', 'transfer_in', 'gift', 'refund', 'other_income',
@@ -29,9 +29,9 @@ describe('categories source of truth', () => {
     );
   });
 
-  it('categorySlugs() returns all 17 slugs', () => {
+  it('categorySlugs() returns all 18 slugs', () => {
     const slugs = categorySlugs();
-    expect(slugs).toHaveLength(17);
+    expect(slugs).toHaveLength(18);
     expect(new Set(slugs)).toEqual(
       new Set([...EXPENSE_SLUGS, ...INCOME_SLUGS]),
     );

@@ -17,17 +17,20 @@ const GROQ_WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const WHISPER_MODEL = "whisper-large-v3-turbo";
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // Groq's ~25MB limit
 
-// Whisper `prompt` biases vocabulary/spelling toward the user's language without
-// hard-forcing it (no `language` param -> still auto-detects). Seeding Egyptian
-// (Masry) finance + number/currency examples makes it transcribe dialect numbers
-// like "بتمانين" -> "80" and terms like "الكهربا"/"بنزين" far more reliably.
+// Whisper `prompt` biases recognition WITHOUT forcing the language (no `language`
+// param -> still auto-detects). We give it a concise VOCABULARY LIST (Whisper's
+// recommended biasing form) — not example sentences, which can make it drift and
+// hallucinate the seeded words. Seeds the hard loanwords (padel, ping pong, …)
+// and finance terms so dialect/foreign words and numbers transcribe correctly.
 const WHISPER_PROMPTS: Record<Locale, string> = {
   ar:
-    "تفريغ مصاريف يومية بالعامية المصرية. اكتب الأرقام أرقامًا والعملة بالجنيه. " +
-    "أمثلة: اتغديت بـ80 جنيه، قهوة بـ25، تاكسي بـ40، فاتورة الكهربا 300، بنزين بـ100، مرتب 9000.",
+    "مصاريف بالعامية المصرية، الأرقام تتكتب أرقام. كلمات متكررة: بادل، تنس، " +
+    "بينج بونج، كورة، ماتش، جيم، ملعب، تاكسي، أوبر، بنزين، قهوة، غدا، عشا، فاتورة، " +
+    "كهربا، إيجار، صيدلية، مرتب، جنيه.",
   en:
-    "Daily expense log in Egyptian pounds; write amounts as digits. " +
-    "Examples: lunch 80, coffee 25, taxi 40, electricity bill 300, fuel 100, salary 9000.",
+    "Egyptian expense notes; amounts as digits. Frequent words: padel, tennis, " +
+    "ping pong, football, match, gym, taxi, uber, fuel, coffee, lunch, bill, " +
+    "electricity, rent, pharmacy, salary, pounds.",
 };
 
 /** Injectable deps so the handler is unit-testable without network. */

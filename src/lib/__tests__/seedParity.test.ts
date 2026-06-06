@@ -26,8 +26,8 @@ function parseSeedRows(): SeedRow[] {
 describe('seed.sql parity with categories.ts', () => {
   const seedRows = parseSeedRows();
 
-  it('extracts exactly 17 rows from seed.sql', () => {
-    expect(seedRows).toHaveLength(17);
+  it('extracts exactly 18 rows from seed.sql', () => {
+    expect(seedRows).toHaveLength(18);
   });
 
   it('seed slugs match categorySlugs() set exactly', () => {

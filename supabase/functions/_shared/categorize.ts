@@ -64,7 +64,8 @@ function systemPrompt(locale: Locale): string {
     "  groceries ONLY for a supermarket shopping trip or multiple household provisions, never a single",
     "  drink/snack. Other hints: taxi, uber, bus, fuel, petrol -> transport;",
     "  rent, electricity, water bill, internet, phone bill -> bills; pharmacy, doctor, medicine ->",
-    "  health; clothes, shoes -> clothes; salary or paycheck -> salary; a refund / money back -> refund.",
+    "  health; clothes, shoes -> clothes; playing a sport (padel/بادل, football/كورة, ping pong, tennis,",
+    "  gym/جيم) -> sports; salary or paycheck -> salary; a refund / money back -> refund.",
     '- "note": a very short human label for the item (e.g. "coffee", "قهوة").',
     '- "confidence": a number from 0 to 1.',
     '- "occurred_at": optional ISO-8601 timestamp if the text states a date/time; omit otherwise.',
@@ -250,8 +251,11 @@ function manySystemPrompt(locale: Locale): string {
     "  (Food & Drink), even when bought from a shop. groceries ONLY for a supermarket trip / multiple",
     "  household provisions. taxi/تاكسي, uber, bus/أتوبيس, fuel/بنزين -> transport; rent/إيجار,",
     "  electricity/الكهربا, water bill, internet/نت, phone bill, فاتورة -> bills; pharmacy/صيدلية,",
-    "  doctor/دكتور, medicine/دوا -> health; clothes/هدوم, shoes/جزمة -> clothes; salary/مرتب/راتب",
-    "  -> salary; a refund / فلوس رجعت -> refund.",
+    "  doctor/دكتور, medicine/دوا -> health; clothes/هدوم, shoes/جزمة -> clothes.",
+    "  PLAYING or paying to do a sport -> sports: padel/بادل, football/كورة/ماتش, ping pong/بينج بونج,",
+    "  tennis/تنس, gym/جيم, swimming/سباحة, basketball/سلة, booking a pitch/ملعب. Common Masry phrasings",
+    "  like 'لعبت بادل', 'حجزت ملعب', 'اشتركت في الجيم' are sports. (Video games, movies, streaming,",
+    "  concerts -> entertainment, NOT sports.) salary/مرتب/راتب -> salary; a refund / فلوس رجعت -> refund.",
     '- "note": a very short label for the item (e.g. "coffee", "قهوة").',
     '- "confidence": a number from 0 to 1.',
     '- "occurred_at": optional ISO-8601 timestamp if the text states a date/time; omit otherwise.',
@@ -267,6 +271,10 @@ function manySystemPrompt(locale: Locale): string {
     'Output: {"transactions":[' +
       '{"type":"expense","amount":350,"currency":"EGP","category_slug":"bills","note":"كهرباء","confidence":0.95},' +
       '{"type":"expense","amount":200,"currency":"EGP","category_slug":"transport","note":"بنزين","confidence":0.95}]}',
+    'Input: لعبت بادل بميتين وبعدها اتغدينا بمية',
+    'Output: {"transactions":[' +
+      '{"type":"expense","amount":200,"currency":"EGP","category_slug":"sports","note":"بادل","confidence":0.95},' +
+      '{"type":"expense","amount":100,"currency":"EGP","category_slug":"food","note":"غداء","confidence":0.9}]}',
   ].join("\n");
 }
 

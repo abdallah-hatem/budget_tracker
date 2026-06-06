@@ -2,9 +2,9 @@ import { assert, assertEquals } from "@std/assert";
 import { CATEGORY_SLUGS } from "../_shared/categories.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-Deno.test("CATEGORY_SLUGS contains exactly the 17 source-of-truth slugs", () => {
+Deno.test("CATEGORY_SLUGS contains exactly the 18 source-of-truth slugs", () => {
   const expected = [
-    // expense (12)
+    // expense (13)
     "food",
     "groceries",
     "transport",
@@ -12,6 +12,7 @@ Deno.test("CATEGORY_SLUGS contains exactly the 17 source-of-truth slugs", () => 
     "bills",
     "health",
     "entertainment",
+    "sports",
     "education",
     "home",
     "travel",
@@ -24,7 +25,7 @@ Deno.test("CATEGORY_SLUGS contains exactly the 17 source-of-truth slugs", () => 
     "refund",
     "other_income",
   ];
-  assertEquals(CATEGORY_SLUGS.length, 17);
+  assertEquals(CATEGORY_SLUGS.length, 18);
   assertEquals([...CATEGORY_SLUGS].sort(), [...expected].sort());
 });
 
