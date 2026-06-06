@@ -212,6 +212,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
         <ScrollView
           ref={catScrollRef}
           horizontal
+          keyboardShouldPersistTaps="handled"
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: 8, paddingRight: 4 }}
         >
@@ -311,6 +312,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           </Text>
           <ScrollView
             horizontal
+            keyboardShouldPersistTaps="handled"
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{
               gap: 8,

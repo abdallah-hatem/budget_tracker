@@ -169,6 +169,7 @@ export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
         <ScrollView
           ref={catScrollRef}
           horizontal
+          keyboardShouldPersistTaps="handled"
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: 8, paddingRight: 4 }}
         >
