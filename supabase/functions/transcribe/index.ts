@@ -17,10 +17,23 @@ const GROQ_WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const WHISPER_MODEL = "whisper-large-v3-turbo";
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // Groq's ~25MB limit
 
+// Whisper `prompt` biases vocabulary/spelling toward the user's language without
+// hard-forcing it (no `language` param -> still auto-detects). Seeding Egyptian
+// (Masry) finance + number/currency examples makes it transcribe dialect numbers
+// like "بتمانين" -> "80" and terms like "الكهربا"/"بنزين" far more reliably.
+const WHISPER_PROMPTS: Record<Locale, string> = {
+  ar:
+    "تفريغ مصاريف يومية بالعامية المصرية. اكتب الأرقام أرقامًا والعملة بالجنيه. " +
+    "أمثلة: اتغديت بـ80 جنيه، قهوة بـ25، تاكسي بـ40، فاتورة الكهربا 300، بنزين بـ100، مرتب 9000.",
+  en:
+    "Daily expense log in Egyptian pounds; write amounts as digits. " +
+    "Examples: lunch 80, coffee 25, taxi 40, electricity bill 300, fuel 100, salary 9000.",
+};
+
 /** Injectable deps so the handler is unit-testable without network. */
 export interface HandlerDeps {
   apiKey: string;
-  transcribeFn: (audio: Blob, apiKey: string) => Promise<string>;
+  transcribeFn: (audio: Blob, apiKey: string, locale: Locale) => Promise<string>;
   categorizeFn: (
     text: string,
     locale: Locale,
@@ -72,7 +85,7 @@ export async function handleTranscribe(
 
   let text: string;
   try {
-    text = (await deps.transcribeFn(file, deps.apiKey)).trim();
+    text = (await deps.transcribeFn(file, deps.apiKey, locale)).trim();
   } catch (e) {
     return json(
       { error: e instanceof Error ? e.message : "Transcription failed." },
@@ -97,12 +110,19 @@ export async function handleTranscribe(
 }
 
 /** Real Groq Whisper transcription with automatic language detection. */
-async function groqTranscribe(audio: Blob, apiKey: string): Promise<string> {
+async function groqTranscribe(
+  audio: Blob,
+  apiKey: string,
+  locale: Locale,
+): Promise<string> {
   const fd = new FormData();
   fd.append("file", audio, "audio.wav");
   fd.append("model", WHISPER_MODEL);
   fd.append("response_format", "json");
-  // No `language` param on purpose -> Whisper auto-detects the spoken language.
+  fd.append("temperature", "0");
+  // Bias vocabulary/numbers toward the user's language (esp. Egyptian Masry).
+  // No `language` param on purpose -> Whisper still auto-detects the spoken one.
+  fd.append("prompt", WHISPER_PROMPTS[locale]);
 
   const resp = await fetch(GROQ_WHISPER_URL, {
     method: "POST",

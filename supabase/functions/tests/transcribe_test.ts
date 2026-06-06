@@ -57,6 +57,21 @@ Deno.test("transcribe: splits a multi-item utterance into several transactions",
   assertEquals(body.transactions[2].category_slug, "transport");
 });
 
+Deno.test("transcribe: forwards locale to the transcriber (Whisper prompt bias)", async () => {
+  let seenLocale = "";
+  const res = await handleTranscribe(
+    audioRequest({ file: wav(), locale: "ar" }),
+    deps({
+      transcribeFn: (_audio, _key, locale) => {
+        seenLocale = locale;
+        return Promise.resolve("قهوة بـ٢٥");
+      },
+    }),
+  );
+  assertEquals(res.status, 200);
+  assertEquals(seenLocale, "ar");
+});
+
 Deno.test("transcribe: passes locale through to the categorizer", async () => {
   let seen = "";
   const res = await handleTranscribe(
