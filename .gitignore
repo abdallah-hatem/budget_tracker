@@ -36,3 +36,6 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Icon generator scratch output (regenerate with scripts/gen-icon.sh)
+.icon-gen/
