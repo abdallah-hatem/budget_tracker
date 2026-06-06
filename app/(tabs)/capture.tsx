@@ -4,6 +4,10 @@ import {
   View,
   TextInput,
   Text,
+  Modal,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
@@ -17,6 +21,10 @@ import {
   deleteTransaction,
 } from '../../src/features/transactions/api';
 import { categoryLabel } from '../../src/features/transactions/display';
+import {
+  ManualEntrySheet,
+  type ManualEntryValues,
+} from '../../src/features/transactions/ManualEntrySheet';
 import type { Locale, ParsedTransaction, Transaction, TxnSource } from '../../src/types';
 import {
   Screen,
@@ -69,6 +77,8 @@ export default function CaptureScreen() {
   const [error, setError] = useState<string | null>(null);
   // The transaction(s) we just auto-added (so we can show them + offer Undo).
   const [lastSaved, setLastSaved] = useState<Transaction[]>([]);
+  // Manual quick-add sheet (the no-AI fallback).
+  const [manualOpen, setManualOpen] = useState(false);
   // Render-timing-independent reentrancy guard against double-submit.
   const submittingRef = useRef(false);
 
@@ -172,6 +182,29 @@ export default function CaptureScreen() {
   };
 
   const onCategorize = () => void processCapture(text, source);
+
+  // Manual quick-add: no AI — feed the typed-in fields straight to saveMany
+  // (confidence 1 so it never shows the low-confidence "Check this" flag).
+  const onManualSubmit = useCallback(
+    (m: ManualEntryValues) => {
+      setManualOpen(false);
+      void saveMany(
+        [
+          {
+            type: m.type,
+            amount: m.amount,
+            currency: 'EGP',
+            category_slug: m.category_slug,
+            note: m.note,
+            confidence: 1,
+          },
+        ],
+        '',
+        'text',
+      );
+    },
+    [saveMany],
+  );
 
   const undoLast = async () => {
     if (lastSaved.length === 0) return;
@@ -368,6 +401,26 @@ export default function CaptureScreen() {
         )}
       </PressableScale>
 
+      {/* Manual quick-add — the no-AI fallback */}
+      <PressableScale
+        testID="capture-manual"
+        onPress={() => {
+          setError(null);
+          setManualOpen(true);
+        }}
+        style={{ alignSelf: 'center', paddingVertical: 6, marginBottom: 12 }}
+      >
+        <Text
+          style={{
+            fontFamily: isRTL ? FONT.readexMd : FONT.jakartaMd,
+            fontSize: 14,
+            color: INK2,
+          }}
+        >
+          {isRTL ? '✏️ إضافة يدوية' : '✏️ Add manually'}
+        </Text>
+      </PressableScale>
+
       {/* Capture error */}
       {error ? (
         <Text
@@ -531,6 +584,29 @@ export default function CaptureScreen() {
           </Card>
         </MotiView>
       ) : null}
+
+      {/* Manual quick-add sheet */}
+      <Modal
+        visible={manualOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setManualOpen(false)}
+      >
+        <Pressable
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
+          onPress={() => setManualOpen(false)}
+        >
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <Pressable onPress={() => {}}>
+              <ManualEntrySheet
+                locale={locale}
+                onSubmit={onManualSubmit}
+                onCancel={() => setManualOpen(false)}
+              />
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }

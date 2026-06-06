@@ -81,6 +81,8 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   expense: { en: 'Expenses', ar: 'المصروفات' },
   earned_caption: { en: 'EARNED', ar: 'الدخل' },
   no_income: { en: 'No income', ar: 'لا دخل' },
+  add: { en: 'Add', ar: 'إضافة' },
+  add_manually: { en: 'Add manually', ar: 'إضافة يدوية' },
   by_category: { en: 'By category', ar: 'حسب الفئة' },
   recent: { en: 'Recent', ar: 'الأخيرة' },
   no_transactions: { en: 'No transactions yet', ar: 'لا توجد معاملات بعد' },

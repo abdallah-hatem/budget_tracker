@@ -228,3 +228,29 @@ it('toggles the mic via the speech hook', () => {
   fireEvent.press(getByTestId('capture-mic'));
   expect(start).toHaveBeenCalledWith('en-US');
 });
+
+it('manual quick-add saves the entry WITHOUT calling the AI', async () => {
+  mockedInsert.mockResolvedValue([savedRow]);
+
+  const { getByTestId, queryByTestId } = render(<CaptureScreen />);
+
+  // Open the manual sheet and fill it in.
+  fireEvent.press(getByTestId('capture-manual'));
+  expect(getByTestId('manual-amount')).toBeTruthy();
+  fireEvent.changeText(getByTestId('manual-amount'), '50');
+  fireEvent.press(getByTestId('manual-add'));
+
+  // It inserts directly; the categorizer (AI) is never invoked.
+  await waitFor(() => expect(mockedInsert).toHaveBeenCalledTimes(1));
+  expect(mockedCategorize).not.toHaveBeenCalled();
+  expect(mockedInsert).toHaveBeenCalledWith([
+    expect.objectContaining({
+      type: 'expense',
+      amount: 50,
+      source: 'text',
+      status: 'confirmed',
+    }),
+  ]);
+  // The same "Added" banner + Undo appears.
+  await waitFor(() => expect(queryByTestId('capture-saved')).toBeTruthy());
+});
