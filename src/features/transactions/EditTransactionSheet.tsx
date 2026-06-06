@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, ScrollView } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateTransaction, deleteTransaction } from './api';
 import { listAccountBalances } from '../accounts/api';
@@ -92,7 +92,10 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
   }
 
   return (
-    <View
+    // Tapping the sheet background (a label, the drag handle, empty space)
+    // dismisses the keyboard — the numeric amount keypad has no Done key.
+    <Pressable
+      onPress={() => Keyboard.dismiss()}
       style={{
         backgroundColor: '#1C2322',
         borderTopLeftRadius: 28,
@@ -452,6 +455,6 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           </Text>
         </PressableScale>
       </View>
-    </View>
+    </Pressable>
   );
 }

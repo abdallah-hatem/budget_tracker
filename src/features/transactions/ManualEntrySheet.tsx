@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TextInput, ScrollView } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categoryLabel } from './display';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
@@ -67,7 +67,10 @@ export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
   };
 
   return (
-    <View
+    // Tapping the sheet background dismisses the keyboard (numeric keypad has no
+    // Done key); category chips and inputs still capture their own taps.
+    <Pressable
+      onPress={() => Keyboard.dismiss()}
       style={{
         backgroundColor: '#1C2322',
         borderTopLeftRadius: 28,
@@ -256,6 +259,6 @@ export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
           <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 14, color: '#06251A' }}>{t('add', locale)}</Text>
         </PressableScale>
       </View>
-    </View>
+    </Pressable>
   );
 }
