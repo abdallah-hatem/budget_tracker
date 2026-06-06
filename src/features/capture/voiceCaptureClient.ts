@@ -63,7 +63,10 @@ export async function requestVoiceCapture(
     parsed?: ParsedTransaction;
   };
   const transactions = d.transactions ?? (d.parsed ? [d.parsed] : []);
-  if (typeof d.text !== 'string' || transactions.length === 0) {
+  // Only a missing transcript is a hard failure. If Whisper heard something but
+  // nothing parsed (e.g. no amount), still return the text so the caller can
+  // show "Heard '…'" instead of a blank miss.
+  if (typeof d.text !== 'string') {
     throw new Error('Voice capture returned no result');
   }
   return { text: d.text, transactions };

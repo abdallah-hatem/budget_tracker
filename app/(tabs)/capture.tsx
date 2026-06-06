@@ -164,6 +164,20 @@ export default function CaptureScreen() {
       if (isListening) stop();
       try {
         const { text: heard, transactions } = await requestVoiceCapture(audioUri, locale);
+        if (transactions.length === 0) {
+          // Whisper heard something but nothing parsed (usually: no amount).
+          // Surface what it heard so the miss is understandable, not silent.
+          setError(
+            heard
+              ? locale === 'ar'
+                ? `سمعت: «${heard}» — بس مفيش مبلغ. قول السعر كمان، مثلاً «بادل بميتين»`
+                : `Heard "${heard}" — but no amount. Add a price, e.g. "padel 200".`
+              : locale === 'ar'
+                ? 'لم أسمع شيئًا — حاول مرة أخرى'
+                : "Didn't catch that — try again",
+          );
+          return;
+        }
         await saveMany(transactions, heard, 'voice');
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to add');
@@ -303,11 +317,11 @@ export default function CaptureScreen() {
                 : 'Adding…'
               : isListening
                 ? isRTL
-                  ? '● استماع… اضغط للإيقاف'
-                  : '● Listening… tap to stop'
+                  ? '● استماع…'
+                  : '● Listening…'
                 : isRTL
-                  ? 'اضغط وتحدّث، ثم اضغط للإيقاف'
-                  : 'Tap, speak, then tap to stop'}
+                  ? 'اضغط وتحدّث'
+                  : 'Tap and speak'}
         </Text>
       </View>
 
