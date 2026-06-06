@@ -12,6 +12,7 @@
 // behalf.
 import { corsHeaders } from "../_shared/cors.ts";
 import { categorize, type ParsedTransaction } from "../_shared/categorize.ts";
+import { INCOME_SLUGS } from "../_shared/categories.ts";
 import { sha256Hex } from "../_shared/hash.ts";
 
 const MAX_TEXT_LENGTH = 2000;
@@ -25,6 +26,13 @@ export interface ExpoPushMessage {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+}
+
+/** A user keyword rule: when `keyword` appears in the SMS, force this category/note. */
+export interface SmsRule {
+  keyword: string;
+  category_slug: string;
+  note: string | null;
 }
 
 export interface IngestDeps {
@@ -44,6 +52,8 @@ export interface IngestDeps {
    * the token does not exist or is revoked.
    */
   lookupUserId: (tokenHash: string) => Promise<string | null>;
+  /** Return the user's keyword rules (override category + note on a match). */
+  getRules: (userId: string) => Promise<SmsRule[]>;
   /** Insert a pending transaction row into the DB. Throw on error. */
   insertPending: (row: Record<string, unknown>) => Promise<void>;
   /** Best-effort: update last_used_at for the token. */
@@ -139,6 +149,29 @@ export async function handleIngest(
     return json({ ok: true, skipped: true }, 200);
   }
 
+  // --- Apply the user's keyword rules (override the AI category + note) ---
+  let categorySlug = parsed.category_slug;
+  let note = parsed.note;
+  let type = parsed.type;
+  try {
+    const rules = await deps.getRules(userId);
+    const lowerText = text.toLowerCase();
+    // Longest matching keyword wins, so a specific rule beats a generic one.
+    const matched = rules
+      .filter((r) => r.keyword && lowerText.includes(r.keyword.toLowerCase()))
+      .sort((a, b) => b.keyword.length - a.keyword.length)[0];
+    if (matched) {
+      categorySlug = matched.category_slug;
+      if (matched.note && matched.note.trim().length > 0) note = matched.note;
+      // Keep the type consistent with the chosen category's kind.
+      type = (INCOME_SLUGS as readonly string[]).includes(matched.category_slug)
+        ? "income"
+        : "expense";
+    }
+  } catch (_e) {
+    // Rules are best-effort — fall back to the AI parse on any error.
+  }
+
   // --- Resolve occurred_at ---
   // Clamp to reject far-future dates (e.g. wrong device clock / replayed SMS).
   const FUTURE_CLAMP_MS = 5 * 60 * 1000; // 5 minutes
@@ -165,11 +198,11 @@ export async function handleIngest(
   try {
     await deps.insertPending({
       user_id: userId,
-      type: parsed.type,
+      type,
       amount,
       currency: "EGP",
-      category_slug: parsed.category_slug,
-      note: parsed.note,
+      category_slug: categorySlug,
+      note,
       raw_text: text,
       source: "sms",
       status: "pending",
@@ -185,7 +218,7 @@ export async function handleIngest(
     try {
       const tokens = await deps.getPushTokens(userId);
       if (tokens.length === 0) return;
-      const bodyText = `E£ ${amount} · ${parsed.note || parsed.category_slug}`;
+      const bodyText = `E£ ${amount} · ${note || categorySlug}`;
       const messages: ExpoPushMessage[] = tokens.map((to) => ({
         to,
         title: "New transaction to review",
@@ -233,6 +266,15 @@ if (import.meta.main) {
         .maybeSingle();
       if (error || !data) return null;
       return (data as { user_id: string }).user_id;
+    },
+
+    async getRules(userId) {
+      const { data, error } = await sb
+        .from("sms_rules")
+        .select("keyword, category_slug, note")
+        .eq("user_id", userId);
+      if (error || !data) return [];
+      return data as SmsRule[];
     },
 
     async insertPending(row) {

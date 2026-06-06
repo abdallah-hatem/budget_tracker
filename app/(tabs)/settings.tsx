@@ -18,6 +18,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import type { Locale, AccountBalance } from '@/src/types';
 import { Screen, Card, AppText, SectionLabel, Pill, Money } from '@/src/ui';
+import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
 import { FONT } from '@/src/lib/font';
 
 export default function Settings() {
@@ -596,6 +597,9 @@ export default function Settings() {
           </View>
         ) : null}
       </Card>
+
+      {/* ── SMS rules (keyword → category/note) ─────────────────────────────── */}
+      <SmsRulesSection locale={locale} />
 
       {/* ── Sign out ───────────────────────────────────────────────────────── */}
       <TouchableOpacity

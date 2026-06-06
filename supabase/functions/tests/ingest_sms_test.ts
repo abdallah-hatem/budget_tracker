@@ -44,6 +44,7 @@ function makeDeps(over: Partial<IngestDeps> = {}): IngestDeps {
     categorizeFn: () => Promise.resolve(SAMPLE_PARSED),
     lookupUserId: (hash) =>
       hash === VALID_TOKEN_HASH ? Promise.resolve(VALID_USER_ID) : Promise.resolve(null),
+    getRules: () => Promise.resolve([]),
     insertPending: () => Promise.resolve(),
     touchToken: () => Promise.resolve(),
     getPushTokens: () => Promise.resolve([]),
@@ -237,6 +238,81 @@ Deno.test("valid token + amount > 0 → CORS header present on 200", async () =>
   );
   assertEquals(res.status, 200);
   assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+});
+
+// ---------------------------------------------------------------------------
+// Tests: user keyword rules override the AI category + note
+// ---------------------------------------------------------------------------
+
+Deno.test("a matching keyword rule overrides category + note (amount kept)", async () => {
+  let row: Record<string, unknown> | null = null;
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "VODAFONE bill 250 EGP" }),
+    makeDeps({
+      getRules: () => Promise.resolve([
+        { keyword: "vodafone", category_slug: "bills", note: "Phone" },
+      ]),
+      insertPending: (r) => { row = r; return Promise.resolve(); },
+    }),
+  );
+  assert(row !== null);
+  const x = row as Record<string, unknown>;
+  assertEquals(x.category_slug, "bills");
+  assertEquals(x.note, "Phone");
+  assertEquals(x.amount, 250); // amount still comes from the AI parse
+});
+
+Deno.test("longest matching keyword wins", async () => {
+  let row: Record<string, unknown> | null = null;
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "UBER EATS 120 EGP" }),
+    makeDeps({
+      getRules: () => Promise.resolve([
+        { keyword: "uber", category_slug: "transport", note: null },
+        { keyword: "uber eats", category_slug: "food", note: "Food delivery" },
+      ]),
+      insertPending: (r) => { row = r; return Promise.resolve(); },
+    }),
+  );
+  assert(row !== null);
+  const x = row as Record<string, unknown>;
+  assertEquals(x.category_slug, "food");
+  assertEquals(x.note, "Food delivery");
+});
+
+Deno.test("a rule with an income category flips type to income", async () => {
+  let row: Record<string, unknown> | null = null;
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "salary deposit 9000 EGP" }),
+    makeDeps({
+      categorizeFn: () => Promise.resolve({ ...SAMPLE_PARSED, type: "expense", amount: 9000 }),
+      getRules: () => Promise.resolve([
+        { keyword: "salary deposit", category_slug: "salary", note: null },
+      ]),
+      insertPending: (r) => { row = r; return Promise.resolve(); },
+    }),
+  );
+  assert(row !== null);
+  const x = row as Record<string, unknown>;
+  assertEquals(x.category_slug, "salary");
+  assertEquals(x.type, "income");
+});
+
+Deno.test("no matching rule → AI category/note are used", async () => {
+  let row: Record<string, unknown> | null = null;
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+    makeDeps({
+      getRules: () => Promise.resolve([
+        { keyword: "vodafone", category_slug: "bills", note: "Phone" },
+      ]),
+      insertPending: (r) => { row = r; return Promise.resolve(); },
+    }),
+  );
+  assert(row !== null);
+  const x = row as Record<string, unknown>;
+  assertEquals(x.category_slug, "food");
+  assertEquals(x.note, "lunch");
 });
 
 // ---------------------------------------------------------------------------

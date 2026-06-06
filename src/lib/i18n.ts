@@ -117,6 +117,16 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
 
   // SMS auto-capture / ingest token (P2.5)
   sms_capture: { en: 'SMS Auto-Capture', ar: 'التقاط الرسائل تلقائياً' },
+  'rules.title': { en: 'SMS rules', ar: 'قواعد الرسائل' },
+  'rules.subtitle': {
+    en: 'When a bank SMS contains a keyword, force its category and note.',
+    ar: 'لما رسالة البنك تحتوي على كلمة، اضبط فئتها وملاحظتها تلقائيًا.',
+  },
+  'rules.keyword': { en: 'Keyword', ar: 'كلمة مفتاحية' },
+  'rules.note_optional': { en: 'Note (optional)', ar: 'ملاحظة (اختياري)' },
+  'rules.add': { en: 'Add rule', ar: 'أضف قاعدة' },
+  'rules.delete': { en: 'Delete', ar: 'حذف' },
+  'rules.empty': { en: 'No rules yet.', ar: 'لا توجد قواعد بعد.' },
   sms_token_intro: {
     en: 'Generate a secret token to link your iOS Shortcut.',
     ar: 'أنشئ رمزاً سرياً لربط اختصار iOS الخاص بك.',
