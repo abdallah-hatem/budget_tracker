@@ -19,15 +19,19 @@ import { useNotifications } from '../useNotifications';
 // ---------------------------------------------------------------------------
 
 const mockPush = jest.fn();
+// Controllable per test (must be `mock`-prefixed to be referenced in jest.mock).
+let mockNavState: { key?: string } | undefined;
+let mockSession: { user: { id: string } | null; loading: boolean };
 
 // Mock expo-router
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
+  useRootNavigationState: () => mockNavState,
 }));
 
 // Mock SessionProvider
 jest.mock('@/src/features/auth/SessionProvider', () => ({
-  useSession: () => ({ user: { id: 'user-123' } }),
+  useSession: () => mockSession,
 }));
 
 // Mock the registration function so tests are isolated from Supabase / device checks
@@ -58,6 +62,9 @@ function makeNotificationResponse(url: string) {
 describe('useNotifications', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: navigator mounted + session resolved (the normal steady state).
+    mockNavState = { key: 'root' };
+    mockSession = { user: { id: 'user-123' }, loading: false };
     // Default: no cold-start response
     (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValue(null);
   });
@@ -89,6 +96,30 @@ describe('useNotifications', () => {
 
     renderHook(() => useNotifications());
 
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/(tabs)/pending');
+    });
+  });
+
+  it('does NOT navigate on cold-start until the navigator is mounted (the hang fix)', async () => {
+    // Navigator not ready yet (loading screen up) + a pending cold-start tap.
+    mockNavState = undefined;
+    mockSession = { user: { id: 'user-123' }, loading: true };
+    (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValue(
+      makeNotificationResponse('/(tabs)/pending'),
+    );
+
+    const { rerender } = renderHook(() => useNotifications());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // Must NOT push while the navigator isn't mounted (that's what hung the app).
+    expect(mockPush).not.toHaveBeenCalled();
+
+    // Once the session resolves and the navigator mounts, it navigates.
+    mockNavState = { key: 'root' };
+    mockSession = { user: { id: 'user-123' }, loading: false };
+    rerender({});
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/(tabs)/pending');
     });
