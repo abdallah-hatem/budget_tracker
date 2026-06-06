@@ -9,6 +9,24 @@
   building what I asked for — just build it (it's git-reversible). Default to
   action, not a confirmation prompt.
 
+## Production database — ALWAYS ask before pushing
+
+- BEFORE any production DB migration (`supabase db push`, schema/data changes to
+  the prod project `pzyadiwfjmjsafssxshc`), STOP and ask me for explicit
+  confirmation — even though my Workflow rule says default to action, prod DB
+  pushes are the exception. Show me the migration first.
+- Once I confirm, push with the linked project: `db push` does NOT take
+  `--project-ref`; it uses the linked project. Use
+  `SUPABASE_DB_PASSWORD=<db-pass> supabase db push --yes`. Migrations live in
+  `supabase/migrations/`; only un-applied ones run. The DB password is the one
+  from `eas.json`/secure notes (never commit it).
+- Adding a category needs a row in the `categories` table (the
+  `transactions.category_slug` FK requires it) — ship an idempotent
+  `insert … on conflict do update` migration, AND keep `src/lib/categories.ts`,
+  `src/lib/categoryStyle.ts`, `supabase/seed.sql`, and
+  `supabase/functions/_shared/categories.ts` in sync (the seedParity / shared
+  tests enforce this), then redeploy `categorize`/`transcribe`.
+
 ## OTA updates (EAS Update) — gotchas
 
 - `eas update` inlines `EXPO_PUBLIC_*` from the LOCAL `.env`, which points at the
