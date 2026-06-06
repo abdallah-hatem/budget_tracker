@@ -20,15 +20,43 @@ const parsed: ParsedTransaction = {
 
 afterEach(() => jest.clearAllMocks());
 
-it('invokes the categorize function with text + locale and returns parsed', async () => {
-  mockedInvoke.mockResolvedValue({ data: { parsed }, error: null });
+it('invokes the categorize function with text + locale and returns the transactions', async () => {
+  mockedInvoke.mockResolvedValue({
+    data: { transactions: [parsed] },
+    error: null,
+  });
 
   const result = await requestCategorize('spent 50 on coffee', 'en');
 
   expect(mockedInvoke).toHaveBeenCalledWith('categorize', {
     body: { text: 'spent 50 on coffee', locale: 'en' },
   });
-  expect(result).toEqual(parsed);
+  expect(result).toEqual([parsed]);
+});
+
+it('splits a multi-item utterance into several transactions', async () => {
+  const taxi: ParsedTransaction = {
+    type: 'expense',
+    amount: 40,
+    currency: 'EGP',
+    category_slug: 'transport',
+    note: 'taxi',
+    confidence: 0.85,
+  };
+  mockedInvoke.mockResolvedValue({
+    data: { transactions: [parsed, taxi] },
+    error: null,
+  });
+
+  const result = await requestCategorize('coffee 50 and taxi 40', 'en');
+  expect(result).toEqual([parsed, taxi]);
+});
+
+it('falls back to the legacy single `parsed` field', async () => {
+  mockedInvoke.mockResolvedValue({ data: { parsed }, error: null });
+
+  const result = await requestCategorize('spent 50 on coffee', 'en');
+  expect(result).toEqual([parsed]);
 });
 
 it('throws with the JSON error body on a FunctionsHttpError', async () => {

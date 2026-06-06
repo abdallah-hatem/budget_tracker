@@ -13,7 +13,7 @@ import { requestCategorize } from '../../src/features/capture/categorizeClient';
 import { requestVoiceCapture } from '../../src/features/capture/voiceCaptureClient';
 import { buildCaptureRow } from '../../src/features/capture/toTransactionRow';
 import {
-  insertTransaction,
+  insertTransactions,
   deleteTransaction,
 } from '../../src/features/transactions/api';
 import { categoryLabel } from '../../src/features/transactions/display';
@@ -67,8 +67,8 @@ export default function CaptureScreen() {
   const [source, setSource] = useState<TxnSource>('text');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // The transaction we just auto-added (so we can show it + offer Undo).
-  const [lastSaved, setLastSaved] = useState<Transaction | null>(null);
+  // The transaction(s) we just auto-added (so we can show them + offer Undo).
+  const [lastSaved, setLastSaved] = useState<Transaction[]>([]);
   // Render-timing-independent reentrancy guard against double-submit.
   const submittingRef = useRef(false);
 
@@ -87,13 +87,16 @@ export default function CaptureScreen() {
     }
   };
 
-  // Persist a parsed transaction. Rounds to the column precision (numeric(14,2))
-  // and guards amount > 0 to match the DB CHECK.
-  const saveParsed = useCallback(
-    async (parsed: ParsedTransaction, rawText: string, src: TxnSource) => {
+  // Persist ONE OR MORE parsed transactions (a single utterance can contain
+  // several items). Rounds each to numeric(14,2), drops amount<=0, inserts the
+  // batch atomically, and shows them all in the "Added" card.
+  const saveMany = useCallback(
+    async (items: ParsedTransaction[], rawText: string, src: TxnSource) => {
       if (!user) return;
-      const amount = Math.round((parsed.amount ?? 0) * 100) / 100;
-      if (!(amount > 0)) {
+      const valid = items
+        .map((p) => ({ ...p, amount: Math.round((p.amount ?? 0) * 100) / 100 }))
+        .filter((p) => p.amount > 0);
+      if (valid.length === 0) {
         setError(
           locale === 'ar'
             ? 'لم أتمكن من إيجاد مبلغ — أضِف المبلغ وحاول مرة أخرى'
@@ -101,22 +104,22 @@ export default function CaptureScreen() {
         );
         return;
       }
-      const row = await insertTransaction(
-        buildCaptureRow({ ...parsed, amount }, rawText, src, user.id, 'confirmed'),
+      const rows = await insertTransactions(
+        valid.map((p) => buildCaptureRow(p, rawText, src, user.id, 'confirmed')),
       );
       try {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {
         // haptics optional
       }
-      setLastSaved(row);
+      setLastSaved(rows);
       setText('');
       setSource('text');
     },
     [user, locale],
   );
 
-  // Typed "Add" (and the on-device-transcript fallback): categorize text, save.
+  // Typed "Add" (and the on-device-transcript fallback): categorize text, save all.
   const processCapture = useCallback(
     async (raw: string, src: TxnSource) => {
       if (submittingRef.current || loading) return;
@@ -127,8 +130,8 @@ export default function CaptureScreen() {
       setLoading(true);
       if (isListening) stop();
       try {
-        const parsed = await requestCategorize(value, locale);
-        await saveParsed(parsed, value, src);
+        const items = await requestCategorize(value, locale);
+        await saveMany(items, value, src);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to add');
       } finally {
@@ -136,11 +139,11 @@ export default function CaptureScreen() {
         submittingRef.current = false;
       }
     },
-    [user, locale, loading, isListening, stop, saveParsed],
+    [user, locale, loading, isListening, stop, saveMany],
   );
 
   // Voice: upload the recorded audio to Whisper (auto-detects ANY spoken
-  // language) + categorize server-side, then save — no visible transcript.
+  // language) + categorize server-side, then save all — no visible transcript.
   const processVoice = useCallback(
     async (audioUri: string) => {
       if (submittingRef.current || loading || !user) return;
@@ -149,8 +152,8 @@ export default function CaptureScreen() {
       setLoading(true);
       if (isListening) stop();
       try {
-        const { text: heard, parsed } = await requestVoiceCapture(audioUri, locale);
-        await saveParsed(parsed, heard, 'voice');
+        const { text: heard, transactions } = await requestVoiceCapture(audioUri, locale);
+        await saveMany(transactions, heard, 'voice');
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to add');
       } finally {
@@ -158,7 +161,7 @@ export default function CaptureScreen() {
         submittingRef.current = false;
       }
     },
-    [user, locale, loading, isListening, stop, saveParsed],
+    [user, locale, loading, isListening, stop, saveMany],
   );
 
   // Prefer Whisper (any language) when audio was recorded; else fall back to the
@@ -171,11 +174,11 @@ export default function CaptureScreen() {
   const onCategorize = () => void processCapture(text, source);
 
   const undoLast = async () => {
-    if (!lastSaved) return;
-    const id = lastSaved.id;
+    if (lastSaved.length === 0) return;
+    const ids = lastSaved.map((t) => t.id);
     try {
-      await deleteTransaction(id);
-      setLastSaved(null);
+      await Promise.all(ids.map((id) => deleteTransaction(id)));
+      setLastSaved([]);
     } catch (e) {
       // Keep the banner so Undo stays tappable on failure.
       setError(e instanceof Error ? e.message : 'Failed to undo');
@@ -183,8 +186,10 @@ export default function CaptureScreen() {
   };
 
   const saved = lastSaved;
-  const savedLow = saved?.confidence != null && saved.confidence < LOW_CONFIDENCE;
-  const savedIncome = saved?.type === 'income';
+  const savedLow =
+    saved.length === 1 &&
+    saved[0].confidence != null &&
+    saved[0].confidence < LOW_CONFIDENCE;
 
   const isEmpty = !text.trim();
 
@@ -380,7 +385,7 @@ export default function CaptureScreen() {
       ) : null}
 
       {/* Saved banner — sleek card with fade/scale-in */}
-      {saved ? (
+      {saved.length > 0 ? (
         <MotiView
           testID="capture-saved"
           from={{ opacity: 0, scale: 0.96, translateY: 8 }}
@@ -418,56 +423,65 @@ export default function CaptureScreen() {
                   ? isRTL
                     ? 'تحقق من هذه'
                     : 'Check this'
-                  : isRTL
-                    ? 'تمت الإضافة'
-                    : 'Added'}
+                  : saved.length > 1
+                    ? isRTL
+                      ? `تمت إضافة ${saved.length}`
+                      : `Added ${saved.length}`
+                    : isRTL
+                      ? 'تمت الإضافة'
+                      : 'Added'}
               </Text>
             </View>
 
-            {/* Category + amount row */}
-            <View
-              style={{
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                alignItems: 'center',
-                gap: 12,
-                marginBottom: saved.note ? 10 : 14,
-              }}
-            >
-              <CategoryAvatar slug={saved.category_slug} size={44} />
-              <View style={{ flex: 1, gap: 3 }}>
-                <Text
-                  style={{
-                    fontFamily: isRTL ? FONT.readexSb : FONT.jakartaSb,
-                    fontSize: 15,
-                    color: INK,
-                    textAlign: isRTL ? 'right' : 'left',
-                  }}
-                >
-                  {categoryLabel(saved.category_slug, locale)}
-                </Text>
-                <Money
-                  amount={saved.amount}
-                  sign={savedIncome ? 'always' : 'none'}
-                  tone={savedIncome ? 'accent' : 'ink'}
-                  size={15}
-                />
-              </View>
+            {/* One row per added transaction */}
+            <View style={{ gap: 12, marginBottom: 14 }}>
+              {saved.map((t) => {
+                const income = t.type === 'income';
+                return (
+                  <View
+                    key={t.id}
+                    style={{
+                      flexDirection: isRTL ? 'row-reverse' : 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <CategoryAvatar slug={t.category_slug} size={40} />
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text
+                        style={{
+                          fontFamily: isRTL ? FONT.readexSb : FONT.jakartaSb,
+                          fontSize: 15,
+                          color: INK,
+                          textAlign: isRTL ? 'right' : 'left',
+                        }}
+                      >
+                        {categoryLabel(t.category_slug, locale)}
+                      </Text>
+                      {t.note ? (
+                        <Text
+                          style={{
+                            fontFamily: isRTL ? FONT.readex : FONT.jakarta,
+                            fontSize: 12,
+                            color: INK2,
+                            textAlign: isRTL ? 'right' : 'left',
+                          }}
+                          numberOfLines={1}
+                        >
+                          {t.note}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Money
+                      amount={t.amount}
+                      sign={income ? 'always' : 'none'}
+                      tone={income ? 'accent' : 'ink'}
+                      size={15}
+                    />
+                  </View>
+                );
+              })}
             </View>
-
-            {/* Note */}
-            {saved.note ? (
-              <Text
-                style={{
-                  fontFamily: isRTL ? FONT.readex : FONT.jakarta,
-                  fontSize: 13,
-                  color: INK2,
-                  marginBottom: 14,
-                  textAlign: isRTL ? 'right' : 'left',
-                }}
-              >
-                {saved.note}
-              </Text>
-            ) : null}
 
             {/* Undo + hint */}
             <View

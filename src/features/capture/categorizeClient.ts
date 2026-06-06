@@ -4,13 +4,14 @@ import type { Locale, ParsedTransaction } from '../../types';
 
 /**
  * Calls the `categorize` Edge Function (verify_jwt=true; the user JWT is
- * attached automatically by functions.invoke) and returns the parsed result.
+ * attached automatically by functions.invoke) and returns ONE OR MORE parsed
+ * transactions — a single utterance may contain several items.
  * Throws an Error carrying the server-provided message on failure.
  */
 export async function requestCategorize(
   text: string,
   locale: Locale,
-): Promise<ParsedTransaction> {
+): Promise<ParsedTransaction[]> {
   const { data, error } = await supabase.functions.invoke('categorize', {
     body: { text, locale },
   });
@@ -24,9 +25,13 @@ export async function requestCategorize(
     throw new Error(error.message || 'Categorization failed');
   }
 
-  const parsed = (data as { parsed?: ParsedTransaction } | null)?.parsed;
-  if (!parsed) {
+  const d = data as
+    | { transactions?: ParsedTransaction[]; parsed?: ParsedTransaction }
+    | null;
+  // Prefer the array; fall back to the single `parsed` (older function shape).
+  const transactions = d?.transactions ?? (d?.parsed ? [d.parsed] : []);
+  if (transactions.length === 0) {
     throw new Error('Categorization returned no result');
   }
-  return parsed;
+  return transactions;
 }

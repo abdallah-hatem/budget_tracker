@@ -1,6 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import {
   categorize,
+  categorizeMany,
   type ChatCompletionResponse,
   type CreateCompletion,
   GROQ_MODEL,
@@ -34,6 +35,54 @@ function stub(
   };
   return { create, calls };
 }
+
+Deno.test("categorizeMany splits multiple items and drops amount-less ones", async () => {
+  const { create } = stub(
+    fakeCompletion({
+      transactions: [
+        { type: "expense", amount: 80, currency: "EGP", category_slug: "food", note: "lunch", confidence: 0.9 },
+        { type: "expense", amount: 0, currency: "EGP", category_slug: "food", note: "water", confidence: 0.4 },
+        { type: "expense", amount: 40, currency: "EGP", category_slug: "transport", note: "taxi", confidence: 0.85 },
+      ],
+    }),
+  );
+  const out = await categorizeMany("lunch 80, water, taxi 40", "en", "k", {
+    createCompletion: create,
+  });
+  assertEquals(out.length, 2); // the amount-0 item is dropped
+  assertEquals(out[0].amount, 80);
+  assertEquals(out[0].category_slug, "food");
+  assertEquals(out[1].category_slug, "transport");
+});
+
+Deno.test("categorizeMany returns a single-element array for one item", async () => {
+  const { create } = stub(
+    fakeCompletion({
+      transactions: [
+        { type: "expense", amount: 100, currency: "EGP", category_slug: "transport", note: "petrol", confidence: 0.9 },
+      ],
+    }),
+  );
+  const out = await categorizeMany("petrol 100", "en", "k", { createCompletion: create });
+  assertEquals(out.length, 1);
+  assertEquals(out[0].amount, 100);
+});
+
+Deno.test("categorizeMany tolerates a bare object (no transactions wrapper)", async () => {
+  const { create } = stub(
+    fakeCompletion({
+      type: "expense",
+      amount: 30,
+      currency: "EGP",
+      category_slug: "food",
+      note: "juice",
+      confidence: 0.8,
+    }),
+  );
+  const out = await categorizeMany("juice 30", "en", "k", { createCompletion: create });
+  assertEquals(out.length, 1);
+  assertEquals(out[0].note, "juice");
+});
 
 Deno.test("maps a well-formed English completion to ParsedTransaction", async () => {
   const { create, calls } = stub(

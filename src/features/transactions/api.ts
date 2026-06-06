@@ -19,6 +19,18 @@ export async function insertTransaction(row: NewTransaction): Promise<Transactio
   return data as Transaction;
 }
 
+/** Insert several transactions at once (one utterance -> several items). */
+export async function insertTransactions(
+  rows: NewTransaction[],
+): Promise<Transaction[]> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert(rows)
+    .select();
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Transaction[];
+}
+
 export async function updateTransaction(
   id: string,
   patch: Partial<NewTransaction>,

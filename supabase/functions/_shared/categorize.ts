@@ -214,3 +214,102 @@ export async function categorize(
 
   return parsed;
 }
+
+// --- Multi-item categorization -------------------------------------------------
+// Splits ONE utterance ("lunch 50, coffee 20, taxi 30") into SEPARATE
+// transactions. Understands English, Modern Standard Arabic, and Egyptian
+// colloquial (Masry).
+
+function manySystemPrompt(locale: Locale): string {
+  const lang = locale === "ar" ? "Arabic" : "English";
+  return [
+    "You extract personal-finance transactions from one spoken/typed utterance or SMS.",
+    'The user OFTEN lists several things at once (e.g. "lunch 50, coffee 20, taxi 30" or',
+    '"اتغديت بـ٥٠ وشربت قهوة بـ٢٠ وركبت تاكسي بـ٣٠"). Split them into SEPARATE transactions —',
+    "one per distinct item with its own amount. If the user mentions a single thing, return one.",
+    "The text may be in English, Modern Standard " + lang +
+      ", or EGYPTIAN colloquial Arabic (Masry / مصري) — understand all of them, including",
+    "slang and spoken numbers (e.g. 'خمسين', 'بميتين', 'اتنين جنيه').",
+    "Respond with a SINGLE JSON object and nothing else (no markdown fences, no prose):",
+    '  { "transactions": [ <transaction>, ... ] }',
+    "Each <transaction> has EXACTLY these keys:",
+    '- "type": "expense" (money spent) or "income" (money received).',
+    '- "amount": a positive number. Convert Arabic-Indic digits (٠-٩) to Western. OMIT the whole item if it has no amount.',
+    '- "currency": map EGP / جنيه / ج.م / pounds to "EGP". Default "EGP".',
+    '- "category_slug": EXACTLY one of: ' + CATEGORY_SLUGS.join(", ") + ".",
+    '  Pick the MOST SPECIFIC fitting category. Use "other_expense"/"other_income" ONLY as a last resort.',
+    "  Anything to eat or drink (water, bottled water, juice, soda, coffee, tea, snacks, any beverage) is food",
+    "  (Food & Drink), even when bought from a shop. Use groceries ONLY for a supermarket trip / multiple",
+    "  household provisions. taxi, uber, bus, fuel, petrol -> transport; rent, electricity, water bill, internet,",
+    "  phone bill -> bills; pharmacy, doctor, medicine -> health; clothes, shoes -> clothes; salary or paycheck",
+    "  -> salary; a refund / money back -> refund.",
+    '- "note": a very short label for the item (e.g. "coffee", "قهوة").',
+    '- "confidence": a number from 0 to 1.',
+    '- "occurred_at": optional ISO-8601 timestamp if the text states a date/time; omit otherwise.',
+    "Amounts are in Egyptian Pounds (EGP) by default. Return an empty array if there are no transactions.",
+  ].join("\n");
+}
+
+/** Build the Groq request body for multi-item extraction. */
+export function buildManyRequestBody(
+  text: string,
+  locale: Locale,
+): Record<string, unknown> {
+  return {
+    model: GROQ_MODEL,
+    temperature: 0,
+    max_tokens: 1024, // room for several transactions
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: manySystemPrompt(locale) },
+      { role: "user", content: text },
+    ],
+  };
+}
+
+/**
+ * Categorize an utterance into ONE OR MORE ParsedTransactions (multi-item).
+ * Items with no usable amount are dropped.
+ */
+export async function categorizeMany(
+  text: string,
+  locale: Locale,
+  apiKey: string,
+  opts: CategorizeOptions = {},
+): Promise<ParsedTransaction[]> {
+  const transport = opts.createCompletion ?? realTransport(apiKey);
+  const res = await transport(buildManyRequestBody(text, locale));
+  const obj = extractJsonObject(res);
+
+  // Accept { transactions: [...] }, a bare array, or a single object (fallback).
+  let rawList: unknown[];
+  const wrapped = (obj as { transactions?: unknown }).transactions;
+  if (Array.isArray(wrapped)) {
+    rawList = wrapped;
+  } else if (Array.isArray(obj)) {
+    rawList = obj as unknown[];
+  } else {
+    rawList = [obj];
+  }
+
+  const out: ParsedTransaction[] = [];
+  for (const item of rawList) {
+    if (typeof item !== "object" || item === null) continue;
+    const rec = item as Record<string, unknown>;
+    const type = coerceType(rec.type);
+    const amount = coerceAmount(rec.amount);
+    if (amount === 0) continue; // drop items with no usable amount
+    const parsed: ParsedTransaction = {
+      type,
+      amount,
+      currency: coerceCurrency(rec.currency),
+      category_slug: coerceSlug(rec.category_slug, type),
+      note: coerceNote(rec.note),
+      confidence: coerceConfidence(rec.confidence),
+    };
+    const occurredAt = coerceOccurredAt(rec.occurred_at);
+    if (occurredAt) parsed.occurred_at = occurredAt;
+    out.push(parsed);
+  }
+  return out;
+}

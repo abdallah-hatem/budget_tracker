@@ -8,7 +8,7 @@
 // in one round trip. verify_jwt = true (see supabase/config.toml).
 import { corsHeaders } from "../_shared/cors.ts";
 import {
-  categorize,
+  categorizeMany,
   type Locale,
   type ParsedTransaction,
 } from "../_shared/categorize.ts";
@@ -25,7 +25,7 @@ export interface HandlerDeps {
     text: string,
     locale: Locale,
     apiKey: string,
-  ) => Promise<ParsedTransaction>;
+  ) => Promise<ParsedTransaction[]>;
 }
 
 function json(body: unknown, status: number): Response {
@@ -83,9 +83,9 @@ export async function handleTranscribe(
     return json({ error: "No speech detected." }, 422);
   }
 
-  let parsed: ParsedTransaction;
+  let transactions: ParsedTransaction[];
   try {
-    parsed = await deps.categorizeFn(text, locale, deps.apiKey);
+    transactions = await deps.categorizeFn(text, locale, deps.apiKey);
   } catch (e) {
     return json(
       { error: e instanceof Error ? e.message : "Categorization failed." },
@@ -93,7 +93,7 @@ export async function handleTranscribe(
     );
   }
 
-  return json({ text, parsed }, 200);
+  return json({ text, transactions, parsed: transactions[0] ?? null }, 200);
 }
 
 /** Real Groq Whisper transcription with automatic language detection. */
@@ -117,10 +117,13 @@ async function groqTranscribe(audio: Blob, apiKey: string): Promise<string> {
   return typeof data.text === "string" ? data.text : "";
 }
 
-Deno.serve((req) =>
-  handleTranscribe(req, {
-    apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
-    transcribeFn: groqTranscribe,
-    categorizeFn: categorize,
-  })
-);
+// Guard with import.meta.main so the server does not bind during deno test.
+if (import.meta.main) {
+  Deno.serve((req) =>
+    handleTranscribe(req, {
+      apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
+      transcribeFn: groqTranscribe,
+      categorizeFn: categorizeMany,
+    })
+  );
+}

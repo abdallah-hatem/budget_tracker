@@ -14,7 +14,7 @@ const SAMPLE: ParsedTransaction = {
 function deps(over: Partial<HandlerDeps> = {}): HandlerDeps {
   return {
     apiKey: "test-key",
-    categorizeFn: () => Promise.resolve(SAMPLE),
+    categorizeFn: () => Promise.resolve([SAMPLE]),
     ...over,
   };
 }
@@ -44,7 +44,7 @@ Deno.test("non-POST method returns 405", async () => {
   assertEquals(res.status, 405);
 });
 
-Deno.test("happy path returns 200 { parsed } with CORS", async () => {
+Deno.test("happy path returns 200 { transactions, parsed } with CORS", async () => {
   const res = await handleCategorize(
     postReq({ text: "spent 50 EGP on coffee", locale: "en" }),
     deps(),
@@ -52,7 +52,7 @@ Deno.test("happy path returns 200 { parsed } with CORS", async () => {
   assertEquals(res.status, 200);
   assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
   const json = await res.json();
-  assertEquals(json, { parsed: SAMPLE });
+  assertEquals(json, { transactions: [SAMPLE], parsed: SAMPLE });
 });
 
 Deno.test("locale defaults to 'en' when omitted", async () => {
@@ -62,7 +62,7 @@ Deno.test("locale defaults to 'en' when omitted", async () => {
     deps({
       categorizeFn: (_t, locale) => {
         seenLocale = locale;
-        return Promise.resolve(SAMPLE);
+        return Promise.resolve([SAMPLE]);
       },
     }),
   );

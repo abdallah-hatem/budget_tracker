@@ -15,7 +15,7 @@ function deps(over: Partial<HandlerDeps> = {}): HandlerDeps {
   return {
     apiKey: "gsk_test",
     transcribeFn: () => Promise.resolve("coffee 50 pounds"),
-    categorizeFn: () => Promise.resolve(parsed),
+    categorizeFn: () => Promise.resolve([parsed]),
     ...over,
   };
 }
@@ -29,13 +29,32 @@ function audioRequest(opts: { file?: Blob; locale?: string } = {}): Request {
   return new Request("http://localhost/transcribe", { method: "POST", body: fd });
 }
 
-Deno.test("transcribe: audio -> transcript + parsed transaction", async () => {
+Deno.test("transcribe: audio -> transcript + parsed transactions", async () => {
   const res = await handleTranscribe(audioRequest({ file: wav() }), deps());
   assertEquals(res.status, 200);
   const body = await res.json();
   assertEquals(body.text, "coffee 50 pounds");
-  assertEquals(body.parsed.amount, 50);
-  assertEquals(body.parsed.category_slug, "food");
+  assertEquals(body.transactions.length, 1);
+  assertEquals(body.transactions[0].amount, 50);
+  assertEquals(body.parsed.category_slug, "food"); // back-compat alias
+});
+
+Deno.test("transcribe: splits a multi-item utterance into several transactions", async () => {
+  const res = await handleTranscribe(
+    audioRequest({ file: wav() }),
+    deps({
+      categorizeFn: () =>
+        Promise.resolve([
+          parsed,
+          { ...parsed, amount: 20, note: "tea" },
+          { ...parsed, amount: 40, category_slug: "transport", note: "taxi" },
+        ]),
+    }),
+  );
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body.transactions.length, 3);
+  assertEquals(body.transactions[2].category_slug, "transport");
 });
 
 Deno.test("transcribe: passes locale through to the categorizer", async () => {
@@ -45,7 +64,7 @@ Deno.test("transcribe: passes locale through to the categorizer", async () => {
     deps({
       categorizeFn: (_t, locale) => {
         seen = locale;
-        return Promise.resolve(parsed);
+        return Promise.resolve([parsed]);
       },
     }),
   );

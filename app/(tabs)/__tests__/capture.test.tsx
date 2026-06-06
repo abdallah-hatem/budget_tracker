@@ -5,7 +5,7 @@ import { requestCategorize } from '../../../src/features/capture/categorizeClien
 import { useSpeechRecognition } from '../../../src/hooks/useSpeechRecognition';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 import {
-  insertTransaction,
+  insertTransactions,
   deleteTransaction,
 } from '../../../src/features/transactions/api';
 import type { ParsedTransaction, Transaction } from '../../../src/types';
@@ -20,14 +20,14 @@ jest.mock('../../../src/features/auth/SessionProvider', () => ({
   useSession: jest.fn(),
 }));
 jest.mock('../../../src/features/transactions/api', () => ({
-  insertTransaction: jest.fn(),
+  insertTransactions: jest.fn(),
   deleteTransaction: jest.fn(),
 }));
 
 const mockedCategorize = requestCategorize as unknown as jest.Mock;
 const mockedSpeech = useSpeechRecognition as unknown as jest.Mock;
 const mockedSession = useSession as unknown as jest.Mock;
-const mockedInsert = insertTransaction as unknown as jest.Mock;
+const mockedInsert = insertTransactions as unknown as jest.Mock;
 const mockedDelete = deleteTransaction as unknown as jest.Mock;
 
 const parsed: ParsedTransaction = {
@@ -75,8 +75,8 @@ beforeEach(() => {
 });
 
 it('auto-adds the transaction after pressing Add (no confirm step)', async () => {
-  mockedCategorize.mockResolvedValue(parsed);
-  mockedInsert.mockResolvedValue(savedRow);
+  mockedCategorize.mockResolvedValue([parsed]);
+  mockedInsert.mockResolvedValue([savedRow]);
 
   const { getByTestId, queryByTestId } = render(<CaptureScreen />);
 
@@ -88,7 +88,7 @@ it('auto-adds the transaction after pressing Add (no confirm step)', async () =>
   );
   // It saves immediately, with status 'confirmed' and the right fields.
   await waitFor(() => expect(mockedInsert).toHaveBeenCalledTimes(1));
-  expect(mockedInsert).toHaveBeenCalledWith(
+  expect(mockedInsert).toHaveBeenCalledWith([
     expect.objectContaining({
       user_id: 'user-1',
       type: 'expense',
@@ -99,14 +99,45 @@ it('auto-adds the transaction after pressing Add (no confirm step)', async () =>
       source: 'text',
       status: 'confirmed',
     }),
-  );
+  ]);
   // No confirm sheet; an "added" banner shows instead.
   await waitFor(() => expect(queryByTestId('capture-saved')).toBeTruthy());
   expect(queryByTestId('confirm-save')).toBeNull();
 });
 
+it('splits one utterance into several transactions', async () => {
+  const taxi: ParsedTransaction = {
+    type: 'expense',
+    amount: 40,
+    currency: 'EGP',
+    category_slug: 'transport',
+    note: 'taxi',
+    confidence: 0.85,
+  };
+  const taxiRow: Transaction = {
+    ...savedRow,
+    id: 'txn-2',
+    amount: 40,
+    category_slug: 'transport',
+    note: 'taxi',
+  };
+  mockedCategorize.mockResolvedValue([parsed, taxi]);
+  mockedInsert.mockResolvedValue([savedRow, taxiRow]);
+
+  const { getByTestId, queryByText } = render(<CaptureScreen />);
+
+  fireEvent.changeText(getByTestId('capture-text'), 'coffee 50 and taxi 40');
+  fireEvent.press(getByTestId('capture-categorize'));
+
+  // Both rows are inserted in one batch...
+  await waitFor(() => expect(mockedInsert).toHaveBeenCalledTimes(1));
+  expect(mockedInsert.mock.calls[0][0]).toHaveLength(2);
+  // ...and the banner shows the count.
+  await waitFor(() => expect(queryByText(/Added 2/)).toBeTruthy());
+});
+
 it('does NOT auto-add when no amount was detected', async () => {
-  mockedCategorize.mockResolvedValue({ ...parsed, amount: 0, confidence: 0 });
+  mockedCategorize.mockResolvedValue([{ ...parsed, amount: 0, confidence: 0 }]);
 
   const { getByTestId, queryByTestId } = render(<CaptureScreen />);
 
@@ -120,8 +151,8 @@ it('does NOT auto-add when no amount was detected', async () => {
 });
 
 it('Undo deletes the just-added transaction', async () => {
-  mockedCategorize.mockResolvedValue(parsed);
-  mockedInsert.mockResolvedValue(savedRow);
+  mockedCategorize.mockResolvedValue([parsed]);
+  mockedInsert.mockResolvedValue([savedRow]);
   mockedDelete.mockResolvedValue(undefined);
 
   const { getByTestId, queryByTestId } = render(<CaptureScreen />);
@@ -137,7 +168,7 @@ it('Undo deletes the just-added transaction', async () => {
 });
 
 it('does NOT auto-add for a negative amount', async () => {
-  mockedCategorize.mockResolvedValue({ ...parsed, amount: -5 });
+  mockedCategorize.mockResolvedValue([{ ...parsed, amount: -5 }]);
 
   const { getByTestId, queryByTestId } = render(<CaptureScreen />);
   fireEvent.changeText(getByTestId('capture-text'), 'weird -5');
@@ -149,8 +180,8 @@ it('does NOT auto-add for a negative amount', async () => {
 });
 
 it('flags a low-confidence auto-add for review', async () => {
-  mockedCategorize.mockResolvedValue({ ...parsed, confidence: 0.3 });
-  mockedInsert.mockResolvedValue({ ...savedRow, confidence: 0.3 });
+  mockedCategorize.mockResolvedValue([{ ...parsed, confidence: 0.3 }]);
+  mockedInsert.mockResolvedValue([{ ...savedRow, confidence: 0.3 }]);
 
   const { getByTestId, queryByTestId, queryByText } = render(<CaptureScreen />);
   fireEvent.changeText(getByTestId('capture-text'), 'maybe food 50');
@@ -161,8 +192,8 @@ it('flags a low-confidence auto-add for review', async () => {
 });
 
 it('keeps the banner if Undo fails to delete', async () => {
-  mockedCategorize.mockResolvedValue(parsed);
-  mockedInsert.mockResolvedValue(savedRow);
+  mockedCategorize.mockResolvedValue([parsed]);
+  mockedInsert.mockResolvedValue([savedRow]);
   mockedDelete.mockRejectedValue(new Error('rls'));
 
   const { getByTestId, queryByTestId } = render(<CaptureScreen />);

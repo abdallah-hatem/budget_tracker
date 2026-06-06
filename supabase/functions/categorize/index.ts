@@ -1,8 +1,11 @@
 // Edge Function: categorize
-// POST { text: string, locale?: 'ar' | 'en' } -> 200 { parsed: ParsedTransaction }
+// POST { text: string, locale?: 'ar' | 'en' }
+//   -> 200 { transactions: ParsedTransaction[], parsed: ParsedTransaction | null }
+// One utterance may contain several items -> several transactions. `parsed` is
+// kept (= transactions[0]) for backward compatibility with older app builds.
 // verify_jwt = true (see supabase/config.toml) — only authenticated app users.
 import { corsHeaders } from "../_shared/cors.ts";
-import { categorize, type Locale, type ParsedTransaction } from "../_shared/categorize.ts";
+import { categorizeMany, type Locale, type ParsedTransaction } from "../_shared/categorize.ts";
 
 const MAX_TEXT_LENGTH = 2000;
 
@@ -13,7 +16,7 @@ export interface HandlerDeps {
     text: string,
     locale: Locale,
     apiKey: string,
-  ) => Promise<ParsedTransaction>;
+  ) => Promise<ParsedTransaction[]>;
 }
 
 function json(body: unknown, status: number): Response {
@@ -64,8 +67,8 @@ export async function handleCategorize(
 
   // Call the LLM.
   try {
-    const parsed = await deps.categorizeFn(text, locale, deps.apiKey);
-    return json({ parsed }, 200);
+    const transactions = await deps.categorizeFn(text, locale, deps.apiKey);
+    return json({ transactions, parsed: transactions[0] ?? null }, 200);
   } catch (_e) {
     return json({ error: "Failed to categorize text." }, 502);
   }
@@ -77,7 +80,7 @@ if (import.meta.main) {
   Deno.serve((req) =>
     handleCategorize(req, {
       apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
-      categorizeFn: (text, locale, apiKey) => categorize(text, locale, apiKey),
+      categorizeFn: (text, locale, apiKey) => categorizeMany(text, locale, apiKey),
     })
   );
 }

@@ -4,7 +4,8 @@ import type { Locale, ParsedTransaction } from '../../types';
 export interface VoiceCaptureResult {
   /** What Whisper heard (any language, auto-detected). */
   text: string;
-  parsed: ParsedTransaction;
+  /** One or more transactions parsed from the utterance. */
+  transactions: ParsedTransaction[];
 }
 
 /**
@@ -56,9 +57,14 @@ export async function requestVoiceCapture(
     throw new Error(message);
   }
 
-  const data = (await resp.json()) as Partial<VoiceCaptureResult>;
-  if (!data.parsed || typeof data.text !== 'string') {
+  const d = (await resp.json()) as {
+    text?: string;
+    transactions?: ParsedTransaction[];
+    parsed?: ParsedTransaction;
+  };
+  const transactions = d.transactions ?? (d.parsed ? [d.parsed] : []);
+  if (typeof d.text !== 'string' || transactions.length === 0) {
     throw new Error('Voice capture returned no result');
   }
-  return { text: data.text, parsed: data.parsed };
+  return { text: d.text, transactions };
 }
