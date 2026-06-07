@@ -132,8 +132,8 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
     ar: 'خلّي رسائل البنك تتسجّل كمعاملات تلقائيًا.',
   },
   sms_recommended: {
-    en: '✨ Easiest — the built-in action (no token to copy)',
-    ar: '✨ الأسهل — إجراء جاهز (بدون نسخ رمز)',
+    en: '✨ Set it up in the Shortcuts app',
+    ar: '✨ إعداده من تطبيق الاختصارات',
   },
   generate_token: { en: 'Generate token', ar: 'إنشاء رمز' },
   regenerate_token: { en: 'Regenerate token', ar: 'إعادة إنشاء الرمز' },
