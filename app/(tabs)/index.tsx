@@ -16,6 +16,7 @@ import { PressableScale } from '../../src/ui/PressableScale';
 import { ViewToggle } from '../../src/ui/ViewToggle';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
 import { useAccountBalances } from '../../src/features/accounts/useAccountBalances';
+import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { categoryLabel } from '../../src/features/transactions/display';
 import { categoryStyle } from '../../src/lib/categoryStyle';
@@ -61,6 +62,15 @@ export default function Dashboard() {
   const { accounts, total: accountsTotal, refresh: refreshAccounts } = useAccountBalances();
 
   useFocusEffect(
+    useCallback(() => {
+      void refresh();
+      void refreshAccounts();
+    }, [refresh, refreshAccounts]),
+  );
+
+  // Capture floats over this tab as a modal, so adding/editing an entry never
+  // blurs it — refetch explicitly when a transaction changes anywhere.
+  useRefetchOnTxnChange(
     useCallback(() => {
       void refresh();
       void refreshAccounts();

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTransactions } from '../../src/features/transactions/useTransactions';
+import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import { categoryLabel } from '../../src/features/transactions/display';
 import { CATEGORIES } from '../../src/lib/categories';
@@ -99,6 +100,8 @@ export default function TransactionsScreen() {
   const { data, loading, refresh } = useTransactions(filter);
 
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  // Refetch when a capture/edit changes transactions while this tab is on screen.
+  useRefetchOnTxnChange(useCallback(() => { void refresh(); }, [refresh]));
 
   const sections = useMemo(() => groupByDay(data ?? []), [data]);
 

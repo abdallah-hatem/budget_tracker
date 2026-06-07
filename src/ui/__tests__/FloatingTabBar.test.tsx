@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { FloatingTabBar } from '@/src/ui/FloatingTabBar';
+import { FloatingTabBar, hoveredMenuIndex } from '@/src/ui/FloatingTabBar';
 import { useCapture } from '@/src/features/capture/CaptureProvider';
 import { usePendingContext } from '@/src/features/transactions/PendingProvider';
 
@@ -22,6 +22,10 @@ const metrics = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 };
+
+// Mic press origin used by the gesture helpers below.
+const OX = 200;
+const OY = 800;
 
 function makeProps() {
   const routes = ['index', 'transactions', 'pending', 'settings'].map((name) => ({
@@ -46,8 +50,29 @@ function renderBar() {
   );
 }
 
+// ── Gesture helpers (drive the RN responder lifecycle directly) ──────────────
+function grant(api: ReturnType<typeof renderBar>, x = OX, y = OY) {
+  fireEvent(api.getByTestId('capture-fab'), 'responderGrant', {
+    nativeEvent: { pageX: x, pageY: y },
+  });
+}
+function move(api: ReturnType<typeof renderBar>, x: number, y: number) {
+  fireEvent(api.getByTestId('capture-fab'), 'responderMove', {
+    nativeEvent: { pageX: x, pageY: y },
+  });
+}
+function release(api: ReturnType<typeof renderBar>) {
+  fireEvent(api.getByTestId('capture-fab'), 'responderRelease', { nativeEvent: {} });
+}
+function holdUntilMenuOpens() {
+  act(() => {
+    jest.advanceTimersByTime(260); // > HOLD_MS
+  });
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.useFakeTimers();
   mockedCapture.mockReturnValue({
     startVoice,
     openType,
@@ -59,60 +84,106 @@ beforeEach(() => {
   mockedPending.mockReturnValue({ count: 0 });
 });
 
-it('tapping the center FAB starts voice capture', async () => {
-  const api = renderBar();
-  fireEvent.press(api.getByTestId('capture-fab'));
-  await waitFor(() => expect(startVoice).toHaveBeenCalledTimes(1));
-  expect(openManual).not.toHaveBeenCalled();
-  expect(openType).not.toHaveBeenCalled();
+afterEach(() => {
+  jest.useRealTimers();
 });
 
-it('holding the FAB opens the manual/type menu', async () => {
+describe('hoveredMenuIndex', () => {
+  it('returns -1 until the finger has moved up toward the options', () => {
+    expect(hoveredMenuIndex(0, 0)).toBe(-1);
+    expect(hoveredMenuIndex(-80, -10)).toBe(-1); // sideways but not up
+  });
+  it('maps up-left to Manual (0) and up-right to Type (1)', () => {
+    expect(hoveredMenuIndex(-70, -120)).toBe(0);
+    expect(hoveredMenuIndex(70, -120)).toBe(1);
+    expect(hoveredMenuIndex(-1, -60)).toBe(0);
+    expect(hoveredMenuIndex(1, -60)).toBe(1);
+  });
+});
+
+it('a quick tap (released before the hold) starts voice capture', () => {
+  const api = renderBar();
+  grant(api);
+  release(api); // released before HOLD_MS elapses
+  expect(startVoice).toHaveBeenCalledTimes(1);
+  expect(openManual).not.toHaveBeenCalled();
+  expect(openType).not.toHaveBeenCalled();
+  // The pending hold timer must not fire a late menu-open.
+  act(() => jest.advanceTimersByTime(500));
+  expect(api.queryByTestId('capture-menu-backdrop')).toBeNull();
+});
+
+it('pressing and holding opens the menu', () => {
   const api = renderBar();
   expect(api.queryByTestId('capture-menu-backdrop')).toBeNull();
-
-  fireEvent(api.getByTestId('capture-fab'), 'longPress');
-
-  await waitFor(() => expect(api.queryByTestId('capture-menu-backdrop')).toBeTruthy());
-  // Voice is NOT triggered by a hold.
+  grant(api);
+  holdUntilMenuOpens();
+  expect(api.queryByTestId('capture-menu-backdrop')).toBeTruthy();
   expect(startVoice).not.toHaveBeenCalled();
-  // Both options are present.
   expect(api.getByLabelText('Manual')).toBeTruthy();
   expect(api.getByLabelText('Type')).toBeTruthy();
 });
 
-it('picking "Manual" from the menu opens the manual sheet and closes the menu', async () => {
+it('hold → slide up-left → release picks Manual (release-to-click)', () => {
   const api = renderBar();
-  fireEvent(api.getByTestId('capture-fab'), 'longPress');
-  await waitFor(() => expect(api.queryByTestId('capture-menu-backdrop')).toBeTruthy());
-
-  fireEvent.press(api.getByLabelText('Manual'));
-
+  grant(api);
+  holdUntilMenuOpens();
+  move(api, OX - 70, OY - 120); // up-left toward Manual
+  release(api);
   expect(openManual).toHaveBeenCalledTimes(1);
   expect(openType).not.toHaveBeenCalled();
-  // Menu closes after a pick.
-  await waitFor(() => expect(api.queryByTestId('capture-menu-backdrop')).toBeNull());
+  expect(startVoice).not.toHaveBeenCalled();
+  // Menu closed after the pick.
+  expect(api.queryByTestId('capture-menu-backdrop')).toBeNull();
 });
 
-it('picking "Type" from the menu opens the type sheet', async () => {
+it('hold → slide up-right → release picks Type', () => {
   const api = renderBar();
-  fireEvent(api.getByTestId('capture-fab'), 'longPress');
-  await waitFor(() => expect(api.queryByTestId('capture-menu-backdrop')).toBeTruthy());
-
-  fireEvent.press(api.getByLabelText('Type'));
-
+  grant(api);
+  holdUntilMenuOpens();
+  move(api, OX + 70, OY - 120); // up-right toward Type
+  release(api);
   expect(openType).toHaveBeenCalledTimes(1);
   expect(openManual).not.toHaveBeenCalled();
 });
 
-it('tapping the backdrop closes the menu without picking anything', async () => {
+it('hold → release without sliding leaves the menu open to tap', () => {
   const api = renderBar();
-  fireEvent(api.getByTestId('capture-fab'), 'longPress');
-  await waitFor(() => expect(api.queryByTestId('capture-menu-backdrop')).toBeTruthy());
+  grant(api);
+  holdUntilMenuOpens();
+  release(api); // released on the mic, no option hovered
+  // Menu stays open…
+  expect(api.queryByTestId('capture-menu-backdrop')).toBeTruthy();
+  expect(openManual).not.toHaveBeenCalled();
+  // …and a plain tap on an option still works.
+  fireEvent.press(api.getByLabelText('Manual'));
+  expect(openManual).toHaveBeenCalledTimes(1);
+  expect(api.queryByTestId('capture-menu-backdrop')).toBeNull();
+});
 
+it('a quick tap on the mic while the menu is open dismisses it (no voice)', () => {
+  const api = renderBar();
+  grant(api);
+  holdUntilMenuOpens();
+  release(api); // leaves the menu open
+  expect(api.queryByTestId('capture-menu-backdrop')).toBeTruthy();
+
+  // Tap the mic again (grant + immediate release, no hold) → closes the menu.
+  grant(api);
+  release(api);
+  expect(api.queryByTestId('capture-menu-backdrop')).toBeNull();
+  expect(startVoice).not.toHaveBeenCalled();
+  expect(openManual).not.toHaveBeenCalled();
+  expect(openType).not.toHaveBeenCalled();
+});
+
+it('tapping the backdrop closes the open menu without selecting', () => {
+  const api = renderBar();
+  grant(api);
+  holdUntilMenuOpens();
+  release(api); // leaves it open
   fireEvent.press(api.getByTestId('capture-menu-backdrop'));
-
-  await waitFor(() => expect(api.queryByTestId('capture-menu-backdrop')).toBeNull());
+  expect(api.queryByTestId('capture-menu-backdrop')).toBeNull();
   expect(openManual).not.toHaveBeenCalled();
   expect(openType).not.toHaveBeenCalled();
   expect(startVoice).not.toHaveBeenCalled();

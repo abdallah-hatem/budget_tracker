@@ -149,3 +149,47 @@ it('stop() calls the native stop', async () => {
   act(() => result.current.stop());
   expect(mod.stop).toHaveBeenCalled();
 });
+
+it('auto-stops on trailing silence, and repeated heartbeat partials do not extend it', async () => {
+  const { result } = renderHook(() => useSpeechRecognition());
+  await act(async () => {
+    await result.current.start('en-US');
+  });
+
+  jest.useFakeTimers();
+  try {
+    act(() => __emit('start')); // arms the initial grace period
+    act(() => __emit('result', { results: [{ transcript: 'coffee 50' }] })); // new words → arm 2000ms
+
+    act(() => jest.advanceTimersByTime(1500));
+    // Same text again (an iOS heartbeat) must NOT re-arm the timer.
+    act(() => __emit('result', { results: [{ transcript: 'coffee 50' }] }));
+    expect(mod.stop).not.toHaveBeenCalled();
+
+    act(() => jest.advanceTimersByTime(600)); // 2100ms since the new words → fires
+    expect(mod.stop).toHaveBeenCalledTimes(1);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it('keeps listening while NEW words keep arriving', async () => {
+  const { result } = renderHook(() => useSpeechRecognition());
+  await act(async () => {
+    await result.current.start('en-US');
+  });
+
+  jest.useFakeTimers();
+  try {
+    act(() => __emit('result', { results: [{ transcript: 'coffee' }] }));
+    act(() => jest.advanceTimersByTime(1500));
+    act(() => __emit('result', { results: [{ transcript: 'coffee fifty' }] })); // grew → re-arm
+    act(() => jest.advanceTimersByTime(1500));
+    expect(mod.stop).not.toHaveBeenCalled(); // 1500 < 2000 since the last new words
+
+    act(() => jest.advanceTimersByTime(600));
+    expect(mod.stop).toHaveBeenCalledTimes(1);
+  } finally {
+    jest.useRealTimers();
+  }
+});

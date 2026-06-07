@@ -33,6 +33,7 @@ import { EditTransactionSheet } from '../transactions/EditTransactionSheet';
 import { RecordingOverlay } from './RecordingOverlay';
 import { TypeSheet } from './TypeSheet';
 import { AddedCardModal } from './AddedCardModal';
+import { useDataSync } from '../sync/dataSync';
 import { isRTL } from '../../lib/i18n';
 import { FONT } from '../../lib/font';
 import type { Locale, ParsedTransaction, Transaction, TxnSource } from '../../types';
@@ -71,6 +72,7 @@ export function useCapture(): CaptureContextValue {
 export function CaptureProvider({ children }: { children: React.ReactNode }) {
   const { user, profile } = useSession();
   const locale: Locale = (profile?.locale as Locale) ?? 'en';
+  const { notifyTxnsChanged } = useDataSync();
 
   const voiceRef = useRef<(transcript: string, audioUri: string | null) => void>(() => {});
   const { isListening, supported, error: sttError, start, stop } =
@@ -108,9 +110,10 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
         // haptics optional
       }
       setLastSaved(rows);
+      notifyTxnsChanged(); // refresh whatever tab is on screen
       return true;
     },
-    [user, locale],
+    [user, locale, notifyTxnsChanged],
   );
 
   const processCapture = useCallback(
@@ -240,10 +243,11 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     try {
       await Promise.all(ids.map((id) => deleteTransaction(id)));
       setLastSaved([]);
+      notifyTxnsChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to undo');
     }
-  }, [lastSaved]);
+  }, [lastSaved, notifyTxnsChanged]);
 
   const dismissCard = useCallback(() => setLastSaved([]), []);
 
@@ -251,6 +255,8 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     const id = editingSaved?.id;
     setEditingSaved(null);
     if (!id) return;
+    // The edit sheet already wrote to the DB — refresh the on-screen tab.
+    notifyTxnsChanged();
     try {
       const fresh = await getTransaction(id);
       setLastSaved((prev) =>
@@ -259,7 +265,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // leave the card as-is on a re-fetch failure
     }
-  }, [editingSaved]);
+  }, [editingSaved, notifyTxnsChanged]);
 
   // Surface STT errors + auto-dismiss any error toast.
   useEffect(() => {

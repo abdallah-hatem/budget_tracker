@@ -35,7 +35,7 @@ const SUPPORTED = !!NativeModule;
 // short pauses (so listing several expenses doesn't get cut off mid-flow) and
 // ends once the user has clearly finished. INITIAL is the grace period before
 // the first word. Tune here.
-const SILENCE_MS = 2500;
+const SILENCE_MS = 2000;
 const INITIAL_SILENCE_MS = 6000;
 
 export interface SpeechRecognition {
@@ -105,11 +105,15 @@ export function useSpeechRecognition(
 
   subscribe('result', (event) => {
     const next = event?.results?.[0]?.transcript;
-    if (typeof next === 'string') {
-      transcriptRef.current = next;
-      setTranscript(next);
-    }
-    armSilence(SILENCE_MS); // any (partial) result = still speaking
+    if (typeof next !== 'string') return;
+    // Re-arm ONLY on genuinely new words. iOS can keep emitting the same partial
+    // as a heartbeat during silence; re-arming on those would mean the trailing-
+    // silence timer never fires and the session listens forever (the user then
+    // has to tap to stop). Treating only growth as activity lets it auto-stop.
+    const grew = next.trim() !== '' && next !== transcriptRef.current;
+    transcriptRef.current = next;
+    setTranscript(next);
+    if (grew) armSilence(SILENCE_MS);
   });
 
   // Coarser activity signals in case partial results are sparse.

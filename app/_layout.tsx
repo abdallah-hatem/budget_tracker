@@ -25,6 +25,7 @@ import { SessionProvider, useSession } from '@/src/features/auth/SessionProvider
 import { redirectTarget } from '@/src/features/auth/redirectTarget';
 import { useNotifications } from '@/src/features/notifications/useNotifications';
 import { CaptureProvider } from '@/src/features/capture/CaptureProvider';
+import { DataSyncProvider } from '@/src/features/sync/dataSync';
 
 // Keep splash visible while fonts load.
 SplashScreen.preventAutoHideAsync();
@@ -92,10 +93,13 @@ export default function RootLayout() {
         {/* Light status-bar content (white time/battery icons) for dark canvas. */}
         <StatusBar style="light" />
         {/* Global capture engine (mic/type/manual) + its overlays, driven by the
-            tab-bar FAB from any screen — so there is no capture tab. */}
-        <CaptureProvider>
-          <RootNavigator />
-        </CaptureProvider>
+            tab-bar FAB from any screen — so there is no capture tab. DataSync sits
+            above it so a capture write can refetch whatever tab is on screen. */}
+        <DataSyncProvider>
+          <CaptureProvider>
+            <RootNavigator />
+          </CaptureProvider>
+        </DataSyncProvider>
       </SessionProvider>
     </SafeAreaProvider>
   );
