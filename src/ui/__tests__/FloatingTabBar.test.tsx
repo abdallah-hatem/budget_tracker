@@ -89,15 +89,18 @@ afterEach(() => {
 });
 
 describe('hoveredMenuIndex', () => {
-  it('returns -1 until the finger has moved up toward the options', () => {
+  it('returns -1 until the finger has clearly moved up', () => {
     expect(hoveredMenuIndex(0, 0)).toBe(-1);
-    expect(hoveredMenuIndex(-80, -10)).toBe(-1); // sideways but not up
+    expect(hoveredMenuIndex(-80, -10)).toBe(-1); // sideways but barely up
+    expect(hoveredMenuIndex(60, -20)).toBe(-1); // not up enough
   });
-  it('maps up-left to Manual (0) and up-right to Type (1)', () => {
-    expect(hoveredMenuIndex(-70, -120)).toBe(0);
-    expect(hoveredMenuIndex(70, -120)).toBe(1);
-    expect(hoveredMenuIndex(-1, -60)).toBe(0);
-    expect(hoveredMenuIndex(1, -60)).toBe(1);
+  it('maps the arc: up-left=Manual(0), up=Cancel(1), up-right=Type(2)', () => {
+    expect(hoveredMenuIndex(-80, -80)).toBe(0); // Manual
+    expect(hoveredMenuIndex(0, -120)).toBe(1); // Cancel (straight up)
+    expect(hoveredMenuIndex(80, -80)).toBe(2); // Type
+    expect(hoveredMenuIndex(-70, -120)).toBe(0); // up-left → Manual
+    expect(hoveredMenuIndex(70, -120)).toBe(2); // up-right → Type
+    expect(hoveredMenuIndex(-10, -110)).toBe(1); // near-vertical → Cancel
   });
 });
 
@@ -121,6 +124,7 @@ it('pressing and holding opens the menu', () => {
   expect(api.queryByTestId('capture-menu-backdrop')).toBeTruthy();
   expect(startVoice).not.toHaveBeenCalled();
   expect(api.getByLabelText('Manual')).toBeTruthy();
+  expect(api.getByLabelText('Cancel')).toBeTruthy();
   expect(api.getByLabelText('Type')).toBeTruthy();
 });
 
@@ -145,6 +149,18 @@ it('hold → slide up-right → release picks Type', () => {
   release(api);
   expect(openType).toHaveBeenCalledTimes(1);
   expect(openManual).not.toHaveBeenCalled();
+});
+
+it('hold → slide straight up to Cancel → release closes with no action', () => {
+  const api = renderBar();
+  grant(api);
+  holdUntilMenuOpens();
+  move(api, OX, OY - 120); // straight up toward Cancel
+  release(api);
+  expect(openManual).not.toHaveBeenCalled();
+  expect(openType).not.toHaveBeenCalled();
+  expect(startVoice).not.toHaveBeenCalled();
+  expect(api.queryByTestId('capture-menu-backdrop')).toBeNull(); // menu closed
 });
 
 it('hold → release without sliding leaves the menu open to tap', () => {

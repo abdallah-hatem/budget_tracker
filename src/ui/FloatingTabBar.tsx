@@ -33,9 +33,17 @@ import { FONT } from '@/src/lib/font';
 const COLORS = {
   overlay: '#1C2322',
   accent: '#2BD98E',
+  danger: '#FF5C6C',
   ink3: '#6B7672',
   ink: '#F4F7F5',
 };
+
+// Per-option colour ramps (resting border, hover fill, solid highlight).
+const TONES = {
+  accent: { solid: '#2BD98E', soft: 'rgba(43,217,142,0.45)', fill: 'rgba(43,217,142,0.20)' },
+  danger: { solid: '#FF5C6C', soft: 'rgba(255,92,108,0.45)', fill: 'rgba(255,92,108,0.20)' },
+} as const;
+type Tone = keyof typeof TONES;
 
 const BAR_HEIGHT = 64;
 const FAB_SIZE = 60;
@@ -185,28 +193,32 @@ function TabItem({
   );
 }
 
-// ── Center FAB: tap = mic (speak), press-and-hold = manual/type menu ─────────
-// Tap the mic to record. Press-and-hold to fan out two options; keep holding and
-// slide onto one, then release to pick it (release-to-click) — or release on the
-// mic to leave the menu open and tap an option instead.
+// ── Center FAB: tap = mic (speak), press-and-hold = manual/type/cancel menu ──
+// Tap the mic to record. Press-and-hold to fan out three options in an arc; keep
+// holding and slide onto one, then release to pick it (release-to-click) — slide
+// up-left = Manual, straight up = Cancel, up-right = Type. Release on the mic to
+// leave the menu open and tap an option instead.
 const HOLD_MS = 200; // hold this long to open the menu (a quick tap stays under it)
-const MENU_DX = 64; // each option sits this far to the side of the FAB
-const MENU_DY = -106; // …and this far above it
-const HOVER_ENTER_Y = 44; // drag up at least this far before a side is "hovered"
+const HOVER_ENTER_Y = 40; // drag up at least this far before an option is "hovered"
 
 const MENU_ITEMS = [
-  { key: 'manual', icon: 'create-outline', dx: -MENU_DX, en: 'Manual', ar: 'يدوي' },
-  { key: 'type', icon: 'text-outline', dx: MENU_DX, en: 'Type', ar: 'كتابة' },
+  { key: 'manual', icon: 'create-outline', dx: -86, dy: -86, tone: 'accent', en: 'Manual', ar: 'يدوي' },
+  { key: 'cancel', icon: 'close', dx: 0, dy: -120, tone: 'danger', en: 'Cancel', ar: 'إلغاء' },
+  { key: 'type', icon: 'text-outline', dx: 86, dy: -86, tone: 'accent', en: 'Type', ar: 'كتابة' },
 ] as const;
 
 /**
  * Which option the finger is over, given its drag offset from the mic press
- * point: -1 none, 0 = Manual (up-left), 1 = Type (up-right). Pure + exported so
- * the geometry is unit-tested without simulating the whole gesture.
+ * point. Indexes into MENU_ITEMS (0 Manual up-left, 1 Cancel up, 2 Type up-right)
+ * or -1 for none. Pure + exported so the geometry is unit-tested on its own.
  */
 export function hoveredMenuIndex(dx: number, dy: number): number {
-  if (dy > -HOVER_ENTER_Y) return -1; // hasn't moved up toward the options yet
-  return dx < 0 ? 0 : 1;
+  const up = -dy; // positive when dragging upward toward the options
+  if (up < HOVER_ENTER_Y) return -1; // hasn't committed upward yet
+  const angle = (Math.atan2(up, dx) * 180) / Math.PI; // 0 = right, 90 = up, 180 = left
+  if (angle < 68) return 2; // Type (up-right)
+  if (angle < 112) return 1; // Cancel (up)
+  return 0; // Manual (up-left)
 }
 
 function MenuButton({
@@ -214,9 +226,11 @@ function MenuButton({
   progress,
   hovered,
   dx,
+  dy,
   icon,
   label,
   labelFont,
+  tone,
   active,
   onPress,
 }: {
@@ -224,18 +238,21 @@ function MenuButton({
   progress: SharedValue<number>;
   hovered: SharedValue<number>;
   dx: number;
+  dy: number;
   icon: string;
   label: string;
   labelFont: string;
+  tone: Tone;
   active: boolean;
   onPress: () => void;
 }) {
+  const ramp = TONES[tone];
   // Fan-out (open) is driven by `progress`; the hover "pop" by `hovered`.
   const containerStyle = useAnimatedStyle(() => {
     const p = progress.value;
     return {
       opacity: p,
-      transform: [{ translateX: dx * p }, { translateY: MENU_DY * p }],
+      transform: [{ translateX: dx * p }, { translateY: dy * p }],
     };
   });
   const hov = useDerivedValue(() =>
@@ -246,8 +263,8 @@ function MenuButton({
     const h = hov.value;
     return {
       transform: [{ scale: (0.5 + 0.5 * p) * (1 + 0.16 * h) }],
-      backgroundColor: interpolateColor(h, [0, 1], [COLORS.overlay, 'rgba(43,217,142,0.20)']),
-      borderColor: interpolateColor(h, [0, 1], ['rgba(43,217,142,0.45)', COLORS.accent]),
+      backgroundColor: interpolateColor(h, [0, 1], [COLORS.overlay, ramp.fill]),
+      borderColor: interpolateColor(h, [0, 1], [ramp.soft, ramp.solid]),
     };
   });
   return (
@@ -276,7 +293,7 @@ function MenuButton({
           },
         ]}
       >
-        <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={22} color={COLORS.accent} />
+        <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={22} color={ramp.solid} />
       </AnimatedPressable>
       <Text style={{ marginTop: 4, fontFamily: labelFont, fontSize: 11, color: COLORS.ink }}>
         {label}
@@ -333,9 +350,11 @@ function CenterFAB() {
 
   const pick = React.useCallback(
     (index: number) => {
+      const key = MENU_ITEMS[index]?.key;
       closeMenu();
-      if (index === 0) openManual();
-      else if (index === 1) openType();
+      if (key === 'manual') openManual();
+      else if (key === 'type') openType();
+      // 'cancel' → just close (already done above)
     },
     [closeMenu, openManual, openType],
   );
@@ -419,9 +438,11 @@ function CenterFAB() {
           progress={progress}
           hovered={hovered}
           dx={item.dx}
+          dy={item.dy}
           icon={item.icon}
           label={isAr ? item.ar : item.en}
           labelFont={labelFont}
+          tone={item.tone}
           active={menuOpen}
           onPress={() => pick(i)}
         />
