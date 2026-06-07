@@ -23,6 +23,7 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.abdallah.masareef",
+      "appleTeamId": "CN24UJRFFJ",
       "entitlements": {
         "com.apple.security.application-groups": [
           "group.com.abdallah.masareef"
