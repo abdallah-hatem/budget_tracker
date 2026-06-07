@@ -11,6 +11,10 @@ jest.mock('../../../src/features/auth/SessionProvider', () => ({
   useSession: jest.fn(),
 }));
 
+jest.mock('../../../src/features/auth/account', () => ({
+  softDeleteOwnAccount: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('../../../src/features/ingest/api', () => ({
   createIngestToken: jest.fn(),
   revokeIngestTokens: jest.fn(),
@@ -46,6 +50,7 @@ jest.mock('../../../src/lib/supabase', () => ({
 // ── Imports after mocks ───────────────────────────────────────────────────────
 
 import { useSession } from '../../../src/features/auth/SessionProvider';
+import { softDeleteOwnAccount } from '../../../src/features/auth/account';
 import {
   createIngestToken,
   revokeIngestTokens,
@@ -60,6 +65,7 @@ import {
 } from '../../../src/features/accounts/api';
 
 const mockSignOut = supabase.auth.signOut as jest.Mock;
+const mockSoftDelete = softDeleteOwnAccount as jest.Mock;
 
 const mockSession = useSession as jest.Mock;
 const mockCreate = createIngestToken as jest.Mock;
@@ -113,6 +119,47 @@ describe('Settings screen — existing settings', () => {
   it('renders sign-out button', async () => {
     render(<Settings />);
     expect(screen.getByTestId('sign-out')).toBeTruthy();
+  });
+
+  it('renders delete-account button', async () => {
+    render(<Settings />);
+    expect(screen.getByTestId('delete-account')).toBeTruthy();
+  });
+});
+
+describe('Settings screen — delete account', () => {
+  it('soft-deletes only after confirming the destructive dialog', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    render(<Settings />);
+
+    fireEvent.press(screen.getByTestId('delete-account'));
+
+    // Confirm dialog shown; nothing deleted yet.
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(mockSoftDelete).not.toHaveBeenCalled();
+
+    const buttons = (alertSpy.mock.calls[0][2] ?? []) as Array<{
+      style?: string;
+      onPress?: () => void;
+    }>;
+    const confirm = buttons.find((b) => b.style === 'destructive');
+    await act(async () => {
+      confirm?.onPress?.();
+    });
+
+    expect(mockSoftDelete).toHaveBeenCalledTimes(1);
+    alertSpy.mockRestore();
+  });
+
+  it('does NOT delete when cancelled', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    render(<Settings />);
+
+    fireEvent.press(screen.getByTestId('delete-account'));
+    const buttons = (alertSpy.mock.calls[0][2] ?? []) as Array<{ style?: string }>;
+    expect(buttons.find((b) => b.style === 'cancel')).toBeTruthy();
+    expect(mockSoftDelete).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 });
 

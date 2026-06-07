@@ -41,6 +41,11 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
     ar: 'تسجيل الخروج من حسابك؟',
   },
   'settings.cancel': { en: 'Cancel', ar: 'إلغاء' },
+  'settings.deleteAccount': { en: 'Delete account', ar: 'حذف الحساب' },
+  'settings.deleteAccountConfirm': {
+    en: 'Delete your account? You will be signed out and won’t be able to sign back in.',
+    ar: 'حذف حسابك؟ سيتم تسجيل خروجك ولن تتمكن من تسجيل الدخول مرة أخرى.',
+  },
 
   // ── Accounts ──────────────────────────────────────────────────────────────
   'settings.accounts': { en: 'Accounts', ar: 'الحسابات' },

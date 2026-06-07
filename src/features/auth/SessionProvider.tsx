@@ -14,6 +14,8 @@ export interface Profile {
   display_name: string | null;
   locale: 'ar' | 'en';
   currency: string;
+  /** Set when the user soft-deleted their account; gates them out of the app. */
+  deleted_at: string | null;
 }
 
 export interface SessionContextValue {
@@ -37,7 +39,7 @@ const SessionContext = createContext<SessionContextValue>({
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, display_name, locale, currency')
+    .select('id, display_name, locale, currency, deleted_at')
     .eq('id', userId)
     .maybeSingle();
   if (error) {
@@ -57,11 +59,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     async function applySession(next: Session | null) {
       if (!active) return;
-      setSession(next);
       if (next?.user) {
         const p = await fetchProfile(next.user.id);
-        if (active) setProfile(p);
-      } else if (active) {
+        if (!active) return;
+        if (p?.deleted_at) {
+          // Account was soft-deleted → refuse the session and sign out. The
+          // subsequent SIGNED_OUT event re-runs applySession(null).
+          setSession(null);
+          setProfile(null);
+          setLoading(false);
+          void supabase.auth.signOut();
+          return;
+        }
+        setSession(next);
+        setProfile(p);
+      } else {
+        setSession(null);
         setProfile(null);
       }
       if (active) setLoading(false);

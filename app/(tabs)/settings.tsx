@@ -3,6 +3,7 @@ import { Alert, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '@/src/lib/supabase';
 import { t, isRTL } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
+import { softDeleteOwnAccount } from '@/src/features/auth/account';
 import {
   listAccountBalances,
   createAccount,
@@ -119,6 +120,30 @@ export default function Settings() {
     Alert.alert(t('settings.signOut', locale), t('settings.signOutConfirm', locale), [
       { text: t('settings.cancel', locale), style: 'cancel' },
       { text: t('settings.signOut', locale), style: 'destructive', onPress: () => void signOut() },
+    ]);
+  }
+
+  async function deleteOwnAccount() {
+    setBusy(true);
+    try {
+      // Soft-delete: marks the profile deleted + signs out. The SessionProvider
+      // gate then refuses any future session, redirecting to (auth)/sign-in.
+      await softDeleteOwnAccount();
+    } catch (e) {
+      Alert.alert(t('settings.deleteAccount', locale), e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onDeleteAccount() {
+    Alert.alert(t('settings.deleteAccount', locale), t('settings.deleteAccountConfirm', locale), [
+      { text: t('settings.cancel', locale), style: 'cancel' },
+      {
+        text: t('settings.deleteAccount', locale),
+        style: 'destructive',
+        onPress: () => void deleteOwnAccount(),
+      },
     ]);
   }
 
@@ -327,7 +352,7 @@ export default function Settings() {
           paddingVertical: 15,
           alignItems: 'center',
           marginTop: 8,
-          marginBottom: 16,
+          marginBottom: 12,
         }}
       >
         <AppText
@@ -336,6 +361,18 @@ export default function Settings() {
           style={{ fontSize: 15 }}
         >
           {t('settings.signOut', locale)}
+        </AppText>
+      </TouchableOpacity>
+
+      {/* ── Delete account (soft delete) ───────────────────────────────────── */}
+      <TouchableOpacity
+        disabled={busy}
+        onPress={onDeleteAccount}
+        testID="delete-account"
+        style={{ paddingVertical: 12, alignItems: 'center', marginBottom: 24 }}
+      >
+        <AppText className="text-ink3" style={{ fontSize: 13 }}>
+          {t('settings.deleteAccount', locale)}
         </AppText>
       </TouchableOpacity>
     </Screen>
