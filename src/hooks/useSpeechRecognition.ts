@@ -44,7 +44,10 @@ export interface SpeechRecognition {
   supported: boolean;
   error: string | null;
   start: (lang: string) => Promise<void>;
+  /** Finish listening and DELIVER the result (transcribe + save downstream). */
   stop: () => void;
+  /** Abort listening and DISCARD it — no result is delivered. */
+  cancel: () => void;
 }
 
 export function useSpeechRecognition(
@@ -60,6 +63,8 @@ export function useSpeechRecognition(
   // Latest transcript + recorded-audio path, read synchronously when it ends.
   const transcriptRef = useRef('');
   const audioUriRef = useRef<string | null>(null);
+  // Set by cancel(): makes the in-flight session deliver NOTHING (discard).
+  const cancelledRef = useRef(false);
 
   // Trailing-silence auto-stop: every bit of speech activity re-arms the timer,
   // so only a real pause (no activity for SILENCE_MS) ends the session.
@@ -87,12 +92,20 @@ export function useSpeechRecognition(
 
   // The recorded audio file path arrives on `audioend` (recordingOptions.persist).
   subscribe('audioend', (event) => {
+    if (cancelledRef.current) return; // cancelled → keep no audio
     audioUriRef.current = event?.uri ?? null;
   });
 
   subscribe('end', () => {
     clearSilence();
     setIsListening(false);
+    // Cancelled: discard the session and deliver nothing.
+    if (cancelledRef.current) {
+      cancelledRef.current = false;
+      transcriptRef.current = '';
+      audioUriRef.current = null;
+      return;
+    }
     // Recognition finished: hand the caller the whole utterance AND the recorded
     // audio "at once" (no streaming). The audio lets the caller re-transcribe in
     // ANY language via Whisper, regardless of the on-device locale.
@@ -104,6 +117,7 @@ export function useSpeechRecognition(
   });
 
   subscribe('result', (event) => {
+    if (cancelledRef.current) return; // ignore late results after a cancel
     const next = event?.results?.[0]?.transcript;
     if (typeof next !== 'string') return;
     // Re-arm ONLY on genuinely new words. iOS can keep emitting the same partial
@@ -137,6 +151,7 @@ export function useSpeechRecognition(
     setTranscript('');
     transcriptRef.current = '';
     audioUriRef.current = null;
+    cancelledRef.current = false;
 
     const perms = await mod.requestPermissionsAsync();
     if (!perms.granted) {
@@ -189,5 +204,20 @@ export function useSpeechRecognition(
     NativeModule?.stop();
   }, [clearSilence]);
 
-  return { transcript, isListening, supported: SUPPORTED, error, start, stop };
+  // Abort + discard: mark cancelled (so 'end'/'audioend' deliver nothing), drop
+  // any captured text/audio, and abort the native session (falls back to stop()
+  // if the platform has no abort — the cancel flag still prevents delivery).
+  const cancel = useCallback(() => {
+    cancelledRef.current = true;
+    clearSilence();
+    transcriptRef.current = '';
+    audioUriRef.current = null;
+    setTranscript('');
+    setIsListening(false);
+    const mod = NativeModule as null | { stop: () => void; abort?: () => void };
+    if (mod?.abort) mod.abort();
+    else mod?.stop();
+  }, [clearSilence]);
+
+  return { transcript, isListening, supported: SUPPORTED, error, start, stop, cancel };
 }

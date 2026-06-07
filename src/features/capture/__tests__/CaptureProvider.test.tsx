@@ -108,6 +108,7 @@ beforeEach(() => {
     error: null,
     start: jest.fn(),
     stop: jest.fn(),
+    cancel: jest.fn(),
   });
 });
 
@@ -266,11 +267,32 @@ it('startVoice toggles the mic via the speech hook', () => {
     error: null,
     start,
     stop: jest.fn(),
+    cancel: jest.fn(),
   });
 
   const api = renderProvider();
   fireEvent.press(api.getByTestId('h-voice'));
   expect(start).toHaveBeenCalledWith('en-US');
+});
+
+it('Cancel in the recording overlay aborts and saves nothing', () => {
+  const cancel = jest.fn();
+  mockedSpeech.mockReturnValue({
+    transcript: '',
+    isListening: true, // overlay is visible while listening
+    supported: true,
+    error: null,
+    start: jest.fn(),
+    stop: jest.fn(),
+    cancel,
+  });
+
+  const api = renderProvider();
+  fireEvent.press(api.getByTestId('recording-cancel'));
+
+  expect(cancel).toHaveBeenCalledTimes(1);
+  expect(mockedCategorize).not.toHaveBeenCalled();
+  expect(mockedInsert).not.toHaveBeenCalled();
 });
 
 it('manual quick-add saves the entry WITHOUT calling the AI', async () => {

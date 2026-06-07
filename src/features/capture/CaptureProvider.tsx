@@ -75,7 +75,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
   const { notifyTxnsChanged } = useDataSync();
 
   const voiceRef = useRef<(transcript: string, audioUri: string | null) => void>(() => {});
-  const { isListening, supported, error: sttError, start, stop } =
+  const { isListening, supported, error: sttError, start, stop, cancel } =
     useSpeechRecognition((transcript, audioUri) => voiceRef.current(transcript, audioUri));
 
   const [loading, setLoading] = useState(false);
@@ -199,6 +199,17 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     start(sttLocale(locale));
   }, [supported, isListening, stop, start, locale]);
 
+  // Abort the recording and throw it away — nothing is transcribed or saved.
+  const cancelVoice = useCallback(() => {
+    try {
+      Haptics.selectionAsync();
+    } catch {
+      // haptics optional
+    }
+    cancel();
+    setError(null);
+  }, [cancel]);
+
   const openType = useCallback(() => {
     setError(null);
     setTypeOpen(true);
@@ -302,6 +313,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
         loading={loading}
         locale={locale}
         onStop={stop}
+        onCancel={cancelVoice}
       />
 
       <AddedCardModal

@@ -16,6 +16,7 @@ const mod = ExpoSpeechRecognitionModule as unknown as {
   requestPermissionsAsync: jest.Mock;
   start: jest.Mock;
   stop: jest.Mock;
+  abort: jest.Mock;
   supportsOnDeviceRecognition: jest.Mock;
   getSupportedLocales: jest.Mock;
 };
@@ -148,6 +149,24 @@ it('stop() calls the native stop', async () => {
   const { result } = renderHook(() => useSpeechRecognition());
   act(() => result.current.stop());
   expect(mod.stop).toHaveBeenCalled();
+});
+
+it('cancel() aborts and delivers NOTHING, even if the session ends after', () => {
+  const onFinal = jest.fn();
+  const { result } = renderHook(() => useSpeechRecognition(onFinal));
+
+  act(() => __emit('start'));
+  act(() => __emit('result', { results: [{ transcript: 'coffee 50' }] }));
+  act(() => __emit('audioend', { uri: 'file:///x.wav' }));
+
+  act(() => result.current.cancel());
+  expect(mod.abort).toHaveBeenCalled();
+  expect(result.current.isListening).toBe(false);
+
+  // The engine still fires 'end' (and a late result) — none of it is delivered.
+  act(() => __emit('result', { results: [{ transcript: 'coffee 50 pounds' }] }));
+  act(() => __emit('end'));
+  expect(onFinal).not.toHaveBeenCalled();
 });
 
 it('auto-stops on trailing silence, and repeated heartbeat partials do not extend it', async () => {

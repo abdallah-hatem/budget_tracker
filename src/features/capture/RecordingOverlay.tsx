@@ -23,12 +23,16 @@ export function RecordingOverlay({
   loading,
   locale,
   onStop,
+  onCancel,
 }: {
   visible: boolean;
   listening: boolean;
   loading: boolean;
   locale: Locale;
+  /** Finish + save the utterance. */
   onStop: () => void;
+  /** Abort + discard — nothing is saved. */
+  onCancel: () => void;
 }) {
   const rtl = isRTL(locale);
   const pulse = useSharedValue(1);
@@ -108,9 +112,33 @@ export function RecordingOverlay({
           </Text>
 
           {listening ? (
-            <Text style={{ fontFamily: rtl ? FONT.readex : FONT.jakarta, fontSize: 13, color: '#A8B2AF' }}>
-              {rtl ? 'اضغط في أي مكان للإيقاف' : 'Tap anywhere to stop'}
-            </Text>
+            <View style={{ alignItems: 'center', gap: 18 }}>
+              <Text style={{ fontFamily: rtl ? FONT.readex : FONT.jakarta, fontSize: 13, color: '#A8B2AF' }}>
+                {rtl ? 'اضغط في أي مكان للإضافة' : 'Tap anywhere to add'}
+              </Text>
+              {/* Discard — nested Pressable, so it does NOT trigger the stop-on-tap. */}
+              <Pressable
+                testID="recording-cancel"
+                onPress={onCancel}
+                hitSlop={10}
+                style={{
+                  flexDirection: rtl ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 7,
+                  paddingHorizontal: 18,
+                  paddingVertical: 11,
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(255,92,108,0.12)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,92,108,0.45)',
+                }}
+              >
+                <Ionicons name="close" size={16} color="#FF5C6C" />
+                <Text style={{ fontFamily: rtl ? FONT.readexSb : FONT.jakartaSb, fontSize: 14, color: '#FF5C6C' }}>
+                  {rtl ? 'إلغاء' : 'Cancel'}
+                </Text>
+              </Pressable>
+            </View>
           ) : null}
         </View>
       </Pressable>
