@@ -42,9 +42,10 @@ if [ -z "$URL" ] || [ -z "$ANON" ]; then
   exit 1
 fi
 
-echo "▸ PRODUCTION iOS build — local Xcode, no EAS"
-echo "    Supabase : $URL   (anon key: ${#ANON} chars)"
-echo "    Config   : Release  ·  Target: connected device"
+echo "▸ Personal iOS build — local Xcode, no EAS"
+echo "    Supabase    : $URL   (anon key: ${#ANON} chars)"
+echo "    Config      : Release  ·  Target: connected device"
+echo "    OTA channel : preview  (run 'npm run ship' to push features over-the-air)"
 echo "    ⚠️  Hits the LIVE production database (real data)."
 echo
 
@@ -60,6 +61,10 @@ fi
 # Inline the prod env so expo's Xcode bundle phase inlines it into EXPO_PUBLIC_*.
 export EXPO_PUBLIC_SUPABASE_URL="$URL"
 export EXPO_PUBLIC_SUPABASE_ANON_KEY="$ANON"
+# Bake the 'preview' OTA channel into this build (via withLocalUpdateChannel) so
+# `eas update --branch preview` (npm run ship) reaches it — without touching the
+# 'production' channel / App Store users.
+export LOCAL_UPDATE_CHANNEL=preview
 
 echo "▸ Building… (first run installs CocoaPods + compiles natively — a few minutes)"
 npx expo run:ios --device --configuration Release "${EXTRA[@]}"

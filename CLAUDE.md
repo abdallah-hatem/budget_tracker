@@ -112,3 +112,23 @@ PRODUCTION values, never the local `.env`:
   (`scripts/run-prod-ios.sh`) — bakes the prod env from `eas.json` into a local
   Release build for the connected iPhone; warns it hits live data, `-y` to skip.
 - After shipping, point `.env` back at the LAN IP for the next dev run.
+
+## Personal daily-driver app (real data) + OTA features — no EAS builds
+
+The owner runs the app for real on their phone from a LOCAL build and ships
+features via FREE OTA (EAS Update is not a build — it doesn't touch build credits).
+
+- **Build once (and only when native code changes):** `npm run build:my-app`
+  (`scripts/run-prod-ios.sh`) — a local Release build on the **`preview`** OTA
+  channel, pointed at **prod** Supabase. The channel is baked in by
+  `plugins/withLocalUpdateChannel.js`, gated on `LOCAL_UPDATE_CHANNEL` (a no-op
+  for every EAS / production build, so it can't leak the channel into the store
+  app). A local build has NO channel otherwise, so this is required for OTA.
+- **Ship a JS/asset feature anytime:** `npm run ship -- "what changed"`
+  (`scripts/ship-ota.sh`) → `eas update --branch preview` with prod env inlined.
+  Reaches the personal phone on the next launch; does NOT touch the `production`
+  channel / App Store users. FREE, no rebuild.
+- **Native module added → rebuild** (`npm run build:my-app`) and bump the app
+  `version` (runtimeVersion policy is `appVersion`) so old OTAs aren't served to
+  the new native runtime.
+- Signing persists via `ios.appleTeamId` (CN24UJRFFJ); see the device-build notes.
