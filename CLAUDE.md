@@ -77,3 +77,35 @@ build** — never via `eas update`/OTA.
   To silence the apple-targets warning / build locally, add
   `ios.appleTeamId`. Keychain candidates on this machine: `2F8X334588`,
   `CN24UJRFFJ` (pick the team that owns the bundle id).
+
+## Dev vs production environment — TEST ON DEV by default
+
+Use the LOCAL/dev Supabase for ALL development and testing. Only switch to
+production for an actual production/live deploy (App Store build or a prod OTA).
+
+**ALWAYS check the LAN IP before launching the dev env.** The local Supabase
+binds to the machine's LAN IP so a physical device can reach it; the IP changes
+with the network, so verify it and update `.env` if it moved:
+- Get it: `ipconfig getifaddr "$(route -n get default | awk '/interface:/{print $2}')"`
+  (usually `en0`). Example seen: `192.168.1.6`.
+- `.env` (gitignored — NEVER commit) must hold
+  `EXPO_PUBLIC_SUPABASE_URL=http://<LAN-IP>:54321` + the LOCAL anon key. If the IP
+  changed, update this line (and restart Metro so it re-inlines).
+
+**Launch the dev env:**
+1. `supabase start` (Docker must be up; stop split_bite first — it shares the
+   default ports). DB → `:54322`, API/Kong → `:54321` (bound `0.0.0.0`, so the
+   LAN IP works). Apply schema with `supabase db reset` (wipes local data, re-runs
+   all migrations + seed) or `supabase migration up` (only pending migrations).
+2. `supabase functions serve` — required for AI features (categorize / transcribe
+   / ingest-sms); reads `supabase/functions/.env` (GROQ_API_KEY, gitignored).
+3. `npx expo run:ios` — a local dev build (native modules — widget, datetimepicker,
+   speech, App Intent — so Expo Go won't work). Metro inlines `EXPO_PUBLIC_*` from
+   `.env`, pointing the app at the LAN-IP local Supabase.
+
+**Switching to production / live — do NOT forget:** for a real deploy, use the
+PRODUCTION values, never the local `.env`:
+- OTA: inline the prod URL + anon key (see "OTA updates" above); prod project is
+  `pzyadiwfjmjsafssxshc`.
+- EAS production build: `eas.json` → `build.production.env` already holds prod values.
+- After shipping, point `.env` back at the LAN IP for the next dev run.
