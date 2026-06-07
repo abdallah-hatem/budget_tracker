@@ -22,7 +22,10 @@
         "NSPhotoLibraryUsageDescription": "Masareef accesses your photo library only if you choose to attach an image to a transaction; it never reads your photos otherwise.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.abdallah.masareef"
+      "bundleIdentifier": "com.abdallah.masareef",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.abdallah.masareef"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -74,7 +77,8 @@
         }
       ],
       "./plugins/withSmsAppIntent",
-      "expo-secure-store"
+      "expo-secure-store",
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true,

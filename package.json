@@ -12,6 +12,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^4.0.7",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo-google-fonts/readex-pro": "^0.4.1",
     "@expo-google-fonts/sora": "^0.4.2",

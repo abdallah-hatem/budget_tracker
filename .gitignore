@@ -39,3 +39,7 @@ coverage/
 
 # Icon generator scratch output (regenerate with scripts/gen-icon.sh)
 .icon-gen/
+
+# apple-targets — regenerated on every prebuild/EAS build
+targets/*/generated.entitlements
+targets/*/Info.plist

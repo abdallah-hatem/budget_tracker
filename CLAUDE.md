@@ -51,3 +51,29 @@ update** — clients never see it.
   `supabase secrets list --project-ref pzyadiwfjmjsafssxshc` (digest changes).
 - **Local dev:** edit `supabase/functions/.env` (gitignored) → `GROQ_API_KEY=<new>`,
   then restart `supabase functions serve`.
+
+## iOS home-screen widget (NOT OTA-able)
+
+The medium widget (`targets/widget/index.swift`, via `@bacons/apple-targets`)
+shows this-month spend + today + top categories and has mic/type quick-add
+buttons. It is a **native target**, so changes ship only via a fresh **EAS
+build** — never via `eas update`/OTA.
+
+- **Data flow:** the app writes a pre-formatted snapshot to the App Group
+  `group.com.abdallah.masareef` (`src/features/widget/sync.ts` →
+  `ExtensionStorage`), driven by `useWidgetSync()` in `app/(tabs)/_layout.tsx`;
+  the widget reads `UserDefaults(suiteName:)`. The shape lives in
+  `src/features/widget/snapshot.ts` and is mirrored by `WSnapshot` in the Swift —
+  **keep them in sync**.
+- **Quick-add deep links:** `masareef://capture?mode=voice|type|manual` →
+  `app/capture.tsx` fires the capture action then redirects to the dashboard.
+- **First EAS build needs Apple setup:** the widget gets its own App ID
+  (`com.abdallah.masareef.widget`); the App Group capability must be enabled on
+  BOTH `com.abdallah.masareef` and the widget App ID. EAS managed credentials
+  usually create/sync this during `eas build -p ios --profile preview` (it may
+  prompt). `targets/widget/{generated.entitlements,Info.plist}` are regenerated
+  each prebuild (gitignored).
+- **appleTeamId:** not set in `app.json` (EAS sets the team per-target at build).
+  To silence the apple-targets warning / build locally, add
+  `ios.appleTeamId`. Keychain candidates on this machine: `2F8X334588`,
+  `CN24UJRFFJ` (pick the team that owns the bundle id).
