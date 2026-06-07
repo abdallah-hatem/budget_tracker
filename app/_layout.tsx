@@ -21,6 +21,7 @@ import {
   ReadexPro_500Medium,
   ReadexPro_600SemiBold,
 } from '@expo-google-fonts/readex-pro';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SessionProvider, useSession } from '@/src/features/auth/SessionProvider';
 import { redirectTarget } from '@/src/features/auth/redirectTarget';
 import { useNotifications } from '@/src/features/notifications/useNotifications';
@@ -75,6 +76,8 @@ export default function RootLayout() {
     ReadexPro_400Regular,
     ReadexPro_500Medium,
     ReadexPro_600SemiBold,
+    // Preload the category icon font so avatars don't flash on first paint.
+    ...MaterialCommunityIcons.font,
   });
 
   useEffect(() => {

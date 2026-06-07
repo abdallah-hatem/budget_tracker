@@ -196,17 +196,76 @@ struct MasareefWidgetView: View {
   }
 }
 
+/// Small widget: just the glance — spend + today — and a tap anywhere starts
+/// voice capture (small widgets allow a single tap target via .widgetURL).
+struct MasareefSmallView: View {
+  let entry: MasareefEntry
+  private var snap: WSnapshot { entry.snapshot }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Text(snap.spentLabel)
+        .font(.system(size: 11, weight: .medium))
+        .foregroundColor(ink2)
+        .lineLimit(1)
+      Text(snap.spent)
+        .font(.system(size: 28, weight: .bold, design: .rounded))
+        .foregroundColor(ink)
+        .minimumScaleFactor(0.5)
+        .lineLimit(1)
+        .padding(.top, 2)
+      Text("\(snap.todayLabel) · \(snap.today)")
+        .font(.system(size: 11))
+        .foregroundColor(ink3)
+        .lineLimit(1)
+        .padding(.top, 2)
+      Spacer(minLength: 6)
+      HStack(spacing: 7) {
+        Image(systemName: "mic.fill")
+          .font(.system(size: 13, weight: .bold))
+          .foregroundColor(onAccent)
+          .frame(width: 30, height: 30)
+          .background(accent)
+          .clipShape(Circle())
+        Text(snap.rtl ? "أضف بصوتك" : "Add")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundColor(ink2)
+          .lineLimit(1)
+        Spacer(minLength: 0)
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .environment(\.layoutDirection, snap.rtl ? .rightToLeft : .leftToRight)
+    .widgetURL(URL(string: "masareef://capture?mode=voice"))
+  }
+}
+
+/// Picks the layout for the requested widget size.
+struct MasareefEntryView: View {
+  @Environment(\.widgetFamily) private var family
+  let entry: MasareefEntry
+
+  var body: some View {
+    switch family {
+    case .systemSmall:
+      MasareefSmallView(entry: entry)
+    default:
+      MasareefWidgetView(entry: entry)
+    }
+  }
+}
+
 // MARK: - Widget
 
 struct MasareefWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: "MasareefWidget", provider: Provider()) { entry in
-      MasareefWidgetView(entry: entry)
+      MasareefEntryView(entry: entry)
         .containerBackground(canvas, for: .widget)
     }
     .configurationDisplayName("Masareef")
     .description("This month's spending, with quick add.")
-    .supportedFamilies([.systemMedium])
+    .supportedFamilies([.systemSmall, .systemMedium])
   }
 }
 

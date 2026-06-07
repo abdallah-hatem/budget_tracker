@@ -199,7 +199,8 @@ export default function TransactionsScreen() {
               <Pill
                 testID={`filter-${item.slug ?? 'all'}`}
                 label={item.label}
-                emoji={item.slug ? categoryStyle(item.slug).emoji : undefined}
+                icon={item.slug ? categoryStyle(item.slug).icon : undefined}
+                iconColor={item.slug ? categoryStyle(item.slug).color : undefined}
                 active={active}
                 onPress={() => setCategoryFilter(item.slug)}
               />

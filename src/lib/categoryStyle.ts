@@ -1,15 +1,22 @@
 /**
- * categoryStyle — returns the emoji and fixed hue color for a category slug.
- * Color is used ONLY for the category avatar tint + donut slice,
- * NEVER to indicate income/expense direction.
+ * categoryStyle — returns the vector icon, emoji, and fixed hue color for a
+ * category slug. `icon` is a MaterialCommunityIcons name (the professional look,
+ * sourced from the canonical category list); `emoji` is kept as a fallback.
+ * Color tints the avatar + donut slice — NEVER income/expense direction.
  */
+import { categoryBySlug } from './categories';
 
 export interface CategoryStyleResult {
+  /** MaterialCommunityIcons glyph name (what the UI renders). */
+  icon: string;
+  /** Legacy emoji fallback. */
   emoji: string;
   color: string;
 }
 
-const CATEGORY_STYLES: Record<string, CategoryStyleResult> = {
+const DEFAULT_ICON = 'credit-card-outline';
+
+const CATEGORY_STYLES: Record<string, { emoji: string; color: string }> = {
   food:           { emoji: '🍔', color: '#F97316' },
   groceries:      { emoji: '🛒', color: '#22C55E' },
   transport:      { emoji: '🚗', color: '#3B82F6' },
@@ -30,8 +37,9 @@ const CATEGORY_STYLES: Record<string, CategoryStyleResult> = {
   other_income:   { emoji: '➕', color: '#64748B' },
 };
 
-const DEFAULT_STYLE: CategoryStyleResult = { emoji: '💳', color: '#6B7672' };
+const DEFAULT_STYLE = { emoji: '💳', color: '#6B7672' };
 
 export function categoryStyle(slug: string): CategoryStyleResult {
-  return CATEGORY_STYLES[slug] ?? DEFAULT_STYLE;
+  const base = CATEGORY_STYLES[slug] ?? DEFAULT_STYLE;
+  return { ...base, icon: categoryBySlug(slug)?.icon ?? DEFAULT_ICON };
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, type PressableProps } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FONT } from '@/src/lib/font';
 import { PressableScale } from './PressableScale';
 
@@ -8,7 +9,11 @@ export interface PillProps {
   active?: boolean;
   onPress?: PressableProps['onPress'];
   testID?: string;
-  /** Optional leading emoji/glyph shown before the label (kept as a separate node). */
+  /** Optional leading MaterialCommunityIcons glyph (preferred over emoji). */
+  icon?: string;
+  /** Tint for `icon`; defaults to the active/inactive text color. */
+  iconColor?: string;
+  /** Optional leading emoji/glyph fallback (used only when `icon` is unset). */
   emoji?: string;
 }
 
@@ -17,7 +22,7 @@ export interface PillProps {
  * Active: accentSoft background + accent text.
  * Inactive: surface background + ink2 text.
  */
-export function Pill({ label, active = false, onPress, testID, emoji }: PillProps) {
+export function Pill({ label, active = false, onPress, testID, icon, iconColor, emoji }: PillProps) {
   return (
     <PressableScale
       testID={testID}
@@ -34,7 +39,15 @@ export function Pill({ label, active = false, onPress, testID, emoji }: PillProp
           : '#14191A',              // surface
       }}
     >
-      {emoji ? <Text style={{ fontSize: 13 }}>{emoji}</Text> : null}
+      {icon ? (
+        <MaterialCommunityIcons
+          name={icon as keyof typeof MaterialCommunityIcons.glyphMap}
+          size={15}
+          color={iconColor ?? (active ? '#2BD98E' : '#A8B2AF')}
+        />
+      ) : emoji ? (
+        <Text style={{ fontSize: 13 }}>{emoji}</Text>
+      ) : null}
       <Text
         style={{
           fontFamily: FONT.jakartaMd,

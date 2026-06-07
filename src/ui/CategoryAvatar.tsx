@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { categoryStyle } from '@/src/lib/categoryStyle';
 
 export interface CategoryAvatarProps {
@@ -11,10 +12,11 @@ export interface CategoryAvatarProps {
 
 /**
  * CategoryAvatar — 40×40 (default) rounded-14 tile.
- * Background is the category color at 14% opacity; emoji is centered.
+ * Background is the category color at 14% opacity; a vector icon (the category
+ * color) is centered.
  */
 export function CategoryAvatar({ slug, size = 40 }: CategoryAvatarProps) {
-  const { emoji, color } = categoryStyle(slug);
+  const { icon, color } = categoryStyle(slug);
 
   // Parse hex color and apply 14% opacity
   const bgColor = hexToRgba(color, 0.14);
@@ -31,7 +33,11 @@ export function CategoryAvatar({ slug, size = 40 }: CategoryAvatarProps) {
         justifyContent: 'center',
       }}
     >
-      <Text style={{ fontSize: size * 0.5 }}>{emoji}</Text>
+      <MaterialCommunityIcons
+        name={icon as keyof typeof MaterialCommunityIcons.glyphMap}
+        size={Math.round(size * 0.55)}
+        color={color}
+      />
     </View>
   );
 }
