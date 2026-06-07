@@ -30,6 +30,18 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+// @react-native-community/datetimepicker — native; render a host stub (a plain
+// View keeps the testID) and stub the imperative Android API. Return the RN
+// component directly (no createElement) to avoid nativewind's babel hoist guard.
+jest.mock('@react-native-community/datetimepicker', () => {
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: View,
+    DateTimePickerAndroid: { open: jest.fn(), dismiss: jest.fn() },
+  };
+});
+
 jest.mock('@expo/vector-icons', () => {
   const Icon = () => null;
   return new Proxy({}, { get: () => Icon });

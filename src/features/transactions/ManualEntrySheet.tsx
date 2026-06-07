@@ -5,6 +5,7 @@ import { categoryLabel } from './display';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
 import { t, isRTL } from '../../lib/i18n';
 import { CategoryAvatar, PressableScale } from '../../ui';
+import { DateTimeField } from '../../ui/DateTimeField';
 import { FONT } from '../../lib/font';
 import type { TxnType, Locale } from '../../types';
 
@@ -13,6 +14,8 @@ export interface ManualEntryValues {
   amount: number;
   category_slug: string;
   note: string;
+  /** ISO timestamp for when the transaction occurred (defaults to now). */
+  occurred_at: string;
 }
 
 interface Props {
@@ -36,6 +39,7 @@ export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
     expenseCategories()[0]?.slug ?? '',
   );
   const [note, setNote] = useState('');
+  const [when, setWhen] = useState<Date>(() => new Date());
   const [error, setError] = useState<string | null>(null);
 
   // Auto-scroll the selected category chip into view on tap.
@@ -54,7 +58,13 @@ export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
       setError(locale === 'ar' ? 'أدخل مبلغًا أكبر من صفر' : 'Enter an amount greater than 0');
       return;
     }
-    onSubmit({ type, amount: parsed, category_slug: categorySlug, note: note.trim() });
+    onSubmit({
+      type,
+      amount: parsed,
+      category_slug: categorySlug,
+      note: note.trim(),
+      occurred_at: when.toISOString(),
+    });
   }
 
   const fieldLabelStyle = {
@@ -231,6 +241,15 @@ export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
           }}
         />
       </View>
+
+      {/* When (date + time) */}
+      <DateTimeField
+        testID="manual-when"
+        label={t('when', locale)}
+        value={when}
+        onChange={setWhen}
+        locale={locale}
+      />
 
       {/* Error */}
       {error ? (

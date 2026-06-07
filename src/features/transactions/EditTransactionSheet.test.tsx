@@ -80,6 +80,23 @@ describe('EditTransactionSheet', () => {
     await waitFor(() => expect(onDone).toHaveBeenCalled());
   });
 
+  it('includes occurred_at in the save patch (date/time is editable)', async () => {
+    mockUpdate.mockResolvedValueOnce(txn);
+    render(
+      <EditTransactionSheet transaction={txn} locale="en" onDone={jest.fn()} onCancel={jest.fn()} />
+    );
+
+    fireEvent.press(screen.getByTestId('edit-save'));
+
+    // Unchanged → it round-trips the transaction's own timestamp.
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith(
+        't1',
+        expect.objectContaining({ occurred_at: '2026-06-10T00:00:00.000Z' }),
+      ),
+    );
+  });
+
   it('deletes via deleteTransaction then calls onDone', async () => {
     mockDelete.mockResolvedValueOnce(undefined);
     const onDone = jest.fn();

@@ -228,6 +228,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
             category_slug: m.category_slug,
             note: m.note,
             confidence: 1,
+            occurred_at: m.occurred_at,
           },
         ],
         '',

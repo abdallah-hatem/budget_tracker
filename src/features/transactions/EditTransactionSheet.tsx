@@ -7,6 +7,7 @@ import { categoryLabel } from './display';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
 import { t, isRTL } from '../../lib/i18n';
 import { CategoryAvatar, PressableScale } from '../../ui';
+import { DateTimeField } from '../../ui/DateTimeField';
 import { FONT } from '../../lib/font';
 import type { Transaction, TxnType, Locale, AccountBalance } from '../../types';
 
@@ -31,6 +32,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
   const [amount, setAmount] = useState<string>(String(transaction.amount));
   const [categorySlug, setCategorySlug] = useState<string>(transaction.category_slug);
   const [note, setNote] = useState<string>(transaction.note ?? '');
+  const [when, setWhen] = useState<Date>(() => new Date(transaction.occurred_at));
   const [accountId, setAccountId] = useState<string | null>(transaction.account_id);
   const [accounts, setAccounts] = useState<AccountBalance[]>([]);
   const [busy, setBusy] = useState(false);
@@ -67,6 +69,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
         category_slug: categorySlug,
         note: note.trim() === '' ? null : note.trim(),
         account_id: accountId,
+        occurred_at: when.toISOString(),
         ...(confirmOnSave ? { status: 'confirmed' as const } : {}),
       });
       onDone();
@@ -354,6 +357,15 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           </ScrollView>
         </View>
       )}
+
+      {/* ── When (date + time) ── */}
+      <DateTimeField
+        testID="edit-when"
+        label={t('when', locale)}
+        value={when}
+        onChange={setWhen}
+        locale={locale}
+      />
 
       {/* ── Error ── */}
       {error ? (

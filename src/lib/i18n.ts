@@ -105,6 +105,7 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   // Capture / edit form fields
   amount: { en: 'Amount', ar: 'المبلغ' },
   note: { en: 'Note', ar: 'ملاحظة' },
+  when: { en: 'When', ar: 'التاريخ والوقت' },
 
   // Month navigation
   prev_month: { en: 'Previous month', ar: 'الشهر السابق' },

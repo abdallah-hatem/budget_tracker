@@ -24,7 +24,9 @@
       },
       "bundleIdentifier": "com.abdallah.masareef",
       "entitlements": {
-        "com.apple.security.application-groups": ["group.com.abdallah.masareef"]
+        "com.apple.security.application-groups": [
+          "group.com.abdallah.masareef"
+        ]
       }
     },
     "android": {
@@ -78,7 +80,8 @@
       ],
       "./plugins/withSmsAppIntent",
       "expo-secure-store",
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

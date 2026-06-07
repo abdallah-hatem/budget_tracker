@@ -13,12 +13,18 @@ describe('ManualEntrySheet', () => {
     fireEvent.changeText(getByTestId('manual-note'), 'taxi');
     fireEvent.press(getByTestId('manual-add'));
 
-    expect(onSubmit).toHaveBeenCalledWith({
-      type: 'expense',
-      amount: 50,
-      category_slug: 'transport',
-      note: 'taxi',
-    });
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'expense',
+        amount: 50,
+        category_slug: 'transport',
+        note: 'taxi',
+      }),
+    );
+    // Defaults the timestamp to "now" (a valid ISO string).
+    const values = onSubmit.mock.calls[0][0];
+    expect(typeof values.occurred_at).toBe('string');
+    expect(Number.isNaN(Date.parse(values.occurred_at))).toBe(false);
   });
 
   it('blocks submit and shows an error when the amount is empty', () => {
