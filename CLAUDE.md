@@ -108,4 +108,7 @@ PRODUCTION values, never the local `.env`:
 - OTA: inline the prod URL + anon key (see "OTA updates" above); prod project is
   `pzyadiwfjmjsafssxshc`.
 - EAS production build: `eas.json` → `build.production.env` already holds prod values.
+- Local prod build on a device (no EAS): `npm run build:prod:device`
+  (`scripts/run-prod-ios.sh`) — bakes the prod env from `eas.json` into a local
+  Release build for the connected iPhone; warns it hits live data, `-y` to skip.
 - After shipping, point `.env` back at the LAN IP for the next dev run.
