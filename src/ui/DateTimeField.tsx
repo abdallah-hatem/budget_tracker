@@ -64,20 +64,12 @@ export function DateTimeField({
   const rtl = isRTL(locale);
 
   if (Platform.OS === 'ios') {
+    // The compact picker renders its own date + time pills — show them bare under
+    // the label (no surrounding field box), aligned to the reading direction.
     return (
       <View style={{ gap: 6 }}>
         <Text style={fieldLabelStyle(rtl)}>{label}</Text>
-        <View
-          style={{
-            flexDirection: rtl ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            backgroundColor: SURFACE,
-            borderRadius: 14,
-            paddingHorizontal: 10,
-            paddingVertical: 8,
-            minHeight: 52,
-          }}
-        >
+        <View style={{ alignItems: rtl ? 'flex-end' : 'flex-start' }}>
           <DateTimePicker
             testID={testID}
             value={value}
