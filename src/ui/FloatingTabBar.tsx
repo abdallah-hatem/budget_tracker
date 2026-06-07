@@ -1,10 +1,12 @@
 /**
- * FloatingTabBar — Midnight Emerald floating pill tab bar with center Add FAB.
+ * FloatingTabBar — Midnight Emerald floating pill tab bar with center mic FAB.
  *
- * Layout (L→R): Home · Transactions · [+ FAB (capture)] · Pending · Settings
+ * Layout (L→R): Home · Transactions · [🎙 FAB] · Pending · Settings
  *
  * The FAB is a raised 60px emerald circle that overlaps the bar top by ~16px,
- * with an accent-colored glow shadow. The 4 regular tabs animate with spring
+ * with an accent-colored glow shadow. Tap it to start voice capture; hold it to
+ * fan out a small menu (manual / type) — all driven by the global CaptureProvider
+ * so there is no capture tab. The 4 regular tabs animate with spring
  * scale+translateY on active. Pending tab shows a badge when count > 0.
  */
 
@@ -17,9 +19,11 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  type SharedValue,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { usePendingContext } from '@/src/features/transactions/PendingProvider';
+import { useCapture } from '@/src/features/capture/CaptureProvider';
 import { FONT } from '@/src/lib/font';
 
 // ── Design tokens ────────────────────────────────────────────────────────────
@@ -178,50 +182,149 @@ function TabItem({
   );
 }
 
-// ── Center FAB ────────────────────────────────────────────────────────────────
-interface CenterFABProps {
+// ── Center FAB: tap = mic (speak), hold = manual/type menu ───────────────────
+const MENU_ITEMS = [
+  { key: 'manual', icon: 'create-outline', dx: -64, en: 'Manual', ar: 'يدوي' },
+  { key: 'type', icon: 'text-outline', dx: 64, en: 'Type', ar: 'كتابة' },
+] as const;
+
+function MenuButton({
+  progress,
+  dx,
+  icon,
+  label,
+  labelFont,
+  active,
+  onPress,
+}: {
+  progress: SharedValue<number>;
+  dx: number;
+  icon: string;
+  label: string;
+  labelFont: string;
+  active: boolean;
   onPress: () => void;
+}) {
+  const style = useAnimatedStyle(() => {
+    const p = progress.value;
+    return {
+      opacity: p,
+      transform: [{ translateX: dx * p }, { translateY: -106 * p }, { scale: 0.4 + 0.6 * p }],
+    };
+  });
+  return (
+    <Animated.View
+      pointerEvents={active ? 'auto' : 'none'}
+      style={[{ position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' }, style]}
+    >
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        style={{
+          width: 50,
+          height: 50,
+          borderRadius: 25,
+          backgroundColor: COLORS.overlay,
+          borderWidth: 1,
+          borderColor: 'rgba(43,217,142,0.45)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          shadowColor: '#000',
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 8,
+        }}
+      >
+        <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={22} color={COLORS.accent} />
+      </Pressable>
+      <Text style={{ marginTop: 4, fontFamily: labelFont, fontSize: 11, color: COLORS.ink }}>
+        {label}
+      </Text>
+    </Animated.View>
+  );
 }
 
-function CenterFAB({ onPress }: CenterFABProps) {
+function CenterFAB() {
+  const { startVoice, openManual, openType, locale } = useCapture();
+  const isAr = locale === 'ar';
+  const labelFont = isAr ? FONT.readexMd : FONT.jakartaMd;
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const scale = useSharedValue(1);
+  const progress = useSharedValue(0);
 
-  function handlePressIn() {
-    scale.value = withSpring(0.93, { damping: 15, stiffness: 300 });
-  }
+  React.useEffect(() => {
+    progress.value = withSpring(menuOpen ? 1 : 0, { damping: 15, stiffness: 200 });
+  }, [menuOpen, progress]);
 
-  function handlePressOut() {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  }
+  const fabStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  async function handlePress() {
+  async function onTap() {
+    if (menuOpen) {
+      setMenuOpen(false);
+      return;
+    }
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onPress();
+    startVoice();
   }
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  async function onHold() {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setMenuOpen(true);
+  }
+
+  function pick(key: string) {
+    setMenuOpen(false);
+    if (key === 'manual') openManual();
+    else openType();
+  }
 
   return (
     <View
       style={{
         flex: 1,
         alignItems: 'center',
-        // The FAB overlaps the bar top by FAB_OVERLAP; center it vertically on bar top
         marginTop: -(FAB_OVERLAP + (FAB_SIZE - BAR_HEIGHT) / 2),
         justifyContent: 'flex-start',
-        paddingTop: 0,
       }}
     >
+      {/* Tap-outside backdrop while the menu is open */}
+      {menuOpen ? (
+        <Pressable
+          testID="capture-menu-backdrop"
+          onPress={() => setMenuOpen(false)}
+          style={{ position: 'absolute', width: 2200, height: 2200, bottom: -500, left: -1100 }}
+        />
+      ) : null}
+
+      {MENU_ITEMS.map((item) => (
+        <MenuButton
+          key={item.key}
+          progress={progress}
+          dx={item.dx}
+          icon={item.icon}
+          label={isAr ? item.ar : item.en}
+          labelFont={labelFont}
+          active={menuOpen}
+          onPress={() => pick(item.key)}
+        />
+      ))}
+
       <AnimatedPressable
-        onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+        testID="capture-fab"
+        onPress={onTap}
+        onLongPress={onHold}
+        onPressIn={() => {
+          scale.value = withSpring(0.93, { damping: 15, stiffness: 300 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+        }}
         accessibilityRole="button"
-        accessibilityLabel="Add transaction / إضافة معاملة"
+        accessibilityLabel="Speak to add — hold for options"
         style={[
-          animatedStyle,
+          fabStyle,
           {
             width: FAB_SIZE,
             height: FAB_SIZE,
@@ -229,7 +332,6 @@ function CenterFAB({ onPress }: CenterFABProps) {
             backgroundColor: COLORS.accent,
             alignItems: 'center',
             justifyContent: 'center',
-            // Accent-colored glow shadow
             shadowColor: COLORS.accent,
             shadowOpacity: 0.5,
             shadowRadius: 12,
@@ -238,7 +340,7 @@ function CenterFAB({ onPress }: CenterFABProps) {
           },
         ]}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Ionicons name="mic" size={28} color="#06251A" />
       </AnimatedPressable>
     </View>
   );
@@ -310,29 +412,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
       >
         {TAB_ORDER.map((entry, slotIndex) => {
           if (entry.kind === 'fab') {
-            const captureRouteIndex = routeIndexMap['capture'];
-            return (
-              <CenterFAB
-                key="fab"
-                onPress={() => {
-                  const captureRoute = state.routes[captureRouteIndex];
-                  const isFocused = state.index === captureRouteIndex;
-
-                  if (captureRoute) {
-                    const event = navigation.emit({
-                      type: 'tabPress',
-                      target: captureRoute.key,
-                      canPreventDefault: true,
-                    });
-                    if (!isFocused && !event.defaultPrevented) {
-                      navigation.navigate('capture');
-                    }
-                  } else {
-                    navigation.navigate('capture');
-                  }
-                }}
-              />
-            );
+            return <CenterFAB key="fab" />;
           }
 
           // Regular tab

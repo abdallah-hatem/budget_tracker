@@ -29,15 +29,6 @@ function TabsInner() {
         }}
       />
       <Tabs.Screen
-        name="capture"
-        options={{
-          title: t('tabs.capture', locale),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="pending"
         options={{
           title: t('pending_title', locale),
