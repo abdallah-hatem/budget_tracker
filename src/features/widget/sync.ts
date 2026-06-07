@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { Platform } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { AppState, Platform } from 'react-native';
 import { useSession } from '../auth/SessionProvider';
 import { useTransactions } from '../transactions/useTransactions';
 import { useRefetchOnTxnChange } from '../sync/dataSync';
@@ -62,16 +62,34 @@ export function useWidgetSync(): void {
     return { from, to, status: 'confirmed' as const };
   }, []);
 
-  const { data, refresh } = useTransactions(filter);
+  const { data, loading, error, refresh } = useTransactions(filter);
   useRefetchOnTxnChange(useCallback(() => void refresh(), [refresh]));
 
+  // Write ONLY on a settled, successful load — never mid-fetch or on error — so
+  // the transient empty `[]` during the initial fetch can't blank the widget to
+  // zero. A genuinely empty month still writes zero (correct).
   useEffect(() => {
-    if (!user) return;
+    if (!user || loading || error) return;
     writeWidgetSnapshot(
       buildWidgetSnapshot({ summary: summarize(data), transactions: data, locale, now: new Date() }),
     );
-  }, [data, locale, user]);
+  }, [data, loading, error, locale, user]);
 
-  // Blank the widget when the authenticated area unmounts (sign-out / delete).
-  useEffect(() => () => clearWidgetSnapshot(), []);
+  // Keep it fresh: refetch the current month whenever the app comes to the
+  // foreground, so the widget reflects new spend even if nothing changed in-app.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') void refresh();
+    });
+    return () => sub.remove();
+  }, [refresh]);
+
+  // Blank the widget ONLY on a real sign-out (user → null), NOT on every unmount —
+  // navigation transitions would otherwise zero it.
+  const prevUserId = useRef<string | null>(user?.id ?? null);
+  useEffect(() => {
+    const id = user?.id ?? null;
+    if (prevUserId.current && !id) clearWidgetSnapshot();
+    prevUserId.current = id;
+  }, [user]);
 }
