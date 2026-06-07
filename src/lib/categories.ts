@@ -11,7 +11,7 @@ export const CATEGORIES: Category[] = [
   { slug: 'clothes',       name_en: 'Clothes',           name_ar: 'ملابس',         kind: 'expense', icon: 'tshirt-crew',      color: '#EC4899', sort_order: 40 },
   { slug: 'bills',         name_en: 'Bills & Utilities', name_ar: 'فواتير ومرافق', kind: 'expense', icon: 'file-document',    color: '#EAB308', sort_order: 50 },
   { slug: 'health',        name_en: 'Health',            name_ar: 'صحة',           kind: 'expense', icon: 'heart-pulse',      color: '#EF4444', sort_order: 60 },
-  { slug: 'entertainment', name_en: 'Entertainment',     name_ar: 'ترفيه',         kind: 'expense', icon: 'movie-open',       color: '#A855F7', sort_order: 70 },
+  { slug: 'entertainment', name_en: 'Entertainment',     name_ar: 'ترفيه',         kind: 'expense', icon: 'gamepad-variant',  color: '#A855F7', sort_order: 70 },
   { slug: 'sports',        name_en: 'Sports',            name_ar: 'رياضة',         kind: 'expense', icon: 'tennis',           color: '#84CC16', sort_order: 75 },
   { slug: 'education',     name_en: 'Education',         name_ar: 'تعليم',         kind: 'expense', icon: 'school',           color: '#06B6D4', sort_order: 80 },
   { slug: 'home',          name_en: 'Home',              name_ar: 'منزل',          kind: 'expense', icon: 'home',             color: '#14B8A6', sort_order: 90 },
