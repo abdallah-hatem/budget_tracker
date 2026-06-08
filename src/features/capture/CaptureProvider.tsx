@@ -29,7 +29,6 @@ import {
   ManualEntrySheet,
   type ManualEntryValues,
 } from '../transactions/ManualEntrySheet';
-import { EditTransactionSheet } from '../transactions/EditTransactionSheet';
 import { RecordingOverlay } from './RecordingOverlay';
 import { TypeSheet } from './TypeSheet';
 import { AddedCardModal } from './AddedCardModal';
@@ -319,9 +318,12 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
       <AddedCardModal
         saved={lastSaved}
         locale={locale}
+        editing={editingSaved}
         onTapItem={setEditingSaved}
         onUndo={undoLast}
         onDismiss={dismissCard}
+        onEditDone={onSavedEditDone}
+        onEditCancel={() => setEditingSaved(null)}
       />
 
       {/* Type-text sheet */}
@@ -347,27 +349,6 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <Pressable onPress={() => {}}>
               <ManualEntrySheet locale={locale} onSubmit={onManualSubmit} onCancel={() => setManualOpen(false)} />
-            </Pressable>
-          </KeyboardAvoidingView>
-        </Pressable>
-      </Modal>
-
-      {/* Edit / discard a tapped saved row */}
-      <Modal visible={editingSaved !== null} transparent animationType="slide" onRequestClose={() => setEditingSaved(null)}>
-        <Pressable
-          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
-          onPress={() => setEditingSaved(null)}
-        >
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <Pressable onPress={() => {}}>
-              {editingSaved ? (
-                <EditTransactionSheet
-                  transaction={editingSaved}
-                  locale={locale}
-                  onCancel={() => setEditingSaved(null)}
-                  onDone={onSavedEditDone}
-                />
-              ) : null}
             </Pressable>
           </KeyboardAvoidingView>
         </Pressable>
