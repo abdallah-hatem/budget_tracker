@@ -6,6 +6,7 @@
 // verify_jwt = true (see supabase/config.toml) — only authenticated app users.
 import { corsHeaders } from "../_shared/cors.ts";
 import { categorizeMany, type Locale, type ParsedTransaction } from "../_shared/categorize.ts";
+import { logAiEvent, minConfidence, userIdFromAuthHeader, type AiEvent } from "../_shared/aiEvents.ts";
 
 const MAX_TEXT_LENGTH = 2000;
 
@@ -17,6 +18,8 @@ export interface HandlerDeps {
     locale: Locale,
     apiKey: string,
   ) => Promise<ParsedTransaction[]>;
+  /** Optional observability sink (omitted in tests). */
+  logEvent?: (e: AiEvent) => void;
 }
 
 function json(body: unknown, status: number): Response {
@@ -66,10 +69,31 @@ export async function handleCategorize(
   }
 
   // Call the LLM.
+  const userId = userIdFromAuthHeader(req);
+  const t0 = Date.now();
   try {
     const transactions = await deps.categorizeFn(text, locale, deps.apiKey);
+    deps.logEvent?.({
+      user_id: userId,
+      fn: "categorize",
+      source: "text",
+      ok: true,
+      latency_ms: Date.now() - t0,
+      confidence: minConfidence(transactions),
+      input_len: text.length,
+      result_count: transactions.length,
+    });
     return json({ transactions, parsed: transactions[0] ?? null }, 200);
-  } catch (_e) {
+  } catch (e) {
+    deps.logEvent?.({
+      user_id: userId,
+      fn: "categorize",
+      source: "text",
+      ok: false,
+      error: e instanceof Error ? e.message : String(e),
+      latency_ms: Date.now() - t0,
+      input_len: text.length,
+    });
     return json({ error: "Failed to categorize text." }, 502);
   }
 }
@@ -81,6 +105,7 @@ if (import.meta.main) {
     handleCategorize(req, {
       apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
       categorizeFn: (text, locale, apiKey) => categorizeMany(text, locale, apiKey),
+      logEvent: (e) => void logAiEvent(e),
     })
   );
 }

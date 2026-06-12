@@ -14,6 +14,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { categorize, type ParsedTransaction } from "../_shared/categorize.ts";
 import { INCOME_SLUGS } from "../_shared/categories.ts";
 import { sha256Hex } from "../_shared/hash.ts";
+import { logAiEvent, type AiEvent } from "../_shared/aiEvents.ts";
 
 const MAX_TEXT_LENGTH = 2000;
 
@@ -62,6 +63,8 @@ export interface IngestDeps {
   getPushTokens: (userId: string) => Promise<string[]>;
   /** Send one or more Expo push messages (best-effort). */
   sendPush: (messages: ExpoPushMessage[]) => Promise<void>;
+  /** Optional observability sink (omitted in tests). */
+  logEvent?: (e: AiEvent) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,15 +137,29 @@ export async function handleIngest(
   deps.touchToken(tokenHash).catch(() => {/* swallow */});
 
   // --- Categorize the SMS ---
+  const t0 = Date.now();
   let parsed: ParsedTransaction;
   try {
     parsed = await deps.categorizeFn(text, "en", deps.groqKey);
-  } catch (_e) {
+  } catch (e) {
+    deps.logEvent?.({
+      user_id: userId, fn: "ingest-sms", source: "sms", ok: false,
+      error: e instanceof Error ? e.message : String(e),
+      latency_ms: Date.now() - t0, input_len: text.length,
+    });
     return json({ error: "Failed to categorize SMS text." }, 502);
   }
 
   // Round amount to 2 decimal places.
   const amount = Math.round((parsed.amount ?? 0) * 100) / 100;
+
+  // The AI part is done — log its outcome (result_count 0 = no amount found).
+  deps.logEvent?.({
+    user_id: userId, fn: "ingest-sms", source: "sms", ok: true,
+    latency_ms: Date.now() - t0,
+    confidence: typeof parsed.confidence === "number" ? parsed.confidence : null,
+    input_len: text.length, result_count: amount > 0 ? 1 : 0,
+  });
 
   // Non-transaction SMS (OTP, promo, …) — skip without inserting.
   if (amount <= 0) {
@@ -308,6 +325,8 @@ if (import.meta.main) {
         body: JSON.stringify(messages),
       });
     },
+
+    logEvent: (e) => void logAiEvent(e),
   };
 
   Deno.serve((req) => handleIngest(req, deps));

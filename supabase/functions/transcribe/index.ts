@@ -12,6 +12,7 @@ import {
   type Locale,
   type ParsedTransaction,
 } from "../_shared/categorize.ts";
+import { logAiEvent, minConfidence, userIdFromAuthHeader, type AiEvent } from "../_shared/aiEvents.ts";
 
 const GROQ_WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 // Full large-v3 (not turbo): noticeably more accurate on dialect + loanwords
@@ -46,6 +47,8 @@ export interface HandlerDeps {
     locale: Locale,
     apiKey: string,
   ) => Promise<ParsedTransaction[]>;
+  /** Optional observability sink (omitted in tests). */
+  logEvent?: (e: AiEvent) => void;
 }
 
 function json(body: unknown, status: number): Response {
@@ -90,16 +93,27 @@ export async function handleTranscribe(
     return json({ error: "Server is missing GROQ_API_KEY." }, 500);
   }
 
+  const userId = userIdFromAuthHeader(req);
+  const t0 = Date.now();
+
   let text: string;
   try {
     text = (await deps.transcribeFn(file, deps.apiKey, locale)).trim();
   } catch (e) {
+    deps.logEvent?.({
+      user_id: userId, fn: "transcribe", source: "voice", model: WHISPER_MODEL,
+      ok: false, error: e instanceof Error ? e.message : String(e), latency_ms: Date.now() - t0,
+    });
     return json(
       { error: e instanceof Error ? e.message : "Transcription failed." },
       502,
     );
   }
   if (!text) {
+    deps.logEvent?.({
+      user_id: userId, fn: "transcribe", source: "voice", model: WHISPER_MODEL,
+      ok: false, error: "no_speech", latency_ms: Date.now() - t0, input_len: 0,
+    });
     return json({ error: "No speech detected." }, 422);
   }
 
@@ -107,12 +121,22 @@ export async function handleTranscribe(
   try {
     transactions = await deps.categorizeFn(text, locale, deps.apiKey);
   } catch (e) {
+    deps.logEvent?.({
+      user_id: userId, fn: "transcribe", source: "voice", model: WHISPER_MODEL,
+      ok: false, error: e instanceof Error ? e.message : String(e),
+      latency_ms: Date.now() - t0, input_len: text.length,
+    });
     return json(
       { error: e instanceof Error ? e.message : "Categorization failed." },
       502,
     );
   }
 
+  deps.logEvent?.({
+    user_id: userId, fn: "transcribe", source: "voice", model: WHISPER_MODEL,
+    ok: true, latency_ms: Date.now() - t0, confidence: minConfidence(transactions),
+    input_len: text.length, result_count: transactions.length,
+  });
   return json({ text, transactions, parsed: transactions[0] ?? null }, 200);
 }
 
@@ -151,6 +175,7 @@ if (import.meta.main) {
       apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
       transcribeFn: groqTranscribe,
       categorizeFn: categorizeMany,
+      logEvent: (e) => void logAiEvent(e),
     })
   );
 }
