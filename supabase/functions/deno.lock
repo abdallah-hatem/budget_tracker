@@ -4,6 +4,7 @@
     "jsr:@std/assert@1": "1.0.19",
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "npm:@anthropic-ai/sdk@0.69.0": "0.69.0",
+    "npm:@sentry/deno@*": "10.57.0",
     "npm:@supabase/supabase-js@2": "2.107.0"
   },
   "jsr": {
@@ -27,6 +28,26 @@
     },
     "@babel/runtime@7.29.7": {
       "integrity": "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="
+    },
+    "@opentelemetry/api@1.9.1": {
+      "integrity": "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="
+    },
+    "@sentry-internal/server-utils@10.57.0": {
+      "integrity": "sha512-Qu8ETmX/ITzteG7Im46b9HOxKKzeaIeqNvftaIlFURu1RUQdHbtGerS7QOmXzwnhuqNGNeiCQYkduB798IfRqA==",
+      "dependencies": [
+        "@sentry/core"
+      ]
+    },
+    "@sentry/core@10.57.0": {
+      "integrity": "sha512-kntItTA2kiT0YpL7encXaF6mkdZMB+y48lwj8w1wkfBpfJAC7sifdgrzLQZqmsqVNE3crg9VfufaAGA+78uFMg=="
+    },
+    "@sentry/deno@10.57.0": {
+      "integrity": "sha512-8YyfriVc9avReZG79SF4Rq7USALBhNdz6Npn07FOrnHwkGen63gjVHw/8vessNgaHROpPtBlwih92NXwsDY3Hw==",
+      "dependencies": [
+        "@opentelemetry/api",
+        "@sentry-internal/server-utils",
+        "@sentry/core"
+      ]
     },
     "@supabase/auth-js@2.107.0": {
       "integrity": "sha512-XA7x+WIeIvuC3GTZ2ey67QcBbGw4n+o5B7M+dMm9KT1lL3wX1B52DfEWW00WuPt/LnniJLLIn1WIm9YPtuxzKQ==",

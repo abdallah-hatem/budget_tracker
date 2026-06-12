@@ -13,6 +13,7 @@ import {
   type ParsedTransaction,
 } from "../_shared/categorize.ts";
 import { logAiEvent, minConfidence, userIdFromAuthHeader, type AiEvent } from "../_shared/aiEvents.ts";
+import { withSentry } from "../_shared/sentry.ts";
 
 const GROQ_WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 // Full large-v3 (not turbo): noticeably more accurate on dialect + loanwords
@@ -170,12 +171,12 @@ async function groqTranscribe(
 
 // Guard with import.meta.main so the server does not bind during deno test.
 if (import.meta.main) {
-  Deno.serve((req) =>
+  Deno.serve(withSentry("transcribe", (req) =>
     handleTranscribe(req, {
       apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
       transcribeFn: groqTranscribe,
       categorizeFn: categorizeMany,
       logEvent: (e) => void logAiEvent(e),
     })
-  );
+  ));
 }

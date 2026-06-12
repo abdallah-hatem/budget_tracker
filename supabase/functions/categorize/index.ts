@@ -7,6 +7,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { categorizeMany, type Locale, type ParsedTransaction } from "../_shared/categorize.ts";
 import { logAiEvent, minConfidence, userIdFromAuthHeader, type AiEvent } from "../_shared/aiEvents.ts";
+import { withSentry } from "../_shared/sentry.ts";
 
 const MAX_TEXT_LENGTH = 2000;
 
@@ -101,11 +102,11 @@ export async function handleCategorize(
 // Wire real dependencies into the runtime server.
 // Guard with import.meta.main so the server does not bind during deno test.
 if (import.meta.main) {
-  Deno.serve((req) =>
+  Deno.serve(withSentry("categorize", (req) =>
     handleCategorize(req, {
       apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
       categorizeFn: (text, locale, apiKey) => categorizeMany(text, locale, apiKey),
       logEvent: (e) => void logAiEvent(e),
     })
-  );
+  ));
 }

@@ -15,6 +15,7 @@ import { categorize, type ParsedTransaction } from "../_shared/categorize.ts";
 import { INCOME_SLUGS } from "../_shared/categories.ts";
 import { sha256Hex } from "../_shared/hash.ts";
 import { logAiEvent, type AiEvent } from "../_shared/aiEvents.ts";
+import { withSentry } from "../_shared/sentry.ts";
 
 const MAX_TEXT_LENGTH = 2000;
 
@@ -329,5 +330,5 @@ if (import.meta.main) {
     logEvent: (e) => void logAiEvent(e),
   };
 
-  Deno.serve((req) => handleIngest(req, deps));
+  Deno.serve(withSentry("ingest-sms", (req) => handleIngest(req, deps)));
 }

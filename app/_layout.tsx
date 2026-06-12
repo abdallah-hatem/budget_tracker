@@ -22,11 +22,17 @@ import {
   ReadexPro_600SemiBold,
 } from '@expo-google-fonts/readex-pro';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
 import { SessionProvider, useSession } from '@/src/features/auth/SessionProvider';
 import { redirectTarget } from '@/src/features/auth/redirectTarget';
 import { useNotifications } from '@/src/features/notifications/useNotifications';
 import { CaptureProvider } from '@/src/features/capture/CaptureProvider';
 import { DataSyncProvider } from '@/src/features/sync/dataSync';
+import { initSentry } from '@/src/lib/sentry';
+
+// Crash/error monitoring — must run before the app renders so early crashes
+// are captured (no-op in dev; see src/lib/sentry.ts).
+initSentry();
 
 // Keep splash visible while fonts load.
 SplashScreen.preventAutoHideAsync();
@@ -65,7 +71,7 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded] = useFonts({
     Sora_600SemiBold,
     Sora_700Bold,
@@ -107,3 +113,6 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+// Sentry.wrap enables automatic error-boundary + navigation/perf instrumentation.
+export default Sentry.wrap(RootLayout);
