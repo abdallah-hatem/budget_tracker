@@ -315,7 +315,9 @@ max_frequency = "5s"
 enabled = true
 # Native iOS flow: the id_token audience is the app bundle id. No secret needed
 # (the secret/Services ID is only for the web OAuth flow).
-client_id = "com.abdallah.masareef"
+# host.exp.Exponent is Expo Go's bundle id — included so Apple sign-in can be
+# tested in Expo Go locally. PROD (dashboard) must list ONLY com.abdallah.masareef.
+client_id = "com.abdallah.masareef,host.exp.Exponent"
 secret = ""
 # Overrides the default auth redirectUrl.
 redirect_uri = ""
