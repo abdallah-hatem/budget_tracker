@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useTransactions } from '../../src/features/transactions/useTransactions';
 import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
@@ -21,6 +22,7 @@ import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/
 import { t, isRTL } from '../../src/lib/i18n';
 import { Screen, Pill, EmptyState, TransactionRow, Money, PressableScale, ViewToggle } from '../../src/ui';
 import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
+import { MonthPicker } from '../../src/ui/MonthPicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT } from '../../src/lib/font';
 import type { Transaction, Locale, TxnType } from '../../src/types';
@@ -79,6 +81,7 @@ export default function TransactionsScreen() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [view, setView] = useState<TxnType>('expense');
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Switching expenses↔income clears the category chip (its options change).
   const changeView = useCallback((v: TxnType) => {
@@ -130,10 +133,11 @@ export default function TransactionsScreen() {
           {t('transactions_title', locale)}
         </Text>
 
-        {/* Month navigator — pill style */}
+        {/* Month navigator — pill style (LTR-stable arrows: ‹ prev · next ›) */}
         <View
           style={{
-            flexDirection: rtl ? 'row-reverse' : 'row',
+            direction: 'ltr',
+            flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             backgroundColor: '#14191A',
@@ -146,42 +150,45 @@ export default function TransactionsScreen() {
             accessibilityRole="button"
             accessibilityLabel={t('prev_month', locale)}
             onPress={() => setMonthKey((k) => addMonth(k, -1))}
-            style={{
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 999,
-            }}
+            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 }}
           >
-            <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>
-              {rtl ? '›' : '‹'}
-            </Text>
+            <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>‹</Text>
           </PressableScale>
 
-          <Text
-            style={{
-              fontFamily: FONT.jakartaSb,
-              fontSize: 15,
-              color: '#F4F7F5',
-            }}
+          {/* Tap the month to jump to any month/year */}
+          <PressableScale
+            testID="month-nav-label"
+            accessibilityRole="button"
+            onPress={() => setPickerOpen(true)}
+            hitSlop={6}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8 }}
           >
-            {monthLabel(monthKey.month, locale)} {monthKey.year}
-          </Text>
+            <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 15, color: '#F4F7F5' }}>
+              {monthLabel(monthKey.month, locale)} {monthKey.year}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color="#A8B2AF" />
+          </PressableScale>
 
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('next_month', locale)}
             onPress={() => setMonthKey((k) => addMonth(k, 1))}
-            style={{
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 999,
-            }}
+            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 }}
           >
-            <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>
-              {rtl ? '‹' : '›'}
-            </Text>
+            <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>›</Text>
           </Pressable>
         </View>
+
+        <MonthPicker
+          visible={pickerOpen}
+          value={monthKey}
+          onSelect={(m) => {
+            setMonthKey(m);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+          locale={locale}
+        />
 
         {/* Expenses | Income toggle (defaults to expenses) */}
         <ViewToggle value={view} onChange={changeView} locale={locale} />

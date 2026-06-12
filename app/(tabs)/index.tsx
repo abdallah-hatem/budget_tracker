@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { MotiView } from 'moti';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../../src/ui/Screen';
 import { Card } from '../../src/ui/Card';
 import { Hero } from '../../src/ui/Hero';
@@ -14,6 +15,7 @@ import { TransactionRow } from '../../src/ui/TransactionRow';
 import { EmptyState } from '../../src/ui/EmptyState';
 import { PressableScale } from '../../src/ui/PressableScale';
 import { ViewToggle } from '../../src/ui/ViewToggle';
+import { MonthPicker } from '../../src/ui/MonthPicker';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
 import { useAccountBalances } from '../../src/features/accounts/useAccountBalances';
 import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
@@ -57,8 +59,9 @@ export default function Dashboard() {
   const rtl = isRTL(locale);
   const dir = rtl ? 'rtl' : 'ltr';
 
-  const { monthKey, summary, transactions, loading, prevMonth, nextMonth, refresh } =
+  const { monthKey, summary, transactions, loading, prevMonth, nextMonth, goToMonth, refresh } =
     useMonthSummary();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const { accounts, total: accountsTotal, refresh: refreshAccounts } = useAccountBalances();
 
   useFocusEffect(
@@ -109,7 +112,10 @@ export default function Dashboard() {
           <View style={{ alignItems: 'center', marginTop: 8, marginBottom: 16 }}>
             <View
               style={{
-                flexDirection: rtl ? 'row-reverse' : 'row',
+                // Force a stable LTR layout: ‹ = previous (left), › = next (right)
+                // in both languages (the RTL row-reverse + glyph swap pointed wrong).
+                direction: 'ltr',
+                flexDirection: 'row',
                 alignItems: 'center',
                 backgroundColor: '#14191A',
                 borderRadius: 999,
@@ -122,52 +128,56 @@ export default function Dashboard() {
                 accessibilityLabel={t('prev_month', locale)}
                 onPress={() => handleMonthStep(prevMonth)}
                 hitSlop={8}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 999,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                style={{ width: 32, height: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text style={{ fontFamily: FONT.sora, fontSize: 18, color: '#A8B2AF' }}>
-                  {rtl ? '›' : '‹'}
-                </Text>
+                <Text style={{ fontFamily: FONT.sora, fontSize: 18, color: '#A8B2AF' }}>‹</Text>
               </PressableScale>
 
-              <Text
-                style={{
-                  fontFamily: uiFontSemiBold(locale),
-                  fontSize: 15,
-                  color: '#F4F7F5',
-                  paddingHorizontal: 12,
-                  minWidth: 132,
-                  textAlign: 'center',
-                }}
+              {/* Tap the month to jump to any month/year */}
+              <PressableScale
+                testID="month-nav-label"
+                accessibilityRole="button"
+                onPress={() => setPickerOpen(true)}
+                hitSlop={6}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8 }}
               >
-                {monthLabel(monthKey.month, locale)} {monthKey.year}
-              </Text>
+                <Text
+                  style={{
+                    fontFamily: uiFontSemiBold(locale),
+                    fontSize: 15,
+                    color: '#F4F7F5',
+                    minWidth: 112,
+                    textAlign: 'center',
+                  }}
+                >
+                  {monthLabel(monthKey.month, locale)} {monthKey.year}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color="#A8B2AF" />
+              </PressableScale>
 
               <PressableScale
                 accessibilityRole="button"
                 accessibilityLabel={t('next_month', locale)}
                 onPress={() => handleMonthStep(nextMonth)}
                 hitSlop={8}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 999,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                style={{ width: 32, height: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text style={{ fontFamily: FONT.sora, fontSize: 18, color: '#A8B2AF' }}>
-                  {rtl ? '‹' : '›'}
-                </Text>
+                <Text style={{ fontFamily: FONT.sora, fontSize: 18, color: '#A8B2AF' }}>›</Text>
               </PressableScale>
             </View>
           </View>
         </Reveal>
+
+        <MonthPicker
+          visible={pickerOpen}
+          value={monthKey}
+          onSelect={(m) => {
+            goToMonth(m);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+          locale={locale}
+        />
 
         {/* ── View toggle: Expenses | Income ─────────────────────────── */}
         <Reveal index={revealIndex++}>

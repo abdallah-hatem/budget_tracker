@@ -13,6 +13,8 @@ export interface UseMonthSummaryResult {
   refresh: () => Promise<void>;
   prevMonth: () => void;
   nextMonth: () => void;
+  /** Jump straight to a specific month. */
+  goToMonth: (m: MonthKey) => void;
 }
 
 /**
@@ -35,6 +37,7 @@ export function useMonthSummary(initialMonth?: MonthKey): UseMonthSummaryResult 
 
   const prevMonth = useCallback(() => setMonthKey((k) => addMonth(k, -1)), []);
   const nextMonth = useCallback(() => setMonthKey((k) => addMonth(k, 1)), []);
+  const goToMonth = useCallback((m: MonthKey) => setMonthKey(m), []);
 
   return {
     monthKey,
@@ -45,5 +48,6 @@ export function useMonthSummary(initialMonth?: MonthKey): UseMonthSummaryResult 
     refresh,
     prevMonth,
     nextMonth,
+    goToMonth,
   };
 }
