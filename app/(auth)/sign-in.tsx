@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,6 +15,8 @@ import { useSession } from '@/src/features/auth/SessionProvider';
 import { AppText } from '@/src/ui';
 import { FONT } from '@/src/lib/font';
 
+const RESEND_COOLDOWN = 60; // seconds
+
 export default function SignIn() {
   const { profile } = useSession();
   const locale = profile?.locale ?? 'en';
@@ -22,14 +24,48 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Set when sign-in fails because the email isn't confirmed yet → offer resend.
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((c) => (c > 0 ? c - 1 : 0)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   async function onSubmit() {
     setError(null);
+    setUnconfirmed(false);
+    setResent(false);
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
-    if (error) setError(error.message || t('auth.genericError', locale));
+    if (error) {
+      const notConfirmed =
+        (error as { code?: string }).code === 'email_not_confirmed' ||
+        /not confirmed|confirm your email/i.test(error.message);
+      if (notConfirmed) {
+        setUnconfirmed(true);
+        setError(t('auth.emailNotConfirmed', locale));
+      } else {
+        setError(error.message || t('auth.genericError', locale));
+      }
+    }
     // On success, onAuthStateChange fires and the root gate redirects to (tabs).
+  }
+
+  async function onResend() {
+    if (cooldown > 0 || !email) return;
+    setResent(false);
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    if (error) {
+      setError(error.message || t('auth.genericError', locale));
+      return;
+    }
+    setResent(true);
+    setCooldown(RESEND_COOLDOWN);
   }
 
   return (
@@ -124,6 +160,20 @@ export default function SignIn() {
             style={{ fontSize: 13, marginBottom: 14, lineHeight: 19 }}
           >
             {error}
+          </AppText>
+        ) : null}
+
+        {/* Resend verification (shown when the email isn't confirmed yet) */}
+        {unconfirmed ? (
+          <TouchableOpacity testID="resend-button" onPress={onResend} disabled={cooldown > 0} style={{ marginBottom: 14 }}>
+            <AppText weight="semibold" className="text-accent" style={{ fontSize: 13 }}>
+              {cooldown > 0 ? `${t('auth.resendIn', locale)} ${cooldown}s` : t('auth.resend', locale)}
+            </AppText>
+          </TouchableOpacity>
+        ) : null}
+        {resent ? (
+          <AppText testID="resent-text" className="text-accent" style={{ fontSize: 13, marginBottom: 14 }}>
+            {t('auth.resent', locale)}
           </AppText>
         ) : null}
 

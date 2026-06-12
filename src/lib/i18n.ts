@@ -22,6 +22,24 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
     ar: 'تحقق من بريدك لتأكيد الحساب.',
   },
   'auth.genericError': { en: 'Something went wrong.', ar: 'حدث خطأ ما.' },
+  // Email verification
+  'auth.verifyTitle': { en: 'Verify your email', ar: 'فعّل بريدك الإلكتروني' },
+  'auth.verifySentTo': {
+    en: 'We sent a verification link to',
+    ar: 'أرسلنا رابط تفعيل إلى',
+  },
+  'auth.verifyHint': {
+    en: 'Tap the link in the email, then come back and sign in. Check your spam folder if you don’t see it.',
+    ar: 'افتح الرابط في الرسالة ثم عُد وسجّل الدخول. تحقق من مجلد الرسائل غير المرغوبة إن لم تجدها.',
+  },
+  'auth.resend': { en: 'Resend email', ar: 'إعادة إرسال الرسالة' },
+  'auth.resendIn': { en: 'Resend in', ar: 'إعادة الإرسال بعد' },
+  'auth.resent': { en: 'Verification email sent again.', ar: 'تم إرسال رسالة التفعيل مرة أخرى.' },
+  'auth.goToSignIn': { en: 'Back to sign in', ar: 'العودة لتسجيل الدخول' },
+  'auth.emailNotConfirmed': {
+    en: 'Please verify your email first — check your inbox for the link.',
+    ar: 'فعّل بريدك أولًا — تحقق من الرسالة في بريدك.',
+  },
 
   // ── Tabs ──────────────────────────────────────────────────────────────────
   'tabs.home': { en: 'Home', ar: 'الرئيسية' },
