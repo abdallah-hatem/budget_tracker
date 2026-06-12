@@ -312,17 +312,18 @@ max_frequency = "5s"
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
 [auth.external.apple]
-enabled = false
-client_id = ""
-# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
-secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
+enabled = true
+# Native iOS flow: the id_token audience is the app bundle id. No secret needed
+# (the secret/Services ID is only for the web OAuth flow).
+client_id = "com.abdallah.masareef"
+secret = ""
 # Overrides the default auth redirectUrl.
 redirect_uri = ""
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
 # or any other third-party OIDC providers.
 url = ""
-# If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
-skip_nonce_check = false
+# We don't send a nonce from the native client, so skip the check locally.
+skip_nonce_check = true
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
