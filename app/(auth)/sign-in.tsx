@@ -12,6 +12,7 @@ import { Link } from 'expo-router';
 import { supabase } from '@/src/lib/supabase';
 import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
+import { SocialAuthButtons } from '@/src/features/auth/SocialAuthButtons';
 import { AppText } from '@/src/ui';
 import { FONT } from '@/src/lib/font';
 
@@ -202,6 +203,9 @@ export default function SignIn() {
             </AppText>
           )}
         </TouchableOpacity>
+
+        {/* Google / Apple sign-in */}
+        <SocialAuthButtons locale={locale} onError={setError} />
 
         {/* Link to sign up */}
         <Link href={"/(auth)/sign-up" as never} style={{ textAlign: 'center' }}>

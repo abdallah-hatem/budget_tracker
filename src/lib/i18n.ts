@@ -40,6 +40,10 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
     en: 'Please verify your email first — check your inbox for the link.',
     ar: 'فعّل بريدك أولًا — تحقق من الرسالة في بريدك.',
   },
+  // Social sign-in
+  'auth.or': { en: 'or', ar: 'أو' },
+  'auth.continueGoogle': { en: 'Continue with Google', ar: 'المتابعة باستخدام Google' },
+  'auth.continueApple': { en: 'Continue with Apple', ar: 'المتابعة باستخدام Apple' },
 
   // ── Tabs ──────────────────────────────────────────────────────────────────
   'tabs.home': { en: 'Home', ar: 'الرئيسية' },

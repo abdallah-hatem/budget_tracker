@@ -16,6 +16,7 @@
     },
     "ios": {
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition to transcribe spoken expenses.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone to capture spoken expenses.",
@@ -84,7 +85,13 @@
       "expo-secure-store",
       "@bacons/apple-targets",
       "@react-native-community/datetimepicker",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.REPLACE_WITH_REVERSED_IOS_CLIENT_ID"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

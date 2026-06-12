@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
 import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
+import { SocialAuthButtons } from '@/src/features/auth/SocialAuthButtons';
 import { AppText } from '@/src/ui';
 import { FONT } from '@/src/lib/font';
 
@@ -249,6 +250,9 @@ export default function SignUp() {
             </AppText>
           )}
         </TouchableOpacity>
+
+        {/* Google / Apple sign-in */}
+        <SocialAuthButtons locale={locale} onError={setError} />
 
         {/* Link to sign in */}
         <Link href={"/(auth)/sign-in" as never} style={{ textAlign: 'center' }}>
