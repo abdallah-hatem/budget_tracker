@@ -78,9 +78,13 @@ function googleModule(): any | null {
   }
 }
 
-/** Google sign-in needs the native module AND a configured web client id. */
+/** Google sign-in needs a configured web client id AND the native module.
+ *  Check the env FIRST so we never load the native module (and risk a hard
+ *  TurboModule "RNGoogleSignin not found" crash on a build that doesn't yet
+ *  bundle it) until Google is actually configured. */
 export function googleAuthAvailable(): boolean {
-  return googleModule() !== null && GOOGLE_WEB_CLIENT_ID.length > 0;
+  if (!GOOGLE_WEB_CLIENT_ID) return false;
+  return googleModule() !== null;
 }
 
 export async function signInWithGoogle(): Promise<SocialResult> {
