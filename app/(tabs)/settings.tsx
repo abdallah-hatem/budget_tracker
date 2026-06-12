@@ -12,7 +12,7 @@ import {
   deleteAccount,
 } from '@/src/features/accounts/api';
 import type { Locale, AccountBalance } from '@/src/types';
-import { Screen, Card, AppText, SectionLabel, Pill, Money } from '@/src/ui';
+import { Screen, Card, CollapsibleCard, AppText, SectionLabel, Pill, Money } from '@/src/ui';
 import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
 import { FONT } from '@/src/lib/font';
 
@@ -175,9 +175,8 @@ export default function Settings() {
       </Card>
 
       {/* ── ACCOUNTS ───────────────────────────────────────────────────────── */}
-      <Card className="mb-4">
-        <SectionLabel>{t('settings.accounts', locale)}</SectionLabel>
-        <View style={{ marginTop: 12, gap: 14 }}>
+      <CollapsibleCard title={t('settings.accounts', locale)} rtl={rtl} testID="section-accounts">
+        <View style={{ gap: 14 }}>
           {accounts.map((a) => (
             <View key={a.id} testID={`account-row-${a.id}`} style={{ gap: 8 }}>
               <View
@@ -277,12 +276,11 @@ export default function Settings() {
             <AppText weight="semibold" className="text-accent" style={{ fontSize: 14 }}>{t('accounts.add', locale)}</AppText>
           </TouchableOpacity>
         )}
-      </Card>
+      </CollapsibleCard>
 
       {/* ── LANGUAGE ───────────────────────────────────────────────────────── */}
-      <Card className="mb-4">
-        <SectionLabel>{t('settings.language', locale)}</SectionLabel>
-        <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10, marginTop: 12 }}>
+      <CollapsibleCard title={t('settings.language', locale)} rtl={rtl} testID="section-language">
+        <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10 }}>
           <Pill
             testID="locale-en"
             label={t('settings.langEnglish', locale)}
@@ -296,11 +294,10 @@ export default function Settings() {
             onPress={() => !busy && setLocale('ar')}
           />
         </View>
-      </Card>
+      </CollapsibleCard>
 
       {/* ── SMS AUTO-CAPTURE ───────────────────────────────────────────────── */}
-      <Card className="mb-4">
-        <SectionLabel>{t('sms_capture', locale)}</SectionLabel>
+      <CollapsibleCard title={t('sms_capture', locale)} rtl={rtl} testID="section-sms">
         <AppText
           className="text-ink2"
           style={{ fontSize: 14, marginTop: 10, marginBottom: 12, lineHeight: 20, textAlign: rtl ? 'right' : 'left' }}
@@ -335,10 +332,10 @@ export default function Settings() {
           ))}
         </View>
 
-      </Card>
+      </CollapsibleCard>
 
       {/* ── SMS rules (keyword → category/note) ─────────────────────────────── */}
-      <SmsRulesSection locale={locale} />
+      <SmsRulesSection locale={locale} collapsible />
 
       {/* ── Sign out ───────────────────────────────────────────────────────── */}
       <TouchableOpacity

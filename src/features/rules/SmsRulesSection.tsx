@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Keyboard } from 'react-native';
-import { Card, SectionLabel, CategoryAvatar, PressableScale } from '../../ui';
+import { Card, CollapsibleCard, SectionLabel, CategoryAvatar, PressableScale } from '../../ui';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
 import { categoryLabel } from '../transactions/display';
 import { t, isRTL } from '../../lib/i18n';
@@ -35,7 +35,13 @@ function inputStyle(rtl: boolean) {
  * incoming bank SMS contains a keyword, ingest-sms forces the rule's category
  * (and note) onto the pending transaction.
  */
-export function SmsRulesSection({ locale }: { locale: Locale }) {
+export function SmsRulesSection({
+  locale,
+  collapsible = false,
+}: {
+  locale: Locale;
+  collapsible?: boolean;
+}) {
   const rtl = isRTL(locale);
   const [rules, setRules] = useState<SmsRule[]>([]);
   const [keyword, setKeyword] = useState('');
@@ -89,15 +95,13 @@ export function SmsRulesSection({ locale }: { locale: Locale }) {
     textAlign: (rtl ? 'right' : 'left') as 'right' | 'left',
   };
 
-  return (
-    <Card className="mb-4">
-      <SectionLabel>{t('rules.title', locale)}</SectionLabel>
+  const body = (
+    <>
       <Text
         style={{
           fontFamily: rtl ? FONT.readex : FONT.jakarta,
           fontSize: 14,
           color: INK2,
-          marginTop: 8,
           marginBottom: 14,
           lineHeight: 20,
           textAlign: rtl ? 'right' : 'left',
@@ -252,6 +256,17 @@ export function SmsRulesSection({ locale }: { locale: Locale }) {
           </Text>
         </PressableScale>
       </View>
+    </>
+  );
+
+  return collapsible ? (
+    <CollapsibleCard title={t('rules.title', locale)} rtl={rtl} testID="section-rules">
+      {body}
+    </CollapsibleCard>
+  ) : (
+    <Card className="mb-4">
+      <SectionLabel>{t('rules.title', locale)}</SectionLabel>
+      {body}
     </Card>
   );
 }

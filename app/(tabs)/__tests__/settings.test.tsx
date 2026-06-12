@@ -112,6 +112,7 @@ describe('Settings screen — existing settings', () => {
 
   it('renders locale toggles', async () => {
     render(<Settings />);
+    fireEvent.press(screen.getByTestId('section-language')); // expand the section
     expect(screen.getByTestId('locale-en')).toBeTruthy();
     expect(screen.getByTestId('locale-ar')).toBeTruthy();
   });
@@ -205,12 +206,14 @@ describe('Settings screen — sign out confirmation', () => {
 describe('Settings screen — Accounts', () => {
   it('lists the user accounts', async () => {
     render(<Settings />);
+    fireEvent.press(screen.getByTestId('section-accounts')); // expand the section
     expect(await screen.findByTestId('account-row-a')).toBeTruthy();
     expect(screen.getByText('Main')).toBeTruthy();
   });
 
   it('creates a new account from the inline form', async () => {
     render(<Settings />);
+    fireEvent.press(screen.getByTestId('section-accounts')); // expand the section
     await screen.findByTestId('account-row-a');
 
     fireEvent.press(screen.getByTestId('accounts-add'));

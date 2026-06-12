@@ -9,6 +9,8 @@ export type { ScreenProps } from './Screen';
 export { Card } from './Card';
 export type { CardProps } from './Card';
 
+export { CollapsibleCard } from './CollapsibleCard';
+
 export { AppText } from './AppText';
 export type { AppTextProps, TextWeight } from './AppText';
 
