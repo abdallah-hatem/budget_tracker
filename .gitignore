@@ -43,3 +43,6 @@ coverage/
 # apple-targets — regenerated on every prebuild/EAS build
 targets/*/generated.entitlements
 targets/*/Info.plist
+
+# Local prod credentials — NEVER commit
+supabase_credentials.md
