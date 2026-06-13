@@ -169,7 +169,7 @@ it('cancel() aborts and delivers NOTHING, even if the session ends after', () =>
   expect(onFinal).not.toHaveBeenCalled();
 });
 
-it('auto-stops on trailing silence, and repeated heartbeat partials do not extend it', async () => {
+it('NEVER auto-stops on silence — records until stop() is called', async () => {
   const { result } = renderHook(() => useSpeechRecognition());
   await act(async () => {
     await result.current.start('en-US');
@@ -177,36 +177,17 @@ it('auto-stops on trailing silence, and repeated heartbeat partials do not exten
 
   jest.useFakeTimers();
   try {
-    act(() => __emit('start')); // arms the initial grace period
-    act(() => __emit('result', { results: [{ transcript: 'coffee 50' }] })); // new words → arm 2000ms
-
-    act(() => jest.advanceTimersByTime(1500));
-    // Same text again (an iOS heartbeat) must NOT re-arm the timer.
+    act(() => __emit('start'));
     act(() => __emit('result', { results: [{ transcript: 'coffee 50' }] }));
+    act(() => __emit('speechend')); // a long pause...
+
+    // ...and a lot of time passes with no new words. The session must stay alive.
+    act(() => jest.advanceTimersByTime(60_000));
     expect(mod.stop).not.toHaveBeenCalled();
+    expect(result.current.isListening).toBe(true);
 
-    act(() => jest.advanceTimersByTime(600)); // 2100ms since the new words → fires
-    expect(mod.stop).toHaveBeenCalledTimes(1);
-  } finally {
-    jest.useRealTimers();
-  }
-});
-
-it('keeps listening while NEW words keep arriving', async () => {
-  const { result } = renderHook(() => useSpeechRecognition());
-  await act(async () => {
-    await result.current.start('en-US');
-  });
-
-  jest.useFakeTimers();
-  try {
-    act(() => __emit('result', { results: [{ transcript: 'coffee' }] }));
-    act(() => jest.advanceTimersByTime(1500));
-    act(() => __emit('result', { results: [{ transcript: 'coffee fifty' }] })); // grew → re-arm
-    act(() => jest.advanceTimersByTime(1500));
-    expect(mod.stop).not.toHaveBeenCalled(); // 1500 < 2000 since the last new words
-
-    act(() => jest.advanceTimersByTime(600));
+    // Only an explicit stop() ends it.
+    act(() => result.current.stop());
     expect(mod.stop).toHaveBeenCalledTimes(1);
   } finally {
     jest.useRealTimers();

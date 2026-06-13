@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type * as ESR from 'expo-speech-recognition';
 
 // expo-speech-recognition is a NATIVE module: it only exists in a development
@@ -31,13 +31,6 @@ const subscribe = (nativeEvent ?? (() => {})) as (
 // Whether voice input is usable in this runtime (true only in a dev/standalone build).
 const SUPPORTED = !!NativeModule;
 
-// Auto-stop after this much TRAILING silence. The session stays alive through
-// short pauses (so listing several expenses doesn't get cut off mid-flow) and
-// ends once the user has clearly finished. INITIAL is the grace period before
-// the first word. Tune here.
-const SILENCE_MS = 2000;
-const INITIAL_SILENCE_MS = 6000;
-
 export interface SpeechRecognition {
   transcript: string;
   isListening: boolean;
@@ -66,28 +59,13 @@ export function useSpeechRecognition(
   // Set by cancel(): makes the in-flight session deliver NOTHING (discard).
   const cancelledRef = useRef(false);
 
-  // Trailing-silence auto-stop: every bit of speech activity re-arms the timer,
-  // so only a real pause (no activity for SILENCE_MS) ends the session.
-  const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clearSilence = useCallback(() => {
-    if (silenceTimer.current) {
-      clearTimeout(silenceTimer.current);
-      silenceTimer.current = null;
-    }
-  }, []);
-  const armSilence = useCallback(
-    (ms: number) => {
-      clearSilence();
-      silenceTimer.current = setTimeout(() => NativeModule?.stop(), ms);
-    },
-    [clearSilence],
-  );
-  useEffect(() => clearSilence, [clearSilence]); // clear on unmount
+  // NOTE: there is intentionally NO auto-stop. The session records until the user
+  // taps Stop (or Cancel). The native session runs with continuous:true, so it
+  // keeps going through pauses; only stop()/cancel() (or a platform error) ends it.
 
   subscribe('start', () => {
     setIsListening(true);
     setError(null);
-    armSilence(INITIAL_SILENCE_MS);
   });
 
   // The recorded audio file path arrives on `audioend` (recordingOptions.persist).
@@ -97,7 +75,6 @@ export function useSpeechRecognition(
   });
 
   subscribe('end', () => {
-    clearSilence();
     setIsListening(false);
     // Cancelled: discard the session and deliver nothing.
     if (cancelledRef.current) {
@@ -120,22 +97,11 @@ export function useSpeechRecognition(
     if (cancelledRef.current) return; // ignore late results after a cancel
     const next = event?.results?.[0]?.transcript;
     if (typeof next !== 'string') return;
-    // Re-arm ONLY on genuinely new words. iOS can keep emitting the same partial
-    // as a heartbeat during silence; re-arming on those would mean the trailing-
-    // silence timer never fires and the session listens forever (the user then
-    // has to tap to stop). Treating only growth as activity lets it auto-stop.
-    const grew = next.trim() !== '' && next !== transcriptRef.current;
     transcriptRef.current = next;
     setTranscript(next);
-    if (grew) armSilence(SILENCE_MS);
   });
 
-  // Coarser activity signals in case partial results are sparse.
-  subscribe('speechstart', () => armSilence(SILENCE_MS));
-  subscribe('speechend', () => armSilence(SILENCE_MS));
-
   subscribe('error', (event) => {
-    clearSilence();
     setError(event?.message ?? event?.error ?? 'Speech recognition error');
     setIsListening(false);
   });
@@ -170,14 +136,11 @@ export function useSpeechRecognition(
     }
 
     const baseOptions = {
-      // Stream partial results as a "still speaking" heartbeat for the silence
-      // timer. They are NOT shown — the capture screen never renders `transcript`
-      // — so the capture still feels instant (no live text on screen).
+      // Stream partial results (not shown on screen) so the transcript ref stays
+      // current while recording.
       interimResults: true,
-      // Keep the native session alive through pauses; OUR silence timer
-      // (SILENCE_MS) decides when the user has actually finished. This avoids the
-      // platform cutting off at the first short pause (continuous:false) AND the
-      // never-stops problem (continuous:true with no timer).
+      // Keep the native session alive through pauses — it records until the user
+      // taps Stop. No silence timer; only stop()/cancel() ends it.
       continuous: true,
       lang,
       recordingOptions: { persist: true }, // keep the audio for Whisper (any language)
@@ -200,16 +163,14 @@ export function useSpeechRecognition(
   }, []);
 
   const stop = useCallback(() => {
-    clearSilence();
     NativeModule?.stop();
-  }, [clearSilence]);
+  }, []);
 
   // Abort + discard: mark cancelled (so 'end'/'audioend' deliver nothing), drop
   // any captured text/audio, and abort the native session (falls back to stop()
   // if the platform has no abort — the cancel flag still prevents delivery).
   const cancel = useCallback(() => {
     cancelledRef.current = true;
-    clearSilence();
     transcriptRef.current = '';
     audioUriRef.current = null;
     setTranscript('');
@@ -217,7 +178,7 @@ export function useSpeechRecognition(
     const mod = NativeModule as null | { stop: () => void; abort?: () => void };
     if (mod?.abort) mod.abort();
     else mod?.stop();
-  }, [clearSilence]);
+  }, []);
 
   return { transcript, isListening, supported: SUPPORTED, error, start, stop, cancel };
 }
