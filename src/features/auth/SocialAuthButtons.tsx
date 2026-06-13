@@ -1,17 +1,9 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View } from 'react-native';
 import { AppText } from '../../ui';
 import { t } from '../../lib/i18n';
-import { FONT } from '../../lib/font';
 import type { Locale } from '../../types';
-import {
-  signInWithApple,
-  signInWithGoogle,
-  appleAuthAvailable,
-  googleAuthAvailable,
-  type SocialResult,
-} from './socialAuth';
+import { signInWithApple, appleAuthAvailable, type SocialResult } from './socialAuth';
 
 // Native Apple button (Apple requires their official button style on iOS).
 const Apple = (() => {
@@ -35,12 +27,11 @@ export function SocialAuthButtons({
   locale: Locale;
   onError?: (message: string) => void;
 }) {
-  const [busy, setBusy] = useState<null | 'apple' | 'google'>(null);
+  const [busy, setBusy] = useState<null | 'apple'>(null);
   const showApple = appleAuthAvailable() && Apple;
-  const showGoogle = googleAuthAvailable();
-  if (!showApple && !showGoogle) return null;
+  if (!showApple) return null;
 
-  const handle = (provider: 'apple' | 'google', fn: () => Promise<SocialResult>) => async () => {
+  const handle = (provider: 'apple', fn: () => Promise<SocialResult>) => async () => {
     if (busy) return;
     setBusy(provider);
     const res = await fn();
@@ -67,35 +58,6 @@ export function SocialAuthButtons({
           style={{ height: 50, width: '100%' }}
           onPress={handle('apple', signInWithApple)}
         />
-      ) : null}
-
-      {showGoogle ? (
-        <TouchableOpacity
-          testID="google-signin"
-          onPress={handle('google', signInWithGoogle)}
-          disabled={!!busy}
-          style={{
-            height: 50,
-            borderRadius: 16,
-            backgroundColor: '#FFFFFF',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            opacity: busy ? 0.7 : 1,
-          }}
-        >
-          {busy === 'google' ? (
-            <ActivityIndicator color="#1F1F1F" />
-          ) : (
-            <>
-              <Ionicons name="logo-google" size={19} color="#1F1F1F" />
-              <AppText weight="semibold" style={{ fontSize: 15, color: '#1F1F1F' }}>
-                {t('auth.continueGoogle', locale)}
-              </AppText>
-            </>
-          )}
-        </TouchableOpacity>
       ) : null}
     </View>
   );

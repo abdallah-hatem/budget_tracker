@@ -85,13 +85,7 @@
       "expo-secure-store",
       "@bacons/apple-targets",
       "@react-native-community/datetimepicker",
-      "@sentry/react-native",
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.REPLACE_WITH_REVERSED_IOS_CLIENT_ID"
-        }
-      ]
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,
