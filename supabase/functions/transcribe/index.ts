@@ -152,8 +152,12 @@ async function groqTranscribe(
   fd.append("model", WHISPER_MODEL);
   fd.append("response_format", "json");
   fd.append("temperature", "0");
+  // PIN the language to the user's locale instead of letting Whisper auto-detect.
+  // Auto-detection was the main source of inconsistency for Egyptian Arabic
+  // (Whisper would sometimes lock onto MSA / mis-detect run to run). "ar" covers
+  // Masry; Whisper still handles loan-words (padel, brands) inside it.
+  fd.append("language", locale === "ar" ? "ar" : "en");
   // Bias vocabulary/numbers toward the user's language (esp. Egyptian Masry).
-  // No `language` param on purpose -> Whisper still auto-detects the spoken one.
   fd.append("prompt", WHISPER_PROMPTS[locale]);
 
   const resp = await fetch(GROQ_WHISPER_URL, {

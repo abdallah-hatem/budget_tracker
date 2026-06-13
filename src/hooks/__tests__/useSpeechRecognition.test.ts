@@ -29,7 +29,7 @@ beforeEach(() => {
   mod.getSupportedLocales.mockResolvedValue({ locales: [], installedLocales: [] });
 });
 
-it('starts cloud recognition when on-device is unavailable', async () => {
+it('always uses CLOUD recognition (audio persists → routes to Whisper)', async () => {
   const { result } = renderHook(() => useSpeechRecognition());
 
   await act(async () => {
@@ -42,7 +42,7 @@ it('starts cloud recognition when on-device is unavailable', async () => {
   );
 });
 
-it('prefers on-device when the locale is installed', async () => {
+it('uses cloud recognition EVEN when on-device is available (no Apple-transcript fallback)', async () => {
   mod.supportsOnDeviceRecognition.mockReturnValue(true);
   mod.getSupportedLocales.mockResolvedValue({
     locales: ['ar-EG'],
@@ -54,8 +54,11 @@ it('prefers on-device when the locale is installed', async () => {
     await result.current.start('ar-EG');
   });
 
+  // On-device would persist no audio on some iOS versions → bad Masry fallback.
+  // We force cloud so the recording always exists and Whisper is the source of truth.
+  expect(mod.start).toHaveBeenCalledTimes(1);
   expect(mod.start).toHaveBeenCalledWith(
-    expect.objectContaining({ lang: 'ar-EG', requiresOnDeviceRecognition: true }),
+    expect.objectContaining({ lang: 'ar-EG', requiresOnDeviceRecognition: false }),
   );
 });
 
@@ -119,30 +122,6 @@ it('captures errors and stops listening', async () => {
 
   expect(result.current.error).toBe('No speech detected');
   expect(result.current.isListening).toBe(false);
-});
-
-it('falls back to cloud when on-device start throws', async () => {
-  mod.supportsOnDeviceRecognition.mockReturnValue(true);
-  mod.getSupportedLocales.mockResolvedValue({
-    locales: ['ar-EG'],
-    installedLocales: ['ar-EG'],
-  });
-  mod.start
-    .mockImplementationOnce(() => {
-      throw new Error('on-device unavailable');
-    })
-    .mockImplementationOnce(() => undefined);
-
-  const { result } = renderHook(() => useSpeechRecognition());
-
-  await act(async () => {
-    await result.current.start('ar-EG');
-  });
-
-  expect(mod.start).toHaveBeenCalledTimes(2);
-  expect(mod.start).toHaveBeenLastCalledWith(
-    expect.objectContaining({ requiresOnDeviceRecognition: false }),
-  );
 });
 
 it('stop() calls the native stop', async () => {

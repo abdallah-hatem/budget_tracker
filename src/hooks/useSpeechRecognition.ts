@@ -125,16 +125,6 @@ export function useSpeechRecognition(
       return;
     }
 
-    let preferOnDevice = false;
-    try {
-      if (mod.supportsOnDeviceRecognition()) {
-        const { installedLocales } = await mod.getSupportedLocales({});
-        preferOnDevice = installedLocales.includes(lang);
-      }
-    } catch {
-      preferOnDevice = false;
-    }
-
     const baseOptions = {
       // Stream partial results (not shown on screen) so the transcript ref stays
       // current while recording.
@@ -146,15 +136,13 @@ export function useSpeechRecognition(
       recordingOptions: { persist: true }, // keep the audio for Whisper (any language)
     };
 
-    if (preferOnDevice) {
-      try {
-        mod.start({ ...baseOptions, requiresOnDeviceRecognition: true });
-        return;
-      } catch {
-        // fall through to cloud
-      }
-    }
-
+    // ALWAYS use cloud recognition (requiresOnDeviceRecognition: false). We don't
+    // use the native transcript at all — Whisper (on the persisted audio) is the
+    // source of truth. Cloud reliably persists the audio file, so capture always
+    // routes to Whisper. We previously preferred the ON-DEVICE recognizer when the
+    // locale was installed, but on-device sometimes didn't emit a recording → the
+    // app fell back to Apple's (poor, esp. Masry) on-device transcript. Forcing
+    // cloud removes that inconsistency. (Network is needed either way for Whisper.)
     try {
       mod.start({ ...baseOptions, requiresOnDeviceRecognition: false });
     } catch (e) {
