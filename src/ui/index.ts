@@ -29,6 +29,8 @@ export type { SectionLabelProps } from './SectionLabel';
 export { Pill } from './Pill';
 export type { PillProps } from './Pill';
 
+export { LanguageToggle } from './LanguageToggle';
+
 export { PrimaryButton } from './PrimaryButton';
 export type { PrimaryButtonProps } from './PrimaryButton';
 

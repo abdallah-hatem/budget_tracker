@@ -10,17 +10,17 @@ import {
 } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '@/src/lib/supabase';
-import { t } from '@/src/lib/i18n';
-import { useSession } from '@/src/features/auth/SessionProvider';
+import { t, isRTL } from '@/src/lib/i18n';
+import { useAuthLocale } from '@/src/hooks/useAuthLocale';
 import { SocialAuthButtons } from '@/src/features/auth/SocialAuthButtons';
-import { AppText } from '@/src/ui';
+import { AppText, LanguageToggle } from '@/src/ui';
 import { FONT } from '@/src/lib/font';
 
 const RESEND_COOLDOWN = 60; // seconds
 
 export default function SignIn() {
-  const { profile } = useSession();
-  const locale = profile?.locale ?? 'en';
+  const [locale, setLocale] = useAuthLocale();
+  const rtl = isRTL(locale);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +85,11 @@ export default function SignIn() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
+        {/* Language toggle (no profile yet → device-level auth locale) */}
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <LanguageToggle locale={locale} onChange={setLocale} />
+        </View>
+
         {/* Wordmark */}
         <View style={{ alignItems: 'center', marginBottom: 48 }}>
           <AppText
@@ -107,7 +112,7 @@ export default function SignIn() {
         </View>
 
         {/* Email input */}
-        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6 }}>
+        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6, textAlign: rtl ? 'right' : 'left' }}>
           {t('auth.email', locale)}
         </AppText>
         <TextInput
@@ -131,7 +136,7 @@ export default function SignIn() {
         />
 
         {/* Password input */}
-        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6 }}>
+        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6, textAlign: rtl ? 'right' : 'left' }}>
           {t('auth.password', locale)}
         </AppText>
         <TextInput

@@ -11,17 +11,17 @@ import {
 import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
-import { t } from '@/src/lib/i18n';
-import { useSession } from '@/src/features/auth/SessionProvider';
+import { t, isRTL } from '@/src/lib/i18n';
+import { useAuthLocale } from '@/src/hooks/useAuthLocale';
 import { SocialAuthButtons } from '@/src/features/auth/SocialAuthButtons';
-import { AppText } from '@/src/ui';
+import { AppText, LanguageToggle } from '@/src/ui';
 import { FONT } from '@/src/lib/font';
 
 const RESEND_COOLDOWN = 60; // seconds
 
 export default function SignUp() {
-  const { profile } = useSession();
-  const locale = profile?.locale ?? 'en';
+  const [locale, setLocale] = useAuthLocale();
+  const rtl = isRTL(locale);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +42,13 @@ export default function SignUp() {
   async function onSubmit() {
     setError(null);
     setBusy(true);
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // Seed the new profile's language with the chosen auth locale (the
+    // handle_new_user trigger reads raw_user_meta_data->>'locale').
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { locale } },
+    });
     setBusy(false);
     if (error) {
       setError(error.message || t('auth.genericError', locale));
@@ -146,6 +152,11 @@ export default function SignUp() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
+        {/* Language toggle (no profile yet → device-level auth locale) */}
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <LanguageToggle locale={locale} onChange={setLocale} />
+        </View>
+
         {/* Wordmark */}
         <View style={{ alignItems: 'center', marginBottom: 48 }}>
           <AppText
@@ -168,7 +179,7 @@ export default function SignUp() {
         </View>
 
         {/* Email input */}
-        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6 }}>
+        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6, textAlign: rtl ? 'right' : 'left' }}>
           {t('auth.email', locale)}
         </AppText>
         <TextInput
@@ -192,7 +203,7 @@ export default function SignUp() {
         />
 
         {/* Password input */}
-        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6 }}>
+        <AppText weight="medium" className="text-ink2" style={{ fontSize: 13, marginBottom: 6, textAlign: rtl ? 'right' : 'left' }}>
           {t('auth.password', locale)}
         </AppText>
         <TextInput
