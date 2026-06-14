@@ -2,7 +2,7 @@
   "expo": {
     "name": "Masareef",
     "slug": "tmp-app",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "masareef",
@@ -12,7 +12,10 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/71a16c6f-6abc-4172-b12a-9958a6d05f44"
+      "url": "https://u.expo.dev/71a16c6f-6abc-4172-b12a-9958a6d05f44",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
     "ios": {
       "supportsTablet": false,
