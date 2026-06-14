@@ -27,6 +27,22 @@
   `supabase/functions/_shared/categories.ts` in sync (the seedParity / shared
   tests enforce this), then redeploy `categorize`/`transcribe`.
 
+## Branch policy — keep `main` OTA-shippable
+
+- **`main` must stay OTA-shippable: only JS / OTA-able features merge to it.** Any
+  feature that needs a NATIVE rebuild (a new native module, a config-plugin /
+  app.json native change, a new entitlement, etc.) goes on its OWN branch
+  (`feat/<name>`) and is NOT merged to `main` until we actually cut a build.
+- WHY: we ship features to live users via FREE OTA off `main`. If `main` carries
+  native code that isn't in the currently-shipped binary, OTA-ing `main` pushes JS
+  that references missing native modules → broken/crashing app for live users.
+- So: native/build features (e.g. quick-actions, RevenueCat, Google sign-in) live
+  on separate branches; merge them only as part of preparing a native build, then
+  bump the version. JS-only fixes (logic, UI, strings, prompts) go straight to
+  `main` and OTA out.
+- Quick test before merging to `main`: "could this be served as an OTA to the
+  current production build without a rebuild?" If no → separate branch.
+
 ## OTA updates (EAS Update) — gotchas
 
 - `eas update` inlines `EXPO_PUBLIC_*` from the LOCAL `.env`, which points at the
