@@ -4,6 +4,7 @@ import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { PendingProvider, usePendingContext } from '@/src/features/transactions/PendingProvider';
 import { useWidgetSync } from '@/src/features/widget/sync';
+import { useHomeQuickActions } from '@/src/features/capture/useHomeQuickActions';
 import { FloatingTabBar } from '@/src/ui/FloatingTabBar';
 
 function TabsInner() {
@@ -12,6 +13,8 @@ function TabsInner() {
   const { count: pendingCount } = usePendingContext();
   // Keep the iOS home-screen widget in sync with the current month.
   useWidgetSync();
+  // Home-screen icon long-press: Voice / Type / Manual / Transactions.
+  useHomeQuickActions(locale);
 
   return (
     <Tabs

@@ -45,6 +45,12 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'auth.continueGoogle': { en: 'Continue with Google', ar: 'المتابعة باستخدام Google' },
   'auth.continueApple': { en: 'Continue with Apple', ar: 'المتابعة باستخدام Apple' },
 
+  // ── Home-screen quick actions (long-press app icon) ───────────────────────
+  'qa.voice': { en: 'Voice', ar: 'بالصوت' },
+  'qa.type': { en: 'Type', ar: 'بالكتابة' },
+  'qa.manual': { en: 'Manual add', ar: 'إضافة يدوية' },
+  'qa.list': { en: 'Transactions', ar: 'المعاملات' },
+
   // ── Tabs ──────────────────────────────────────────────────────────────────
   'tabs.home': { en: 'Home', ar: 'الرئيسية' },
   'tabs.capture': { en: 'Add', ar: 'إضافة' },
