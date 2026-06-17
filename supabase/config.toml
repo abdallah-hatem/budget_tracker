@@ -417,3 +417,6 @@ verify_jwt = true
 
 [functions.ingest-sms]
 verify_jwt = false
+
+[functions.gold-price]
+verify_jwt = true

@@ -15,6 +15,7 @@ import type { Locale, AccountBalance } from '@/src/types';
 import { Screen, Card, CollapsibleCard, AppText, SectionLabel, Pill, Money } from '@/src/ui';
 import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
 import { MonthStartSection } from '@/src/features/dashboard/MonthStartSection';
+import { GoldSection } from '@/src/features/gold/GoldSection';
 import { FONT } from '@/src/lib/font';
 
 export default function Settings() {
@@ -296,6 +297,9 @@ export default function Settings() {
           />
         </View>
       </CollapsibleCard>
+
+      {/* ── GOLD ───────────────────────────────────────────────────────────── */}
+      <GoldSection locale={locale} accountsTotal={accounts.reduce((s, a) => s + a.balance, 0)} />
 
       {/* ── START OF MONTH ─────────────────────────────────────────────────── */}
       <MonthStartSection locale={locale} />
