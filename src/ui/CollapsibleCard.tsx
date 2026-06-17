@@ -39,11 +39,18 @@ export function CollapsibleCard({
         testID={testID}
         accessibilityRole="button"
         onPress={toggle}
-        style={{
+        // The header text row is thin; without this, taps in the Card's 16px
+        // padding (which looks like part of the header) miss the touch target.
+        // hitSlop extends the tappable area to cover the whole header band, and
+        // a little vertical padding makes it taller. Pressed-opacity gives feedback.
+        hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+        style={({ pressed }) => ({
           flexDirection: rtl ? 'row-reverse' : 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-        }}
+          paddingVertical: 4,
+          opacity: pressed ? 0.6 : 1,
+        })}
       >
         <Text
           style={{
