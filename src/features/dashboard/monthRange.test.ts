@@ -33,3 +33,35 @@ describe('currentMonthKey', () => {
     expect(key).toEqual({ year: 2026, month: 5 });
   });
 });
+
+describe('custom start-of-month day', () => {
+  it('monthRange runs startDay → startDay of next month', () => {
+    // Financial June with startDay=25 → [Jun 25, Jul 25)
+    expect(monthRange({ year: 2026, month: 5 }, 25)).toEqual({
+      from: '2026-06-25T00:00:00.000Z',
+      to: '2026-07-25T00:00:00.000Z',
+    });
+  });
+
+  it('monthRange clamps startDay to the last day for short months (31 → Feb 28/29)', () => {
+    // Financial Feb 2026 with startDay=31 → [Feb 28, Mar 31)
+    expect(monthRange({ year: 2026, month: 1 }, 31)).toEqual({
+      from: '2026-02-28T00:00:00.000Z',
+      to: '2026-03-31T00:00:00.000Z',
+    });
+  });
+
+  it('currentMonthKey: a date BEFORE the start day belongs to the previous month', () => {
+    // startDay=25, Jun 20 → still in May's financial month
+    expect(currentMonthKey(new Date('2026-06-20T09:00:00.000Z'), 25)).toEqual({ year: 2026, month: 4 });
+  });
+
+  it('currentMonthKey: a date ON/AFTER the start day belongs to the current month', () => {
+    // startDay=25, Jun 26 → June's financial month
+    expect(currentMonthKey(new Date('2026-06-26T09:00:00.000Z'), 25)).toEqual({ year: 2026, month: 5 });
+  });
+
+  it('currentMonthKey: start-of-year rollover (Jan 10, startDay=25 → previous Dec)', () => {
+    expect(currentMonthKey(new Date('2026-01-10T09:00:00.000Z'), 25)).toEqual({ year: 2025, month: 11 });
+  });
+});

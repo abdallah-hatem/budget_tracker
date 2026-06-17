@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { PendingProvider, usePendingContext } from '@/src/features/transactions/PendingProvider';
+import { MonthStartProvider } from '@/src/features/dashboard/MonthStartProvider';
 import { useWidgetSync } from '@/src/features/widget/sync';
 import { usePendingBadge } from '@/src/features/notifications/usePendingBadge';
 import { FloatingTabBar } from '@/src/ui/FloatingTabBar';
@@ -69,8 +70,10 @@ function TabsInner() {
 
 export default function TabsLayout() {
   return (
-    <PendingProvider>
-      <TabsInner />
-    </PendingProvider>
+    <MonthStartProvider>
+      <PendingProvider>
+        <TabsInner />
+      </PendingProvider>
+    </MonthStartProvider>
   );
 }

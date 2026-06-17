@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { CATEGORIES } from '../../src/lib/categories';
 import { categoryStyle } from '../../src/lib/categoryStyle';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/features/dashboard/monthRange';
+import { useMonthStart } from '../../src/features/dashboard/MonthStartProvider';
 import { t, isRTL } from '../../src/lib/i18n';
 import { Screen, Pill, EmptyState, TransactionRow, Money, PressableScale, ViewToggle } from '../../src/ui';
 import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
@@ -77,7 +78,12 @@ export default function TransactionsScreen() {
   const dir = rtl ? 'rtl' : 'ltr';
   const insets = useSafeAreaInsets();
 
-  const [monthKey, setMonthKey] = useState<MonthKey>(() => currentMonthKey());
+  const { startDay } = useMonthStart();
+  const [monthKey, setMonthKey] = useState<MonthKey>(() => currentMonthKey(new Date(), startDay));
+  const userNavigatedMonth = useRef(false);
+  useEffect(() => {
+    if (!userNavigatedMonth.current) setMonthKey(currentMonthKey(new Date(), startDay));
+  }, [startDay]);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [view, setView] = useState<TxnType>('expense');
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -90,7 +96,7 @@ export default function TransactionsScreen() {
   }, []);
 
   const filter = useMemo(() => {
-    const { from, to } = monthRange(monthKey);
+    const { from, to } = monthRange(monthKey, startDay);
     return {
       from,
       to,
@@ -98,7 +104,7 @@ export default function TransactionsScreen() {
       type: view,
       ...(categoryFilter ? { category_slug: categoryFilter } : {}),
     };
-  }, [monthKey, categoryFilter, view]);
+  }, [monthKey, categoryFilter, view, startDay]);
 
   const { data, loading, refresh } = useTransactions(filter);
 
@@ -149,7 +155,7 @@ export default function TransactionsScreen() {
           <PressableScale
             accessibilityRole="button"
             accessibilityLabel={t('prev_month', locale)}
-            onPress={() => setMonthKey((k) => addMonth(k, -1))}
+            onPress={() => { userNavigatedMonth.current = true; setMonthKey((k) => addMonth(k, -1)); }}
             style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 }}
           >
             <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>‹</Text>
@@ -172,7 +178,7 @@ export default function TransactionsScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('next_month', locale)}
-            onPress={() => setMonthKey((k) => addMonth(k, 1))}
+            onPress={() => { userNavigatedMonth.current = true; setMonthKey((k) => addMonth(k, 1)); }}
             style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 }}
           >
             <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>›</Text>
@@ -183,6 +189,7 @@ export default function TransactionsScreen() {
           visible={pickerOpen}
           value={monthKey}
           onSelect={(m) => {
+            userNavigatedMonth.current = true;
             setMonthKey(m);
             setPickerOpen(false);
           }}

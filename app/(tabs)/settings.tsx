@@ -14,6 +14,7 @@ import {
 import type { Locale, AccountBalance } from '@/src/types';
 import { Screen, Card, CollapsibleCard, AppText, SectionLabel, Pill, Money } from '@/src/ui';
 import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
+import { MonthStartSection } from '@/src/features/dashboard/MonthStartSection';
 import { FONT } from '@/src/lib/font';
 
 export default function Settings() {
@@ -295,6 +296,9 @@ export default function Settings() {
           />
         </View>
       </CollapsibleCard>
+
+      {/* ── START OF MONTH ─────────────────────────────────────────────────── */}
+      <MonthStartSection locale={locale} />
 
       {/* ── SMS AUTO-CAPTURE ───────────────────────────────────────────────── */}
       <CollapsibleCard title={t('sms_capture', locale)} rtl={rtl} testID="section-sms">

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from './PressableScale';
 import { FONT } from '../lib/font';
 import { currentMonthKey, type MonthKey } from '../features/dashboard/monthRange';
+import { useMonthStart } from '../features/dashboard/MonthStartProvider';
 import type { Locale } from '../types';
 
 const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -45,7 +46,8 @@ export function MonthPicker({
     if (visible) setYear(value.year);
   }, [visible, value.year]);
 
-  const now = currentMonthKey();
+  const { startDay } = useMonthStart();
+  const now = currentMonthKey(new Date(), startDay);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>

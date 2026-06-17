@@ -55,6 +55,11 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'settings.title': { en: 'Settings', ar: 'الإعدادات' },
   'settings.account': { en: 'Account', ar: 'الحساب' },
   'settings.language': { en: 'Language', ar: 'اللغة' },
+  'settings.month_start': { en: 'Start of month', ar: 'بداية الشهر' },
+  'settings.month_start_hint': {
+    en: 'Your “this month” runs from this day to the same day next month (e.g. your salary day).',
+    ar: 'يبدأ شهرك من هذا اليوم حتى نفس اليوم الشهر القادم (مثلاً يوم راتبك).',
+  },
   'settings.langEnglish': { en: 'English', ar: 'الإنجليزية' },
   'settings.langArabic': { en: 'Arabic', ar: 'العربية' },
   'settings.signOut': { en: 'Sign out', ar: 'تسجيل الخروج' },

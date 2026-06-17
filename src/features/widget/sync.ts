@@ -5,6 +5,7 @@ import { useTransactions } from '../transactions/useTransactions';
 import { useRefetchOnTxnChange } from '../sync/dataSync';
 import { summarize } from '../dashboard/summary';
 import { monthRange, currentMonthKey } from '../dashboard/monthRange';
+import { useMonthStart } from '../dashboard/MonthStartProvider';
 import { buildWidgetSnapshot, WIDGET_SNAPSHOT_KEY, type WidgetSnapshot } from './snapshot';
 import type { Locale } from '../../types';
 
@@ -55,12 +56,13 @@ export function clearWidgetSnapshot(): void {
 export function useWidgetSync(): void {
   const { user, profile } = useSession();
   const locale: Locale = (profile?.locale as Locale) ?? 'en';
+  const { startDay } = useMonthStart();
 
-  // Always the current calendar month — recomputed on mount.
+  // Always the CURRENT financial month (honouring the user's start-of-month day).
   const filter = useMemo(() => {
-    const { from, to } = monthRange(currentMonthKey());
+    const { from, to } = monthRange(currentMonthKey(new Date(), startDay), startDay);
     return { from, to, status: 'confirmed' as const };
-  }, []);
+  }, [startDay]);
 
   const { data, loading, error, refresh } = useTransactions(filter);
   useRefetchOnTxnChange(useCallback(() => void refresh(), [refresh]));

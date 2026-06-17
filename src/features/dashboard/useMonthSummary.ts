@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTransactions } from '../transactions/useTransactions';
 import { summarize, type Summary } from './summary';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from './monthRange';
+import { useMonthStart } from './MonthStartProvider';
 import type { Transaction } from '../../types';
 
 export interface UseMonthSummaryResult {
@@ -22,22 +23,33 @@ export interface UseMonthSummaryResult {
  * summarize(). `initialMonth` defaults to the current calendar month.
  */
 export function useMonthSummary(initialMonth?: MonthKey): UseMonthSummaryResult {
+  const { startDay } = useMonthStart();
   const [monthKey, setMonthKey] = useState<MonthKey>(
-    () => initialMonth ?? currentMonthKey()
+    () => initialMonth ?? currentMonthKey(new Date(), startDay)
   );
 
+  // When the start-of-month day changes (e.g. loaded from storage, or the user
+  // edits it), snap to the current financial month — but only if the user hasn't
+  // navigated to a specific month and no explicit initialMonth was given.
+  const userNavigated = useRef(false);
+  useEffect(() => {
+    if (!initialMonth && !userNavigated.current) {
+      setMonthKey(currentMonthKey(new Date(), startDay));
+    }
+  }, [startDay, initialMonth]);
+
   const filter = useMemo(() => {
-    const { from, to } = monthRange(monthKey);
+    const { from, to } = monthRange(monthKey, startDay);
     return { from, to, status: 'confirmed' as const };
-  }, [monthKey]);
+  }, [monthKey, startDay]);
 
   const { data, loading, error, refresh } = useTransactions(filter);
 
   const summary = useMemo(() => summarize(data), [data]);
 
-  const prevMonth = useCallback(() => setMonthKey((k) => addMonth(k, -1)), []);
-  const nextMonth = useCallback(() => setMonthKey((k) => addMonth(k, 1)), []);
-  const goToMonth = useCallback((m: MonthKey) => setMonthKey(m), []);
+  const prevMonth = useCallback(() => { userNavigated.current = true; setMonthKey((k) => addMonth(k, -1)); }, []);
+  const nextMonth = useCallback(() => { userNavigated.current = true; setMonthKey((k) => addMonth(k, 1)); }, []);
+  const goToMonth = useCallback((m: MonthKey) => { userNavigated.current = true; setMonthKey(m); }, []);
 
   return {
     monthKey,
