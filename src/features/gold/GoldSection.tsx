@@ -102,7 +102,11 @@ export function GoldSection({ locale, accountsTotal }: { locale: Locale; account
                 {h.label ? <AppText className="text-ink3" style={{ fontSize: 12 }}>{h.label}</AppText> : null}
               </View>
               <View style={{ flexDirection: rowDir, alignItems: 'center', gap: 12 }}>
-                <Money amount={holdingValue(h, prices)} tone="ink2" sign="none" size={13} />
+                {priceUnavailable ? (
+                  <AppText className="text-ink3" style={{ fontSize: 13 }}>—</AppText>
+                ) : (
+                  <Money amount={holdingValue(h, prices)} tone="ink2" sign="none" size={13} />
+                )}
                 <TouchableOpacity testID={`gold-edit-${h.id}`} onPress={() => openEdit(h)}>
                   <AppText className="text-ink2" style={{ fontSize: 12 }}>{t('edit', locale)}</AppText>
                 </TouchableOpacity>
