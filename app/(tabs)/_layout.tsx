@@ -4,6 +4,7 @@ import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { PendingProvider, usePendingContext } from '@/src/features/transactions/PendingProvider';
 import { useWidgetSync } from '@/src/features/widget/sync';
+import { usePendingBadge } from '@/src/features/notifications/usePendingBadge';
 import { FloatingTabBar } from '@/src/ui/FloatingTabBar';
 
 function TabsInner() {
@@ -12,6 +13,8 @@ function TabsInner() {
   const { count: pendingCount } = usePendingContext();
   // Keep the iOS home-screen widget in sync with the current month.
   useWidgetSync();
+  // Show the pending count on the app icon badge.
+  usePendingBadge(pendingCount);
 
   return (
     <Tabs
