@@ -28,6 +28,8 @@ export interface ExpoPushMessage {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+  /** iOS app-icon badge count to set on arrival (= number of pending items). */
+  badge?: number;
 }
 
 /** A user keyword rule: when `keyword` appears in the SMS, force this category/note. */
@@ -62,6 +64,8 @@ export interface IngestDeps {
   touchToken: (tokenHash: string) => Promise<void>;
   /** Return Expo push tokens registered for the given user_id. */
   getPushTokens: (userId: string) => Promise<string[]>;
+  /** Count the user's pending transactions (for the app-icon badge). */
+  countPending: (userId: string) => Promise<number>;
   /** Send one or more Expo push messages (best-effort). */
   sendPush: (messages: ExpoPushMessage[]) => Promise<void>;
   /** Optional observability sink (omitted in tests). */
@@ -236,12 +240,16 @@ export async function handleIngest(
     try {
       const tokens = await deps.getPushTokens(userId);
       if (tokens.length === 0) return;
+      // Badge = current pending count, so iOS sets the app-icon badge the moment
+      // the notification arrives (even when the app is closed/backgrounded).
+      const badge = await deps.countPending(userId).catch(() => undefined);
       const bodyText = `E£ ${amount} · ${note || categorySlug}`;
       const messages: ExpoPushMessage[] = tokens.map((to) => ({
         to,
         title: "New transaction to review",
         body: bodyText,
         data: { url: "/(tabs)/pending", type: "sms_pending" },
+        ...(typeof badge === "number" ? { badge } : {}),
       }));
       await deps.sendPush(messages);
     } catch (_e) {
@@ -314,6 +322,16 @@ if (import.meta.main) {
         .eq("user_id", userId);
       if (error || !data) return [];
       return (data as { token: string }[]).map((r) => r.token);
+    },
+
+    async countPending(userId) {
+      const { count, error } = await sb
+        .from("transactions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "pending");
+      if (error) return 0;
+      return count ?? 0;
     },
 
     async sendPush(messages) {

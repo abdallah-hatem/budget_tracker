@@ -48,6 +48,7 @@ function makeDeps(over: Partial<IngestDeps> = {}): IngestDeps {
     insertPending: () => Promise.resolve(),
     touchToken: () => Promise.resolve(),
     getPushTokens: () => Promise.resolve([]),
+    countPending: () => Promise.resolve(3),
     sendPush: () => Promise.resolve(),
     ...over,
   };
@@ -553,6 +554,7 @@ Deno.test(
       postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
       makeDeps({
         getPushTokens: () => Promise.resolve([FAKE_PUSH_TOKEN]),
+        countPending: () => Promise.resolve(4),
         sendPush: (msgs) => {
           captured.push(msgs);
           resolvePush();
@@ -576,6 +578,7 @@ Deno.test(
     assertEquals(msg.title, "New transaction to review");
     assertEquals(msg.data?.url, "/(tabs)/pending");
     assertEquals(msg.data?.type, "sms_pending");
+    assertEquals(msg.badge, 4, "app-icon badge = pending count");
     assert(typeof msg.body === "string" && msg.body.length > 0);
   },
 );

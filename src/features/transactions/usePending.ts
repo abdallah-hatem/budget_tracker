@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import { listTransactions } from './api';
 import type { Transaction } from '../../types';
 
@@ -36,6 +37,13 @@ export function usePending(): UsePendingResult {
 
   useEffect(() => {
     void refresh();
+    // Re-fetch when the app returns to the foreground, so the pending count (and
+    // the app-icon badge driven by it) updates after an SMS-captured item arrives
+    // while the app was backgrounded — without needing to open the Pending tab.
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') void refresh();
+    });
+    return () => sub.remove();
   }, [refresh]);
 
   return { data, count: data.length, loading, error, refresh };
