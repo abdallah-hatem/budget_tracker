@@ -17,6 +17,7 @@ import { PressableScale } from '../../src/ui/PressableScale';
 import { ViewToggle } from '../../src/ui/ViewToggle';
 import { MonthPicker } from '../../src/ui/MonthPicker';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
+import { useTabPreload } from '../../src/hooks/useTabPreload';
 import { useAccountBalances } from '../../src/features/accounts/useAccountBalances';
 import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { useSession } from '../../src/features/auth/SessionProvider';
@@ -58,6 +59,10 @@ export default function Dashboard() {
   const locale: Locale = profile?.locale ?? 'en';
   const rtl = isRTL(locale);
   const dir = rtl ? 'rtl' : 'ltr';
+
+  // Warm the other tabs in the background after the dashboard is interactive, so
+  // the first switch to each isn't janky (they're lazy-mounted by default).
+  useTabPreload(['transactions', 'settings', 'pending']);
 
   const { monthKey, summary, transactions, loading, prevMonth, nextMonth, goToMonth, refresh } =
     useMonthSummary();
