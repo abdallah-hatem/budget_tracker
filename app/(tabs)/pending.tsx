@@ -304,7 +304,8 @@ export default function PendingScreen() {
                 <EditTransactionSheet
                   transaction={editing}
                   locale={locale}
-                  confirmOnSave
+                  // Editing a pending item just saves the changes — it STAYS
+                  // pending (Confirm is a separate, explicit action).
                   onCancel={() => setEditing(null)}
                   onDone={() => {
                     setEditing(null);
