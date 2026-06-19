@@ -329,3 +329,55 @@ Deno.test("coerceOccurredAt: valid ISO date -> normalised ISO string", async () 
   assertEquals(typeof parsed.occurred_at, "string");
   assertEquals((parsed.occurred_at ?? "").startsWith("2026-06-0"), true);
 });
+
+// --- Custom (user-defined) categories ------------------------------------------
+
+import { buildManyRequestBody, buildRequestBody } from "../_shared/categorize.ts";
+
+const PADEL = { slug: "c_padel", name: "Padel", kind: "expense" as const };
+
+Deno.test("custom category: a valid custom slug survives coercion (categorize)", async () => {
+  const { create } = stub(
+    fakeCompletion({ type: "expense", amount: 200, currency: "EGP", category_slug: "c_padel", note: "padel", confidence: 0.9 }),
+  );
+  const parsed = await categorize("padel 200", "en", "k", {
+    createCompletion: create,
+    customCategories: [PADEL],
+  });
+  assertEquals(parsed.category_slug, "c_padel");
+});
+
+Deno.test("custom category: an UNKNOWN custom slug falls back to Other", async () => {
+  const { create } = stub(
+    fakeCompletion({ type: "expense", amount: 50, currency: "EGP", category_slug: "c_not_registered", note: "x", confidence: 0.9 }),
+  );
+  // No customCategories passed -> the slug is not in the allow-set.
+  const parsed = await categorize("x 50", "en", "k", { createCompletion: create });
+  assertEquals(parsed.category_slug, "other_expense");
+});
+
+Deno.test("custom category: survives coercion in categorizeMany too", async () => {
+  const { create } = stub(
+    fakeCompletion({ transactions: [
+      { type: "expense", amount: 200, currency: "EGP", category_slug: "c_padel", note: "padel", confidence: 0.9 },
+    ] }),
+  );
+  const out = await categorizeMany("padel 200", "en", "k", {
+    createCompletion: create,
+    customCategories: [PADEL],
+  });
+  assertEquals(out[0].category_slug, "c_padel");
+});
+
+Deno.test("custom category: the slug + name are injected into the prompt catalog", () => {
+  const sys = (b: Record<string, unknown>) =>
+    String((b.messages as Array<{ role: string; content: string }>)[0].content);
+  const single = sys(buildRequestBody("x", "en", [PADEL]));
+  assert(single.includes("c_padel"));
+  assert(single.includes("Padel"));
+  const many = sys(buildManyRequestBody("x", "en", [PADEL]));
+  assert(many.includes("c_padel"));
+  assert(many.includes("Padel"));
+  // No custom categories -> no catalog noise.
+  assert(!sys(buildRequestBody("x", "en")).includes("CUSTOM categories"));
+});

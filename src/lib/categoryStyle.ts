@@ -4,7 +4,7 @@
  * sourced from the canonical category list); `emoji` is kept as a fallback.
  * Color tints the avatar + donut slice — NEVER income/expense direction.
  */
-import { categoryBySlug } from './categories';
+import { categoryBySlug, isCustomSlug } from './categories';
 
 export interface CategoryStyleResult {
   /** MaterialCommunityIcons glyph name (what the UI renders). */
@@ -40,6 +40,11 @@ const CATEGORY_STYLES: Record<string, { emoji: string; color: string }> = {
 const DEFAULT_STYLE = { emoji: '💳', color: '#6B7672' };
 
 export function categoryStyle(slug: string): CategoryStyleResult {
+  const cat = categoryBySlug(slug);
+  // Custom categories carry their own icon + color on the row.
+  if (cat && isCustomSlug(slug)) {
+    return { icon: cat.icon || DEFAULT_ICON, color: cat.color, emoji: DEFAULT_STYLE.emoji };
+  }
   const base = CATEGORY_STYLES[slug] ?? DEFAULT_STYLE;
-  return { ...base, icon: categoryBySlug(slug)?.icon ?? DEFAULT_ICON };
+  return { ...base, icon: cat?.icon ?? DEFAULT_ICON };
 }

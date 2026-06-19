@@ -16,6 +16,7 @@ import { Screen, Card, CollapsibleCard, AppText, SectionLabel, Pill, Money } fro
 import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
 import { MonthStartSection } from '@/src/features/dashboard/MonthStartSection';
 import { GoldSection } from '@/src/features/gold/GoldSection';
+import { CategoriesSection } from '@/src/features/categories/CategoriesSection';
 import { FONT } from '@/src/lib/font';
 
 export default function Settings() {
@@ -297,6 +298,9 @@ export default function Settings() {
           />
         </View>
       </CollapsibleCard>
+
+      {/* ── CATEGORIES ─────────────────────────────────────────────────────── */}
+      <CategoriesSection locale={locale} />
 
       {/* ── GOLD ───────────────────────────────────────────────────────────── */}
       <GoldSection locale={locale} accountsTotal={accounts.reduce((s, a) => s + a.balance, 0)} />

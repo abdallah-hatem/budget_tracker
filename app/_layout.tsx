@@ -27,6 +27,7 @@ import { SessionProvider, useSession } from '@/src/features/auth/SessionProvider
 import { redirectTarget } from '@/src/features/auth/redirectTarget';
 import { useNotifications } from '@/src/features/notifications/useNotifications';
 import { CaptureProvider } from '@/src/features/capture/CaptureProvider';
+import { CategoriesProvider } from '@/src/features/categories/CategoriesProvider';
 import { DataSyncProvider } from '@/src/features/sync/dataSync';
 import { initSentry } from '@/src/lib/sentry';
 
@@ -104,11 +105,13 @@ function RootLayout() {
         {/* Global capture engine (mic/type/manual) + its overlays, driven by the
             tab-bar FAB from any screen — so there is no capture tab. DataSync sits
             above it so a capture write can refetch whatever tab is on screen. */}
-        <DataSyncProvider>
-          <CaptureProvider>
-            <RootNavigator />
-          </CaptureProvider>
-        </DataSyncProvider>
+        <CategoriesProvider>
+          <DataSyncProvider>
+            <CaptureProvider>
+              <RootNavigator />
+            </CaptureProvider>
+          </DataSyncProvider>
+        </CategoriesProvider>
       </SessionProvider>
     </SafeAreaProvider>
   );

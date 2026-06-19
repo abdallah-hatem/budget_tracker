@@ -14,6 +14,8 @@ export interface Category {
   icon: string;
   color: string;
   sort_order: number;
+  /** Owner of a custom category. Absent/null on the built-in (global) ones. */
+  user_id?: string | null;
 }
 
 export interface Transaction {

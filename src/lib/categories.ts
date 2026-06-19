@@ -26,26 +26,56 @@ export const CATEGORIES: Category[] = [
   { slug: 'other_income',  name_en: 'Other',             name_ar: 'أخرى',          kind: 'income',  icon: 'dots-horizontal',  color: '#64748B', sort_order: 50 },
 ];
 
-const BY_SLUG: Record<string, Category> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.slug, c]),
-);
+// ---------------------------------------------------------------------------
+// Runtime registry: built-ins (above) + the signed-in user's CUSTOM categories,
+// loaded from the DB by CategoriesProvider. All lookups below resolve against
+// both, so every slug-based call site (rows, donut, pickers, avatar) renders
+// custom categories without changes. Custom slugs are opaque ("c_…").
+// ---------------------------------------------------------------------------
+let customCategories: Category[] = [];
+
+function indexBySlug(list: Category[]): Record<string, Category> {
+  return Object.fromEntries(list.map((c) => [c.slug, c]));
+}
+
+let bySlug: Record<string, Category> = indexBySlug(CATEGORIES);
+
+/** Replace the registered custom categories (called on load + after CRUD). */
+export function setCustomCategories(list: Category[]): void {
+  customCategories = list;
+  bySlug = indexBySlug([...CATEGORIES, ...list]);
+}
+
+/** Drop all custom categories (sign-out / tests). */
+export function clearCustomCategories(): void {
+  setCustomCategories([]);
+}
+
+/** True if the slug belongs to a registered custom category. */
+export function isCustomSlug(slug: string): boolean {
+  return customCategories.some((c) => c.slug === slug);
+}
+
+function allCategories(): Category[] {
+  return [...CATEGORIES, ...customCategories];
+}
 
 export function categoryBySlug(slug: string): Category | undefined {
-  return BY_SLUG[slug];
+  return bySlug[slug];
 }
 
 export function expenseCategories(): Category[] {
-  return CATEGORIES.filter((c) => c.kind === 'expense').sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
+  return allCategories()
+    .filter((c) => c.kind === 'expense')
+    .sort((a, b) => a.sort_order - b.sort_order);
 }
 
 export function incomeCategories(): Category[] {
-  return CATEGORIES.filter((c) => c.kind === 'income').sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
+  return allCategories()
+    .filter((c) => c.kind === 'income')
+    .sort((a, b) => a.sort_order - b.sort_order);
 }
 
 export function categorySlugs(): string[] {
-  return CATEGORIES.map((c) => c.slug);
+  return allCategories().map((c) => c.slug);
 }

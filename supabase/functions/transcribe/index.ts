@@ -9,10 +9,12 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import {
   categorizeMany,
+  type CustomCategory,
   type Locale,
   type ParsedTransaction,
 } from "../_shared/categorize.ts";
 import { logAiEvent, minConfidence, userIdFromAuthHeader, type AiEvent } from "../_shared/aiEvents.ts";
+import { fetchCustomCategories } from "../_shared/customCategories.ts";
 import { withSentry } from "../_shared/sentry.ts";
 
 const GROQ_WHISPER_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
@@ -47,7 +49,10 @@ export interface HandlerDeps {
     text: string,
     locale: Locale,
     apiKey: string,
+    extra?: CustomCategory[],
   ) => Promise<ParsedTransaction[]>;
+  /** Fetch the caller's custom categories (omitted in tests -> built-ins only). */
+  fetchCategoriesFn?: (userId: string | null) => Promise<CustomCategory[]>;
   /** Optional observability sink (omitted in tests). */
   logEvent?: (e: AiEvent) => void;
 }
@@ -118,9 +123,10 @@ export async function handleTranscribe(
     return json({ error: "No speech detected." }, 422);
   }
 
+  const extra = deps.fetchCategoriesFn ? await deps.fetchCategoriesFn(userId) : [];
   let transactions: ParsedTransaction[];
   try {
-    transactions = await deps.categorizeFn(text, locale, deps.apiKey);
+    transactions = await deps.categorizeFn(text, locale, deps.apiKey, extra);
   } catch (e) {
     deps.logEvent?.({
       user_id: userId, fn: "transcribe", source: "voice", model: WHISPER_MODEL,
@@ -179,7 +185,9 @@ if (import.meta.main) {
     handleTranscribe(req, {
       apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
       transcribeFn: groqTranscribe,
-      categorizeFn: categorizeMany,
+      categorizeFn: (text, locale, apiKey, extra) =>
+        categorizeMany(text, locale, apiKey, { customCategories: extra }),
+      fetchCategoriesFn: fetchCustomCategories,
       logEvent: (e) => void logAiEvent(e),
     })
   ));

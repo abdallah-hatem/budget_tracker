@@ -11,7 +11,8 @@
 // so the function can resolve user_id from a validated token and write on their
 // behalf.
 import { corsHeaders } from "../_shared/cors.ts";
-import { categorize, type ParsedTransaction } from "../_shared/categorize.ts";
+import { categorize, type CustomCategory, type ParsedTransaction } from "../_shared/categorize.ts";
+import { fetchCustomCategories } from "../_shared/customCategories.ts";
 import { INCOME_SLUGS } from "../_shared/categories.ts";
 import { sha256Hex } from "../_shared/hash.ts";
 import { logAiEvent, type AiEvent } from "../_shared/aiEvents.ts";
@@ -50,7 +51,10 @@ export interface IngestDeps {
     text: string,
     locale: "ar" | "en",
     apiKey: string,
+    extra?: CustomCategory[],
   ) => Promise<ParsedTransaction>;
+  /** Fetch the user's custom categories (omitted in tests -> built-ins only). */
+  fetchCategoriesFn?: (userId: string | null) => Promise<CustomCategory[]>;
   /**
    * Given a sha256-hex token hash, return the associated user_id, or null if
    * the token does not exist or is revoked.
@@ -142,10 +146,11 @@ export async function handleIngest(
   deps.touchToken(tokenHash).catch(() => {/* swallow */});
 
   // --- Categorize the SMS ---
+  const extra = deps.fetchCategoriesFn ? await deps.fetchCategoriesFn(userId) : [];
   const t0 = Date.now();
   let parsed: ParsedTransaction;
   try {
-    parsed = await deps.categorizeFn(text, "en", deps.groqKey);
+    parsed = await deps.categorizeFn(text, "en", deps.groqKey, extra);
   } catch (e) {
     deps.logEvent?.({
       user_id: userId, fn: "ingest-sms", source: "sms", ok: false,
@@ -281,7 +286,9 @@ if (import.meta.main) {
   const deps: IngestDeps = {
     groqKey,
 
-    categorizeFn: (text, locale, apiKey) => categorize(text, locale, apiKey),
+    categorizeFn: (text, locale, apiKey, extra) =>
+      categorize(text, locale, apiKey, { customCategories: extra }),
+    fetchCategoriesFn: fetchCustomCategories,
 
     async lookupUserId(tokenHash) {
       const { data, error } = await sb

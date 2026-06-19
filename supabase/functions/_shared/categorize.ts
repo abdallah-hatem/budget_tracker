@@ -20,6 +20,13 @@ export interface ParsedTransaction {
   occurred_at?: string;
 }
 
+/** A user's custom category, fed to the model so it can assign it by name. */
+export interface CustomCategory {
+  slug: string;
+  name: string;
+  kind: TxnType;
+}
+
 // --- Minimal structural shape of the OpenAI-compatible chat completion we read.
 // We type only the fields we use so a fake response in tests is trivial.
 export interface ChatCompletionResponse {
@@ -39,6 +46,23 @@ export type CreateCompletion = (
 export interface CategorizeOptions {
   /** Inject a fake transport in tests. Defaults to a real fetch to Groq. */
   createCompletion?: CreateCompletion;
+  /** The caller's custom categories — assignable by the model in addition to built-ins. */
+  customCategories?: CustomCategory[];
+}
+
+/** Built-in slugs plus the caller's custom slugs (the full allow-set). */
+function allowedSlugs(extra: CustomCategory[]): string[] {
+  return [...CATEGORY_SLUGS, ...extra.map((c) => c.slug)];
+}
+
+/** Prompt lines describing the user's custom categories (empty when none). */
+function customCatalogBlock(extra: CustomCategory[]): string[] {
+  if (extra.length === 0) return [];
+  return [
+    "  The user also defined these CUSTOM categories. Prefer one when the item clearly",
+    "  matches its name; output its EXACT slug as shown:",
+    ...extra.map((c) => `    • ${c.slug} — "${c.name}" (${c.kind})`),
+  ];
 }
 
 // Groq model + endpoint. llama-3.3-70b handles Arabic/English well and is on
@@ -46,7 +70,7 @@ export interface CategorizeOptions {
 export const GROQ_MODEL = "llama-3.3-70b-versatile";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-function systemPrompt(locale: Locale): string {
+function systemPrompt(locale: Locale, extra: CustomCategory[] = []): string {
   const lang = locale === "ar" ? "Arabic" : "English";
   return [
     "You categorize a single personal-finance utterance or SMS into ONE fixed category.",
@@ -65,7 +89,8 @@ function systemPrompt(locale: Locale): string {
     "    • For a generic bank transfer with no merchant/purpose: income → other_income, expense → other_expense.",
     '- "amount": a positive number. Convert Arabic-Indic digits (٠-٩) to Western digits. Use 0 if no amount is present.',
     '- "currency": map EGP / جنيه / ج.م / pounds to "EGP". Default "EGP".',
-    '- "category_slug": EXACTLY one of these allowed values: ' + CATEGORY_SLUGS.join(", ") + ".",
+    '- "category_slug": EXACTLY one of these allowed values: ' + allowedSlugs(extra).join(", ") + ".",
+    ...customCatalogBlock(extra),
     '  Pick the MOST SPECIFIC fitting category. Use "other_expense"/"other_income" ONLY as a last',
     "  resort when no listed category reasonably fits — never for common everyday items, even from",
     "  terse input. Anything to eat or drink — including water, bottled water, juice, soda, coffee,",
@@ -86,6 +111,7 @@ function systemPrompt(locale: Locale): string {
 export function buildRequestBody(
   text: string,
   locale: Locale,
+  extra: CustomCategory[] = [],
 ): Record<string, unknown> {
   return {
     model: GROQ_MODEL,
@@ -93,7 +119,7 @@ export function buildRequestBody(
     max_tokens: 256,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: systemPrompt(locale) },
+      { role: "system", content: systemPrompt(locale, extra) },
       { role: "user", content: text },
     ],
   };
@@ -146,8 +172,8 @@ function coerceNote(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-function coerceSlug(v: unknown, type: TxnType): string {
-  if (typeof v === "string" && CATEGORY_SLUGS.includes(v)) return v;
+function coerceSlug(v: unknown, type: TxnType, extraSlugs: string[] = []): string {
+  if (typeof v === "string" && (CATEGORY_SLUGS.includes(v) || extraSlugs.includes(v))) return v;
   return type === "income" ? FALLBACK_INCOME_SLUG : FALLBACK_EXPENSE_SLUG;
 }
 
@@ -202,7 +228,8 @@ export async function categorize(
   opts: CategorizeOptions = {},
 ): Promise<ParsedTransaction> {
   const transport = opts.createCompletion ?? realTransport(apiKey);
-  const res = await transport(buildRequestBody(text, locale));
+  const extra = opts.customCategories ?? [];
+  const res = await transport(buildRequestBody(text, locale, extra));
 
   const input = extractJsonObject(res);
   const type = coerceType(input.type);
@@ -214,7 +241,7 @@ export async function categorize(
     type,
     amount,
     currency: coerceCurrency(input.currency),
-    category_slug: coerceSlug(input.category_slug, type),
+    category_slug: coerceSlug(input.category_slug, type, extra.map((c) => c.slug)),
     note: coerceNote(input.note),
     confidence,
   };
@@ -230,7 +257,7 @@ export async function categorize(
 // transactions. Understands English, Modern Standard Arabic, and Egyptian
 // colloquial (Masry).
 
-function manySystemPrompt(locale: Locale): string {
+function manySystemPrompt(locale: Locale, extra: CustomCategory[] = []): string {
   const lang = locale === "ar" ? "Arabic" : "English";
   return [
     "You extract personal-finance transactions from one spoken/typed utterance or SMS.",
@@ -254,7 +281,8 @@ function manySystemPrompt(locale: Locale): string {
     '- "type": "expense" (money spent) or "income" (money received).',
     '- "amount": a positive number. OMIT the whole item if it has no amount.',
     '- "currency": map EGP / جنيه / جنيها / ج / ج.م / pound(s) to "EGP". Default "EGP".',
-    '- "category_slug": EXACTLY one of: ' + CATEGORY_SLUGS.join(", ") + ".",
+    '- "category_slug": EXACTLY one of: ' + allowedSlugs(extra).join(", ") + ".",
+    ...customCatalogBlock(extra),
     '  Pick the MOST SPECIFIC fitting category. Use "other_expense"/"other_income" ONLY as a last resort.',
     "  Anything to eat or drink (water, juice, soda, coffee/قهوة, tea/شاي, snacks, any beverage) is food",
     "  (Food & Drink), even when bought from a shop. groceries ONLY for a supermarket trip / multiple",
@@ -294,6 +322,7 @@ function manySystemPrompt(locale: Locale): string {
 export function buildManyRequestBody(
   text: string,
   locale: Locale,
+  extra: CustomCategory[] = [],
 ): Record<string, unknown> {
   return {
     model: GROQ_MODEL,
@@ -301,7 +330,7 @@ export function buildManyRequestBody(
     max_tokens: 1024, // room for several transactions
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: manySystemPrompt(locale) },
+      { role: "system", content: manySystemPrompt(locale, extra) },
       { role: "user", content: text },
     ],
   };
@@ -318,7 +347,9 @@ export async function categorizeMany(
   opts: CategorizeOptions = {},
 ): Promise<ParsedTransaction[]> {
   const transport = opts.createCompletion ?? realTransport(apiKey);
-  const res = await transport(buildManyRequestBody(text, locale));
+  const extra = opts.customCategories ?? [];
+  const extraSlugs = extra.map((c) => c.slug);
+  const res = await transport(buildManyRequestBody(text, locale, extra));
   const obj = extractJsonObject(res);
 
   // Accept { transactions: [...] }, a bare array, or a single object (fallback).
@@ -343,7 +374,7 @@ export async function categorizeMany(
       type,
       amount,
       currency: coerceCurrency(rec.currency),
-      category_slug: coerceSlug(rec.category_slug, type),
+      category_slug: coerceSlug(rec.category_slug, type, extraSlugs),
       note: coerceNote(rec.note),
       confidence: coerceConfidence(rec.confidence),
     };
