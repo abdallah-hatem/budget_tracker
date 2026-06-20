@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { CollapsibleCard, AppText, Money, Pill, PressableScale } from '../../ui';
+import { CollapsibleCard, AppText, Money, Pill, PressableScale, NumericInput } from '../../ui';
 import { t, isRTL } from '../../lib/i18n';
 import { FONT } from '../../lib/font';
 import type { Locale } from '../../types';
@@ -126,11 +126,10 @@ export function GoldSection({ locale, accountsTotal }: { locale: Locale; account
                 <Pill key={k} testID={`gold-karat-${k}`} label={karatLabel(k, locale)} active={karat === k} onPress={() => setKarat(k)} />
               ))}
             </View>
-            <TextInput
+            <NumericInput
               testID="gold-grams"
               value={grams}
-              onChangeText={setGrams}
-              keyboardType="decimal-pad"
+              onChangeValue={setGrams}
               placeholder={t('gold.grams', locale)}
               placeholderTextColor="#6B7672"
               style={{ fontFamily: FONT.sora, fontSize: 15, color: '#F4F7F5', backgroundColor: '#0B0F0E', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, textAlign: align }}

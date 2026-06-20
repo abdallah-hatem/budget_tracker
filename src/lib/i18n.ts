@@ -90,6 +90,10 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
     en: 'Delete this category? Its transactions move to Other.',
     ar: 'حذف هذا التصنيف؟ ستنتقل معاملاته إلى «أخرى».',
   },
+  'cat.hideHint': {
+    en: 'Tap a category to hide it from Home.',
+    ar: 'اضغط على تصنيف لإخفائه من الرئيسية.',
+  },
   'settings.langEnglish': { en: 'English', ar: 'الإنجليزية' },
   'settings.langArabic': { en: 'Arabic', ar: 'العربية' },
   'settings.signOut': { en: 'Sign out', ar: 'تسجيل الخروج' },

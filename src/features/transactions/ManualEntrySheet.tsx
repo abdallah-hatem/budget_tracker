@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categoryLabel } from './display';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
 import { t, isRTL } from '../../lib/i18n';
-import { CategoryAvatar, PressableScale } from '../../ui';
+import { CategoryAvatar, PressableScale, NumericInput } from '../../ui';
 import { DateTimeField } from '../../ui/DateTimeField';
 import { FONT } from '../../lib/font';
 import type { TxnType, Locale } from '../../types';
@@ -151,14 +151,13 @@ export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
       {/* Amount */}
       <View style={{ gap: 6 }}>
         <Text style={fieldLabelStyle}>{t('amount', locale)}</Text>
-        <TextInput
+        <NumericInput
           testID="manual-amount"
           value={amount}
-          onChangeText={(v) => {
+          onChangeValue={(v) => {
             setAmount(v);
             if (error) setError(null);
           }}
-          keyboardType="numeric"
           autoFocus
           placeholder="0"
           placeholderTextColor="#6B7672"

@@ -6,7 +6,7 @@ import { listAccountBalances } from '../accounts/api';
 import { categoryLabel } from './display';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
 import { t, isRTL } from '../../lib/i18n';
-import { CategoryAvatar, PressableScale } from '../../ui';
+import { CategoryAvatar, PressableScale, NumericInput } from '../../ui';
 import { DateTimeField } from '../../ui/DateTimeField';
 import { FONT } from '../../lib/font';
 import type { Transaction, TxnType, Locale, AccountBalance } from '../../types';
@@ -192,11 +192,10 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
         >
           {t('amount', locale)}
         </Text>
-        <TextInput
+        <NumericInput
           testID="edit-amount"
           value={amount}
-          onChangeText={setAmount}
-          keyboardType="numeric"
+          onChangeValue={setAmount}
           placeholderTextColor="#6B7672"
           style={{
             fontFamily: FONT.soraSb,

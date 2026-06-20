@@ -23,6 +23,9 @@ export type { HeroProps } from './Hero';
 export { CategoryAvatar } from './CategoryAvatar';
 export type { CategoryAvatarProps } from './CategoryAvatar';
 
+export { NumericInput } from './NumericInput';
+export type { NumericInputProps } from './NumericInput';
+
 export { SectionLabel } from './SectionLabel';
 export type { SectionLabelProps } from './SectionLabel';
 

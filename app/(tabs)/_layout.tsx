@@ -4,6 +4,7 @@ import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { PendingProvider, usePendingContext } from '@/src/features/transactions/PendingProvider';
 import { MonthStartProvider } from '@/src/features/dashboard/MonthStartProvider';
+import { HiddenCategoriesProvider } from '@/src/features/categories/HiddenCategoriesProvider';
 import { useWidgetSync } from '@/src/features/widget/sync';
 import { usePendingBadge } from '@/src/features/notifications/usePendingBadge';
 import { FloatingTabBar } from '@/src/ui/FloatingTabBar';
@@ -71,9 +72,11 @@ function TabsInner() {
 export default function TabsLayout() {
   return (
     <MonthStartProvider>
-      <PendingProvider>
-        <TabsInner />
-      </PendingProvider>
+      <HiddenCategoriesProvider>
+        <PendingProvider>
+          <TabsInner />
+        </PendingProvider>
+      </HiddenCategoriesProvider>
     </MonthStartProvider>
   );
 }

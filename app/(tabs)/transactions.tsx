@@ -17,6 +17,7 @@ import { EditTransactionSheet } from '../../src/features/transactions/EditTransa
 import { categoryLabel } from '../../src/features/transactions/display';
 import { CATEGORIES } from '../../src/lib/categories';
 import { categoryStyle } from '../../src/lib/categoryStyle';
+import { localDayKey } from '../../src/lib/day';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/features/dashboard/monthRange';
 import { useMonthStart } from '../../src/features/dashboard/MonthStartProvider';
@@ -45,7 +46,7 @@ function monthLabel(month: number, locale: Locale): string {
 function groupByDay(txns: Transaction[]): { title: string; data: Transaction[] }[] {
   const map = new Map<string, Transaction[]>();
   for (const txn of txns) {
-    const day = txn.occurred_at.slice(0, 10); // "YYYY-MM-DD"
+    const day = localDayKey(txn.occurred_at); // local "YYYY-MM-DD"
     if (!map.has(day)) map.set(day, []);
     map.get(day)!.push(txn);
   }

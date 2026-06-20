@@ -34,8 +34,11 @@ function clampStartDay(year: number, month: number, startDay: number): number {
  */
 export function monthRange(key: MonthKey, startDay: number = DEFAULT_MONTH_START_DAY): MonthRange {
   const next = addMonth(key, 1);
-  const from = new Date(Date.UTC(key.year, key.month, clampStartDay(key.year, key.month, startDay)));
-  const to = new Date(Date.UTC(next.year, next.month, clampStartDay(next.year, next.month, startDay)));
+  // LOCAL midnight (not UTC) -> .toISOString() yields the matching UTC instant, so
+  // a financial month begins/ends at the user's local midnight. occurred_at is a
+  // UTC instant; comparing it against these bounds buckets by the user's calendar.
+  const from = new Date(key.year, key.month, clampStartDay(key.year, key.month, startDay));
+  const to = new Date(next.year, next.month, clampStartDay(next.year, next.month, startDay));
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
@@ -54,9 +57,9 @@ export function currentMonthKey(
   date: Date = new Date(),
   startDay: number = DEFAULT_MONTH_START_DAY,
 ): MonthKey {
-  const year = date.getUTCFullYear();
-  const month = date.getUTCMonth();
-  const day = date.getUTCDate();
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
   const key = { year, month };
   return day >= clampStartDay(year, month, startDay) ? key : addMonth(key, -1);
 }

@@ -3,6 +3,7 @@ import { useTransactions } from '../transactions/useTransactions';
 import { summarize, type Summary } from './summary';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from './monthRange';
 import { useMonthStart } from './MonthStartProvider';
+import { useHiddenCategories } from '../categories/HiddenCategoriesProvider';
 import type { Transaction } from '../../types';
 
 export interface UseMonthSummaryResult {
@@ -45,7 +46,8 @@ export function useMonthSummary(initialMonth?: MonthKey): UseMonthSummaryResult 
 
   const { data, loading, error, refresh } = useTransactions(filter);
 
-  const summary = useMemo(() => summarize(data), [data]);
+  const { hidden } = useHiddenCategories();
+  const summary = useMemo(() => summarize(data, hidden), [data, hidden]);
 
   const prevMonth = useCallback(() => { userNavigated.current = true; setMonthKey((k) => addMonth(k, -1)); }, []);
   const nextMonth = useCallback(() => { userNavigated.current = true; setMonthKey((k) => addMonth(k, 1)); }, []);
