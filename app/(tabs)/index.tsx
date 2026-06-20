@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { MotiView } from 'moti';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -23,6 +23,8 @@ import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { categoryLabel } from '../../src/features/transactions/display';
 import { categoryStyle } from '../../src/lib/categoryStyle';
+import { categoryBySlug } from '../../src/lib/categories';
+import { useHiddenCategories } from '../../src/features/categories/HiddenCategoriesProvider';
 import { t, isRTL } from '../../src/lib/i18n';
 import { FONT, uiFontSemiBold } from '../../src/lib/font';
 import type { Locale, TxnType } from '../../src/types';
@@ -97,6 +99,23 @@ export default function Dashboard() {
   // Category rows (already sorted desc) with a max for progress-bar scaling.
   const categoryRows = breakdown;
   const maxTotal = categoryRows.reduce((m, r) => Math.max(m, r.total), 0);
+
+  // Long-press a category to hide it from Home; hidden ones can be restored from
+  // the small footer below the breakdown.
+  const { hidden, toggle: toggleHidden } = useHiddenCategories();
+  const hiddenForView = [...hidden].filter(
+    (slug) => (categoryBySlug(slug)?.kind ?? 'expense') === view,
+  );
+  const confirmHide = useCallback(
+    (slug: string, label: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      Alert.alert(label, t('cat.hideHomePrompt', locale), [
+        { text: t('cancel', locale), style: 'cancel' },
+        { text: t('cat.hide', locale), style: 'destructive', onPress: () => toggleHidden(slug) },
+      ]);
+    },
+    [locale, toggleHidden],
+  );
 
   function handleMonthStep(step: () => void) {
     void Haptics.selectionAsync();
@@ -294,7 +313,7 @@ export default function Dashboard() {
             </Reveal>
 
             {/* ── By category ──────────────────────────────────────── */}
-            {categoryRows.length > 0 && (
+            {(categoryRows.length > 0 || hiddenForView.length > 0) && (
               <Reveal index={revealIndex++}>
                 <Card className="mb-7">
                   <SectionLabel>{t('by_category', locale)}</SectionLabel>
@@ -303,7 +322,11 @@ export default function Dashboard() {
                       const color = categoryStyle(row.slug).color;
                       const pct = maxTotal > 0 ? row.total / maxTotal : 0;
                       return (
-                        <View key={row.slug}>
+                        <Pressable
+                          key={row.slug}
+                          onLongPress={() => confirmHide(row.slug, categoryLabel(row.slug, locale))}
+                          delayLongPress={300}
+                        >
                           <View
                             style={{
                               flexDirection: rtl ? 'row-reverse' : 'row',
@@ -346,10 +369,53 @@ export default function Dashboard() {
                               }}
                             />
                           </View>
-                        </View>
+                        </Pressable>
                       );
                     })}
                   </View>
+
+                  {/* Hidden-from-home footer: tap a chip to restore it. */}
+                  {hiddenForView.length > 0 && (
+                    <View
+                      style={{
+                        flexDirection: rtl ? 'row-reverse' : 'row',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: 8,
+                        marginTop: 18,
+                        paddingTop: 14,
+                        borderTopWidth: 1,
+                        borderTopColor: '#1C2322',
+                      }}
+                    >
+                      <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 11, color: '#6B7672' }}>
+                        {t('cat.hidden', locale)}
+                      </Text>
+                      {hiddenForView.map((slug) => (
+                        <Pressable
+                          key={slug}
+                          onPress={() => toggleHidden(slug)}
+                          hitSlop={6}
+                          style={{
+                            flexDirection: rtl ? 'row-reverse' : 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            paddingVertical: 4,
+                            paddingHorizontal: 8,
+                            backgroundColor: '#14191A',
+                            borderRadius: 999,
+                            opacity: 0.6,
+                          }}
+                        >
+                          <CategoryAvatar slug={slug} size={18} />
+                          <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 12, color: '#A8B2AF' }}>
+                            {categoryLabel(slug, locale)}
+                          </Text>
+                          <Ionicons name="eye-off-outline" size={13} color="#6B7672" />
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
                 </Card>
               </Reveal>
             )}

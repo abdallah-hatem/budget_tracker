@@ -8,7 +8,6 @@ import type { Category, CategoryKind, Locale } from '../../types';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
 import { categoryLabel } from '../transactions/display';
 import { useCustomCategories } from './CategoriesProvider';
-import { useHiddenCategories } from './HiddenCategoriesProvider';
 import { createCustomCategory, updateCustomCategory, deleteCustomCategory } from './api';
 import { CATEGORY_ICONS, CATEGORY_COLORS, DEFAULT_CATEGORY_ICON, DEFAULT_CATEGORY_COLOR } from './icons';
 
@@ -22,7 +21,6 @@ export function CategoriesSection({ locale }: { locale: Locale }) {
   const align = rtl ? 'right' : 'left';
   const rowDir = rtl ? 'row-reverse' : 'row';
   const { custom, refresh } = useCustomCategories();
-  const { isHidden, toggle: toggleHidden } = useHiddenCategories();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editSlug, setEditSlug] = useState<string | null>(null);
@@ -115,9 +113,6 @@ export function CategoriesSection({ locale }: { locale: Locale }) {
                 </View>
               </View>
               <View style={{ flexDirection: rowDir, alignItems: 'center', gap: 14 }}>
-                <TouchableOpacity testID={`cat-hide-${c.slug}`} onPress={() => toggleHidden(c.slug)} hitSlop={8}>
-                  <MaterialCommunityIcons name={isHidden(c.slug) ? 'eye-off-outline' : 'eye-outline'} size={18} color={isHidden(c.slug) ? '#6B7672' : INK2} />
-                </TouchableOpacity>
                 <TouchableOpacity testID={`cat-edit-${c.slug}`} onPress={() => openEdit(c)}>
                   <AppText className="text-ink2" style={{ fontSize: 12 }}>{t('edit', locale)}</AppText>
                 </TouchableOpacity>
@@ -153,30 +148,21 @@ export function CategoriesSection({ locale }: { locale: Locale }) {
           </TouchableOpacity>
         )}
 
-        {/* ── Built-in (tap to hide/show on home) ── */}
+        {/* ── Built-in (read-only) ── */}
         <View style={{ height: 1, backgroundColor: '#1F2826' }} />
         <AppText className="text-ink3" style={{ fontSize: 12, textAlign: align }}>
           {t('cat.builtin', locale)}
         </AppText>
-        <AppText className="text-ink3" style={{ fontSize: 11, textAlign: align, marginTop: -6 }}>
-          {t('cat.hideHint', locale)}
-        </AppText>
         <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', flexWrap: 'wrap', gap: 8 }}>
-          {builtIns.map((c) => {
-            const hidden = isHidden(c.slug);
-            return (
-              <TouchableOpacity
-                key={c.slug}
-                testID={`cat-hide-${c.slug}`}
-                onPress={() => toggleHidden(c.slug)}
-                style={{ flexDirection: rtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, paddingVertical: 4, paddingHorizontal: 8, backgroundColor: INSET, borderRadius: 999, opacity: hidden ? 0.45 : 1 }}
-              >
-                <CategoryAvatar slug={c.slug} size={20} />
-                <AppText className="text-ink2" style={{ fontSize: 12 }}>{categoryLabel(c.slug, locale)}</AppText>
-                {hidden ? <MaterialCommunityIcons name="eye-off-outline" size={14} color="#6B7672" /> : null}
-              </TouchableOpacity>
-            );
-          })}
+          {builtIns.map((c) => (
+            <View
+              key={c.slug}
+              style={{ flexDirection: rtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, paddingVertical: 4, paddingHorizontal: 8, backgroundColor: INSET, borderRadius: 999 }}
+            >
+              <CategoryAvatar slug={c.slug} size={20} />
+              <AppText className="text-ink2" style={{ fontSize: 12 }}>{categoryLabel(c.slug, locale)}</AppText>
+            </View>
+          ))}
         </View>
       </View>
     </CollapsibleCard>
