@@ -6,6 +6,8 @@ import {
   expenseCategories,
   incomeCategories,
   categorySlugs,
+  subscribeCategories,
+  getCategoriesVersion,
 } from '../categories';
 import { categoryStyle } from '../categoryStyle';
 import type { Category } from '../../types';
@@ -38,10 +40,36 @@ describe('custom category registry', () => {
     expect(categoryStyle('food').color).toBe('#F97316');
   });
 
+  it('sorts custom categories before the "Other" catch-all', () => {
+    setCustomCategories([padel]);
+    const slugs = expenseCategories().map((c) => c.slug);
+    expect(slugs.indexOf('c_padel')).toBeLessThan(slugs.indexOf('other_expense'));
+    expect(slugs[slugs.length - 1]).toBe('other_expense'); // catch-all stays last
+  });
+
   it('places income custom categories in incomeCategories()', () => {
     setCustomCategories([{ ...padel, slug: 'c_freelance', kind: 'income' }]);
     expect(incomeCategories().some((c) => c.slug === 'c_freelance')).toBe(true);
     expect(expenseCategories().some((c) => c.slug === 'c_freelance')).toBe(false);
+  });
+
+  it('notifies subscribers and bumps the version when the registry changes', () => {
+    const before = getCategoriesVersion();
+    let calls = 0;
+    const unsubscribe = subscribeCategories(() => { calls += 1; });
+
+    setCustomCategories([padel]);
+    expect(calls).toBe(1);
+    expect(getCategoriesVersion()).not.toBe(before);
+
+    clearCustomCategories();
+    expect(calls).toBe(2);
+
+    const afterUnsub = getCategoriesVersion();
+    unsubscribe();
+    setCustomCategories([padel]);
+    expect(calls).toBe(2); // no further notifications after unsubscribe
+    expect(getCategoriesVersion()).not.toBe(afterUnsub); // version still advances
   });
 
   it('clear() removes custom categories', () => {

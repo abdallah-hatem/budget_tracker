@@ -25,6 +25,7 @@ import { categoryLabel } from '../../src/features/transactions/display';
 import { categoryStyle } from '../../src/lib/categoryStyle';
 import { categoryBySlug } from '../../src/lib/categories';
 import { useHiddenCategories } from '../../src/features/categories/HiddenCategoriesProvider';
+import { useCategoriesVersion } from '../../src/features/categories/useCategoriesVersion';
 import { t, isRTL } from '../../src/lib/i18n';
 import { FONT, uiFontSemiBold } from '../../src/lib/font';
 import type { Locale, TxnType } from '../../src/types';
@@ -62,9 +63,17 @@ export default function Dashboard() {
   const rtl = isRTL(locale);
   const dir = rtl ? 'rtl' : 'ltr';
 
-  // Warm the other tabs in the background after the dashboard is interactive, so
+  // Re-render the breakdown once the user's custom categories finish loading,
+  // so custom slugs resolve to their name/icon instead of the raw "c_…" fallback.
+  useCategoriesVersion();
+
+  // Warm sibling tabs in the background after the dashboard is interactive, so
   // the first switch to each isn't janky (they're lazy-mounted by default).
-  useTabPreload(['transactions', 'settings', 'pending']);
+  // NOTE: Transactions is intentionally NOT preloaded — preloading mounts it
+  // before custom categories load, which froze its category filter on the
+  // built-ins-only list. Lazy-mounting it lets the filter read the loaded
+  // registry on first open (like the add-entry picker does).
+  useTabPreload(['settings', 'pending']);
 
   const { monthKey, summary, transactions, loading, prevMonth, nextMonth, goToMonth, refresh } =
     useMonthSummary();

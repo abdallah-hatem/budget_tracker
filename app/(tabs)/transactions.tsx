@@ -15,7 +15,8 @@ import { useTransactions } from '../../src/features/transactions/useTransactions
 import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import { categoryLabel } from '../../src/features/transactions/display';
-import { CATEGORIES } from '../../src/lib/categories';
+import { expenseCategories, incomeCategories } from '../../src/lib/categories';
+import { useCategoriesVersion } from '../../src/features/categories/useCategoriesVersion';
 import { categoryStyle } from '../../src/lib/categoryStyle';
 import { localDayKey } from '../../src/lib/day';
 import { useSession } from '../../src/features/auth/SessionProvider';
@@ -115,14 +116,19 @@ export default function TransactionsScreen() {
 
   const sections = useMemo(() => groupByDay(data ?? []), [data]);
 
-  // Only show the categories that belong to the active view (expense vs income).
+  // Re-derive the filter pills once custom categories load (registry version),
+  // so the user's custom categories appear alongside the built-ins.
+  const catVersion = useCategoriesVersion();
+
+  // Only show the categories that belong to the active view (expense vs income),
+  // including the user's custom ones.
   const filterItems = useMemo(() => [
     { slug: null as string | null, label: t('all_categories', locale) },
-    ...CATEGORIES.filter((c) => c.kind === view).map((c) => ({
+    ...(view === 'income' ? incomeCategories() : expenseCategories()).map((c) => ({
       slug: c.slug,
       label: categoryLabel(c.slug, locale),
     })),
-  ], [locale, view]);
+  ], [locale, view, catVersion]);
 
   return (
     <Screen padded={false}>

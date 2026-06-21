@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { formatMoneyCompact } from '@/src/lib/money';
 import { categoryStyle } from '@/src/lib/categoryStyle';
+import { useCategoriesVersion } from '@/src/features/categories/useCategoriesVersion';
 import { FONT } from '@/src/lib/font';
 import type { Locale } from '@/src/types';
 import { Text } from 'react-native';
@@ -43,6 +44,9 @@ const GHOST = '#1C2322'; // overlay step for the empty ghost ring
  * With no data it renders a faint ghost ring and a muted hint instead.
  */
 export function SpendingDonut({ data, total, locale, label, emptyHint }: SpendingDonutProps) {
+  // Re-render when custom categories load, so their slice color resolves
+  // instead of falling back to the grey default on a cold open.
+  useCategoriesVersion();
   const slices = buildSlices(data);
   const hasData = slices.length > 0 && total > 0;
 
