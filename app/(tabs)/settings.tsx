@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, TextInput, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
 import { t, isRTL } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
@@ -21,6 +23,7 @@ import { FONT } from '@/src/lib/font';
 
 export default function Settings() {
   const { user, profile, updateProfile } = useSession();
+  const router = useRouter();
   const locale: Locale = profile?.locale ?? 'en';
   const rtl = isRTL(locale);
   const [busy, setBusy] = useState(false);
@@ -343,6 +346,34 @@ export default function Settings() {
             </AppText>
           ))}
         </View>
+
+        {/* Open the full visual walkthrough (same screen new users first see). */}
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: '/onboarding', params: { from: 'settings' } })}
+          testID="open-sms-tutorial"
+          style={{
+            flexDirection: rtl ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: '#1F2725',
+            borderRadius: 14,
+            paddingVertical: 13,
+            paddingHorizontal: 14,
+          }}
+        >
+          <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 10 }}>
+            <MaterialCommunityIcons name="book-open-variant" size={18} color="#2BD98E" />
+            <AppText weight="medium" style={{ fontSize: 14 }}>
+              {t('sms_tut.view', locale)}
+            </AppText>
+          </View>
+          <MaterialCommunityIcons
+            name={rtl ? 'chevron-left' : 'chevron-right'}
+            size={20}
+            color="#5C6661"
+          />
+        </TouchableOpacity>
 
       </CollapsibleCard>
 

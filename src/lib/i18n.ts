@@ -214,6 +214,36 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   copy: { en: 'Copy', ar: 'نسخ' },
   copied: { en: 'Copied!', ar: 'تم النسخ!' },
   shortcut_guide: { en: 'Manual setup (advanced)', ar: 'الإعداد اليدوي (متقدم)' },
+
+  // SMS auto-capture onboarding tutorial
+  'sms_tut.heading': { en: 'Auto-capture your bank SMS', ar: 'التقاط رسائل بنكك تلقائيًا' },
+  'sms_tut.sub': {
+    en: 'Set this up once — then every bank SMS becomes a transaction to review.',
+    ar: 'اضبطه مرة واحدة — وكل رسالة بنك تتحوّل لمعاملة تراجعها.',
+  },
+  'sms_tut.s1.t': { en: 'Open Masareef once, signed in', ar: 'افتح مصاريف مرة وأنت مسجّل الدخول' },
+  'sms_tut.s1.d': {
+    en: 'Sets up your secure key automatically — no copy-paste.',
+    ar: 'يجهّز مفتاحك الآمن تلقائيًا — بدون نسخ ولصق.',
+  },
+  'sms_tut.s2.t': { en: 'Shortcuts → Automation → tap +', ar: 'الاختصارات ← الأتمتة ← اضغط +' },
+  'sms_tut.s2.d': { en: 'Create a new personal automation.', ar: 'أنشئ أتمتة شخصية جديدة.' },
+  'sms_tut.s3.t': { en: 'Message → “Contains” → type EGP', ar: 'رسالة ← «تحتوي على» ← اكتب EGP' },
+  'sms_tut.s3.d': {
+    en: 'You can use your bank’s name too. Choose Run Immediately.',
+    ar: 'تقدر تستخدم اسم بنكك أيضًا. اختر «تشغيل فوري».',
+  },
+  'sms_tut.s4.t': { en: 'Add “Log SMS to Masareef”', ar: 'أضف «Log SMS to Masareef»' },
+  'sms_tut.s4.d': { en: 'Set its Message to Shortcut Input.', ar: 'اضبط Message على «مدخلات الاختصار».' },
+  'sms_tut.s5.t': { en: 'Done — review in Pending', ar: 'تم — راجِعها في «قيد المراجعة»' },
+  'sms_tut.s5.d': {
+    en: 'New bank SMS appear there to confirm or edit.',
+    ar: 'تظهر رسائل البنك الجديدة هناك للتأكيد أو التعديل.',
+  },
+  'sms_tut.start': { en: 'Get started', ar: 'لنبدأ' },
+  'sms_tut.skip': { en: 'Skip for now', ar: 'تخطّي الآن' },
+  'sms_tut.done': { en: 'Got it', ar: 'تمام' },
+  'sms_tut.view': { en: 'View SMS setup guide', ar: 'عرض دليل إعداد الرسائل' },
 };
 
 export function isRTL(locale: Locale): boolean {

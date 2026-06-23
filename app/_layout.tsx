@@ -1,5 +1,5 @@
 import '../global.css';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -29,6 +29,7 @@ import { useNotifications } from '@/src/features/notifications/useNotifications'
 import { CaptureProvider } from '@/src/features/capture/CaptureProvider';
 import { CategoriesProvider } from '@/src/features/categories/CategoriesProvider';
 import { DataSyncProvider } from '@/src/features/sync/dataSync';
+import { getSmsTutorialSeen, isNewAccount } from '@/src/features/onboarding/onboardingStorage';
 import { initSentry } from '@/src/lib/sentry';
 
 // Crash/error monitoring — must run before the app renders so early crashes
@@ -39,7 +40,7 @@ initSentry();
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
-  const { session, loading } = useSession();
+  const { session, user, loading } = useSession();
   const segments = useSegments();
   const router = useRouter();
 
@@ -56,6 +57,25 @@ function RootNavigator() {
     if (target) router.replace(target as never);
   }, [loading, session, segments, router]);
 
+  // Show the SMS auto-capture tutorial once to a brand-new account after it
+  // lands in the app. Gated on a recent created_at + a per-user "seen" flag so
+  // it never gets pushed at existing users (OTA-safe). Runs at most once per
+  // signed-in session; resets on sign-out.
+  const onboardCheckedRef = useRef(false);
+  useEffect(() => {
+    if (loading || !user) {
+      onboardCheckedRef.current = false;
+      return;
+    }
+    if (onboardCheckedRef.current) return;
+    if ((segments[0] as string) !== '(tabs)') return; // wait until on the app
+    onboardCheckedRef.current = true;
+    if (!isNewAccount(user.created_at)) return;
+    void getSmsTutorialSeen(user.id).then((seen) => {
+      if (!seen) router.push('/onboarding');
+    });
+  }, [loading, user, segments, router]);
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
@@ -68,6 +88,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
     </Stack>
   );
 }

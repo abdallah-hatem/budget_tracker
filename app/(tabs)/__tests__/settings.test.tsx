@@ -5,7 +5,9 @@ import Settings from '../settings';
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
-jest.mock('expo-router', () => ({}));
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: jest.fn() }),
+}));
 
 jest.mock('../../../src/features/auth/SessionProvider', () => ({
   useSession: jest.fn(),
