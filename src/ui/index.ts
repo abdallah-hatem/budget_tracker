@@ -43,6 +43,8 @@ export type { PressableScaleProps } from './PressableScale';
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 
+export { Skeleton, RowSkeleton, ListSkeleton } from './Skeleton';
+
 export { SpendingDonut } from './SpendingDonut';
 export type { SpendingDonutProps, SpendingDonutDatum } from './SpendingDonut';
 

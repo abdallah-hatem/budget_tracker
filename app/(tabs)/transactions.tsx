@@ -23,7 +23,7 @@ import { useSession } from '../../src/features/auth/SessionProvider';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/features/dashboard/monthRange';
 import { useMonthStart } from '../../src/features/dashboard/MonthStartProvider';
 import { t, isRTL } from '../../src/lib/i18n';
-import { Screen, Pill, EmptyState, TransactionRow, Money, PressableScale, ViewToggle } from '../../src/ui';
+import { Screen, Pill, EmptyState, TransactionRow, Money, PressableScale, ViewToggle, ListSkeleton } from '../../src/ui';
 import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
 import { MonthPicker } from '../../src/ui/MonthPicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -231,7 +231,9 @@ export default function TransactionsScreen() {
       </View>
 
       {/* ── Transaction list grouped by day ────────────────────────────── */}
-      {(!loading && sections.length === 0) ? (
+      {(loading && sections.length === 0) ? (
+        <ListSkeleton />
+      ) : (!loading && sections.length === 0) ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <EmptyState
             emoji="📭"

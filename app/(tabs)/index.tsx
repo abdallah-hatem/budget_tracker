@@ -14,6 +14,7 @@ import { SpendingDonut } from '../../src/ui/SpendingDonut';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { EmptyState } from '../../src/ui/EmptyState';
 import { PressableScale } from '../../src/ui/PressableScale';
+import { Skeleton } from '../../src/ui/Skeleton';
 import { ViewToggle } from '../../src/ui/ViewToggle';
 import { MonthPicker } from '../../src/ui/MonthPicker';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
@@ -222,10 +223,17 @@ export default function Dashboard() {
         {/* ── Hero: total for the selected view ──────────────────────── */}
         <Reveal index={revealIndex++}>
           <View style={{ marginBottom: 28 }}>
-            <Hero
-              label={t(isIncome ? 'income_this_month' : 'spent_this_month', locale)}
-              amount={viewTotal}
-            />
+            {loading && !hasData ? (
+              <View style={{ alignItems: 'center', gap: 12, paddingVertical: 6 }}>
+                <Skeleton width={110} height={12} radius={6} />
+                <Skeleton width={210} height={50} radius={14} />
+              </View>
+            ) : (
+              <Hero
+                label={t(isIncome ? 'income_this_month' : 'spent_this_month', locale)}
+                amount={viewTotal}
+              />
+            )}
           </View>
         </Reveal>
 

@@ -27,8 +27,8 @@ export const SMS_FRAMES: SmsFrame[] = [
   },
   {
     image: require('@/assets/onboarding/sms/03-message-contains.png'),
-    capEn: 'Tap Message Contains → type EGP (and بمبلغ for Arabic SMS) → Done.',
-    capAr: 'اضغط «الرسالة تحتوي على» ← اكتب EGP (و«بمبلغ» للرسائل العربية) ← تم.',
+    capEn: 'Tap Message Contains → type a word your bank always sends in its SMS (e.g. EGP or جم) → Done.',
+    capAr: 'اضغط «الرسالة تحتوي على» ← اكتب كلمة يرسلها بنكك دائمًا في رسائله (مثل EGP أو جم) ← تم.',
   },
   {
     image: require('@/assets/onboarding/sms/04-run-immediately.png'),
