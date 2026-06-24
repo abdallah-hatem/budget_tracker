@@ -130,6 +130,9 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'accounts.cancel': { en: 'Cancel', ar: 'إلغاء' },
   'accounts.account': { en: 'Account', ar: 'الحساب' },
   'accounts.none': { en: 'No account', ar: 'بدون حساب' },
+  'accounts.add_money': { en: 'Add money', ar: 'إضافة رصيد' },
+  'accounts.amount_to_add': { en: 'Amount to add', ar: 'المبلغ المراد إضافته' },
+  'accounts.topup_note': { en: 'Balance top-up', ar: 'إضافة رصيد' },
 
   // ── Stub placeholders (replaced by M5/M6) ─────────────────────────────────
   'home.placeholder': { en: 'Dashboard coming soon', ar: 'لوحة المعلومات قريباً' },
