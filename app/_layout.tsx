@@ -1,5 +1,5 @@
 import '../global.css';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -27,7 +27,11 @@ import { SessionProvider, useSession } from '@/src/features/auth/SessionProvider
 import { redirectTarget } from '@/src/features/auth/redirectTarget';
 import { useNotifications } from '@/src/features/notifications/useNotifications';
 import { CaptureProvider } from '@/src/features/capture/CaptureProvider';
+import { CategoriesProvider } from '@/src/features/categories/CategoriesProvider';
 import { DataSyncProvider } from '@/src/features/sync/dataSync';
+import { getSmsTutorialSeen, isNewAccount } from '@/src/features/onboarding/onboardingStorage';
+import { useForceUpdate } from '@/src/features/appConfig/useForceUpdate';
+import { UpdateRequiredScreen } from '@/src/features/appConfig/UpdateRequiredScreen';
 import { initSentry } from '@/src/lib/sentry';
 
 // Crash/error monitoring — must run before the app renders so early crashes
@@ -38,9 +42,13 @@ initSentry();
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
-  const { session, loading } = useSession();
+  const { session, user, profile, loading } = useSession();
   const segments = useSegments();
   const router = useRouter();
+
+  // Force-update gate: block when the installed version is below the remote
+  // minimum (app_config). Fails open. Must take precedence over everything.
+  const updateRequired = useForceUpdate();
 
   // Register push token + wire tap-to-navigate deep-link (no-op on simulator).
   useNotifications();
@@ -55,6 +63,29 @@ function RootNavigator() {
     if (target) router.replace(target as never);
   }, [loading, session, segments, router]);
 
+  // Show the SMS auto-capture tutorial once to a brand-new account after it
+  // lands in the app. Gated on a recent created_at + a per-user "seen" flag so
+  // it never gets pushed at existing users (OTA-safe). Runs at most once per
+  // signed-in session; resets on sign-out.
+  const onboardCheckedRef = useRef(false);
+  useEffect(() => {
+    if (loading || !user) {
+      onboardCheckedRef.current = false;
+      return;
+    }
+    if (onboardCheckedRef.current) return;
+    if ((segments[0] as string) !== '(tabs)') return; // wait until on the app
+    onboardCheckedRef.current = true;
+    if (!isNewAccount(user.created_at)) return;
+    void getSmsTutorialSeen(user.id).then((seen) => {
+      if (!seen) router.push('/onboarding');
+    });
+  }, [loading, user, segments, router]);
+
+  if (updateRequired) {
+    return <UpdateRequiredScreen locale={profile?.locale ?? 'en'} />;
+  }
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
@@ -67,6 +98,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
     </Stack>
   );
 }
@@ -104,11 +136,13 @@ function RootLayout() {
         {/* Global capture engine (mic/type/manual) + its overlays, driven by the
             tab-bar FAB from any screen — so there is no capture tab. DataSync sits
             above it so a capture write can refetch whatever tab is on screen. */}
-        <DataSyncProvider>
-          <CaptureProvider>
-            <RootNavigator />
-          </CaptureProvider>
-        </DataSyncProvider>
+        <CategoriesProvider>
+          <DataSyncProvider>
+            <CaptureProvider>
+              <RootNavigator />
+            </CaptureProvider>
+          </DataSyncProvider>
+        </CategoriesProvider>
       </SessionProvider>
     </SafeAreaProvider>
   );

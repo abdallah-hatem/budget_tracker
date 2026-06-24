@@ -64,3 +64,35 @@ export async function deleteAccount(id: string): Promise<void> {
   const { error } = await supabase.from('accounts').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Add money to an account's CURRENT balance without touching its opening
+ * balance. Balance is computed (opening + confirmed income − confirmed
+ * expense), so this records a confirmed `transfer_in` income transaction on the
+ * account — the account_balances view then reflects the higher balance, and the
+ * top-up stays in history as an auditable entry.
+ */
+export async function addToAccountBalance(
+  accountId: string,
+  amount: number,
+  note: string,
+): Promise<void> {
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter an amount greater than 0');
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error('Not authenticated');
+
+  const { error } = await supabase.from('transactions').insert({
+    user_id: userId,
+    type: 'income',
+    amount,
+    currency: 'EGP',
+    category_slug: 'transfer_in',
+    note,
+    source: 'text',
+    status: 'confirmed',
+    account_id: accountId,
+    occurred_at: new Date().toISOString(),
+  });
+  if (error) throw new Error(error.message);
+}

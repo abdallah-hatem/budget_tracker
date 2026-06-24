@@ -26,7 +26,9 @@ Notifications.setNotificationHandler({
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
-    shouldSetBadge: false,
+    // Apply the notification's badge (= pending count) even in the foreground, so
+    // the app-icon badge tracks pending items as they arrive.
+    shouldSetBadge: true,
   }),
 });
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { MotiView } from 'moti';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -14,14 +14,19 @@ import { SpendingDonut } from '../../src/ui/SpendingDonut';
 import { TransactionRow } from '../../src/ui/TransactionRow';
 import { EmptyState } from '../../src/ui/EmptyState';
 import { PressableScale } from '../../src/ui/PressableScale';
+import { Skeleton } from '../../src/ui/Skeleton';
 import { ViewToggle } from '../../src/ui/ViewToggle';
 import { MonthPicker } from '../../src/ui/MonthPicker';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
+import { useTabPreload } from '../../src/hooks/useTabPreload';
 import { useAccountBalances } from '../../src/features/accounts/useAccountBalances';
 import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { categoryLabel } from '../../src/features/transactions/display';
 import { categoryStyle } from '../../src/lib/categoryStyle';
+import { categoryBySlug } from '../../src/lib/categories';
+import { useHiddenCategories } from '../../src/features/categories/HiddenCategoriesProvider';
+import { useCategoriesVersion } from '../../src/features/categories/useCategoriesVersion';
 import { t, isRTL } from '../../src/lib/i18n';
 import { FONT, uiFontSemiBold } from '../../src/lib/font';
 import type { Locale, TxnType } from '../../src/types';
@@ -59,6 +64,18 @@ export default function Dashboard() {
   const rtl = isRTL(locale);
   const dir = rtl ? 'rtl' : 'ltr';
 
+  // Re-render the breakdown once the user's custom categories finish loading,
+  // so custom slugs resolve to their name/icon instead of the raw "c_…" fallback.
+  useCategoriesVersion();
+
+  // Warm sibling tabs in the background after the dashboard is interactive, so
+  // the first switch to each isn't janky (they're lazy-mounted by default).
+  // NOTE: Transactions is intentionally NOT preloaded — preloading mounts it
+  // before custom categories load, which froze its category filter on the
+  // built-ins-only list. Lazy-mounting it lets the filter read the loaded
+  // registry on first open (like the add-entry picker does).
+  useTabPreload(['settings', 'pending']);
+
   const { monthKey, summary, transactions, loading, prevMonth, nextMonth, goToMonth, refresh } =
     useMonthSummary();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -92,6 +109,23 @@ export default function Dashboard() {
   // Category rows (already sorted desc) with a max for progress-bar scaling.
   const categoryRows = breakdown;
   const maxTotal = categoryRows.reduce((m, r) => Math.max(m, r.total), 0);
+
+  // Long-press a category to hide it from Home; hidden ones can be restored from
+  // the small footer below the breakdown.
+  const { hidden, toggle: toggleHidden } = useHiddenCategories();
+  const hiddenForView = [...hidden].filter(
+    (slug) => (categoryBySlug(slug)?.kind ?? 'expense') === view,
+  );
+  const confirmHide = useCallback(
+    (slug: string, label: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      Alert.alert(label, t('cat.hideHomePrompt', locale), [
+        { text: t('cancel', locale), style: 'cancel' },
+        { text: t('cat.hide', locale), style: 'destructive', onPress: () => toggleHidden(slug) },
+      ]);
+    },
+    [locale, toggleHidden],
+  );
 
   function handleMonthStep(step: () => void) {
     void Haptics.selectionAsync();
@@ -189,10 +223,17 @@ export default function Dashboard() {
         {/* ── Hero: total for the selected view ──────────────────────── */}
         <Reveal index={revealIndex++}>
           <View style={{ marginBottom: 28 }}>
-            <Hero
-              label={t(isIncome ? 'income_this_month' : 'spent_this_month', locale)}
-              amount={viewTotal}
-            />
+            {loading && !hasData ? (
+              <View style={{ alignItems: 'center', gap: 12, paddingVertical: 6 }}>
+                <Skeleton width={110} height={12} radius={6} />
+                <Skeleton width={210} height={50} radius={14} />
+              </View>
+            ) : (
+              <Hero
+                label={t(isIncome ? 'income_this_month' : 'spent_this_month', locale)}
+                amount={viewTotal}
+              />
+            )}
           </View>
         </Reveal>
 
@@ -289,7 +330,7 @@ export default function Dashboard() {
             </Reveal>
 
             {/* ── By category ──────────────────────────────────────── */}
-            {categoryRows.length > 0 && (
+            {(categoryRows.length > 0 || hiddenForView.length > 0) && (
               <Reveal index={revealIndex++}>
                 <Card className="mb-7">
                   <SectionLabel>{t('by_category', locale)}</SectionLabel>
@@ -298,7 +339,11 @@ export default function Dashboard() {
                       const color = categoryStyle(row.slug).color;
                       const pct = maxTotal > 0 ? row.total / maxTotal : 0;
                       return (
-                        <View key={row.slug}>
+                        <Pressable
+                          key={row.slug}
+                          onLongPress={() => confirmHide(row.slug, categoryLabel(row.slug, locale))}
+                          delayLongPress={300}
+                        >
                           <View
                             style={{
                               flexDirection: rtl ? 'row-reverse' : 'row',
@@ -341,10 +386,53 @@ export default function Dashboard() {
                               }}
                             />
                           </View>
-                        </View>
+                        </Pressable>
                       );
                     })}
                   </View>
+
+                  {/* Hidden-from-home footer: tap a chip to restore it. */}
+                  {hiddenForView.length > 0 && (
+                    <View
+                      style={{
+                        flexDirection: rtl ? 'row-reverse' : 'row',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: 8,
+                        marginTop: 18,
+                        paddingTop: 14,
+                        borderTopWidth: 1,
+                        borderTopColor: '#1C2322',
+                      }}
+                    >
+                      <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 11, color: '#6B7672' }}>
+                        {t('cat.hidden', locale)}
+                      </Text>
+                      {hiddenForView.map((slug) => (
+                        <Pressable
+                          key={slug}
+                          onPress={() => toggleHidden(slug)}
+                          hitSlop={6}
+                          style={{
+                            flexDirection: rtl ? 'row-reverse' : 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            paddingVertical: 4,
+                            paddingHorizontal: 8,
+                            backgroundColor: '#14191A',
+                            borderRadius: 999,
+                            opacity: 0.6,
+                          }}
+                        >
+                          <CategoryAvatar slug={slug} size={18} />
+                          <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 12, color: '#A8B2AF' }}>
+                            {categoryLabel(slug, locale)}
+                          </Text>
+                          <Ionicons name="eye-off-outline" size={13} color="#6B7672" />
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
                 </Card>
               </Reveal>
             )}

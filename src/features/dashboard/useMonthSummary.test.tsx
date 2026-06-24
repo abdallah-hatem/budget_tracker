@@ -8,6 +8,10 @@ jest.mock('../transactions/api', () => ({
 import { listTransactions } from '../transactions/api';
 const mockList = listTransactions as jest.MockedFunction<typeof listTransactions>;
 
+// monthRange bounds are LOCAL midnight as a UTC instant — build expectations the
+// same way so the test is timezone-independent.
+const localMidnight = (y: number, m: number, d: number) => new Date(y, m, d).toISOString();
+
 function tx(over: Partial<Transaction>): Transaction {
   return {
     id: over.id ?? 'id',
@@ -48,10 +52,10 @@ describe('useMonthSummary', () => {
       expenseByCategory: [{ slug: 'food', total: 250 }],
       incomeByCategory: [{ slug: 'salary', total: 1000 }],
     });
-    // Confirmed-only, June 2026 half-open range.
+    // Confirmed-only, June 2026 half-open range at LOCAL midnight.
     expect(mockList).toHaveBeenCalledWith({
-      from: '2026-06-01T00:00:00.000Z',
-      to: '2026-07-01T00:00:00.000Z',
+      from: localMidnight(2026, 5, 1),
+      to: localMidnight(2026, 6, 1),
       status: 'confirmed',
     });
   });
@@ -67,8 +71,8 @@ describe('useMonthSummary', () => {
 
     await waitFor(() =>
       expect(mockList).toHaveBeenLastCalledWith({
-        from: '2026-05-01T00:00:00.000Z',
-        to: '2026-06-01T00:00:00.000Z',
+        from: localMidnight(2026, 4, 1),
+        to: localMidnight(2026, 5, 1),
         status: 'confirmed',
       })
     );

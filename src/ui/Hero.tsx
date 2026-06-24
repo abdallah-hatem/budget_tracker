@@ -59,8 +59,10 @@ export function Hero({ label, amount, delta }: HeroProps) {
         {label}
       </Text>
 
-      {/* Big split number — flex-row, each Text guards its own bidi */}
-      <View className="flex-row items-end">
+      {/* Big split number — flex-row, each Text guards its own bidi. Force LTR
+          so the sign/symbol/integer/decimals never reverse under an ambient RTL
+          (the dashboard wraps its content in direction:'rtl' for Arabic). */}
+      <View className="flex-row items-end" style={{ direction: 'ltr' }}>
         {/* Unicode minus prefix when net is negative — same muted ink2 treatment */}
         {negative && (
           <Text style={[MUTED_STYLE, { marginRight: 1 }]}>

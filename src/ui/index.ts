@@ -23,6 +23,9 @@ export type { HeroProps } from './Hero';
 export { CategoryAvatar } from './CategoryAvatar';
 export type { CategoryAvatarProps } from './CategoryAvatar';
 
+export { NumericInput } from './NumericInput';
+export type { NumericInputProps } from './NumericInput';
+
 export { SectionLabel } from './SectionLabel';
 export type { SectionLabelProps } from './SectionLabel';
 
@@ -39,6 +42,8 @@ export type { PressableScaleProps } from './PressableScale';
 
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
+
+export { Skeleton, RowSkeleton, ListSkeleton } from './Skeleton';
 
 export { SpendingDonut } from './SpendingDonut';
 export type { SpendingDonutProps, SpendingDonutDatum } from './SpendingDonut';

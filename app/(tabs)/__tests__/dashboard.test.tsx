@@ -8,6 +8,7 @@ jest.mock('expo-router', () => {
   return {
     useFocusEffect: (cb: () => void) => { useEffect(() => { cb(); }, []); },
     useRouter: () => ({ navigate: jest.fn(), push: jest.fn() }),
+    useNavigation: () => ({ preload: jest.fn() }),
   };
 });
 

@@ -5,8 +5,9 @@
 // kept (= transactions[0]) for backward compatibility with older app builds.
 // verify_jwt = true (see supabase/config.toml) — only authenticated app users.
 import { corsHeaders } from "../_shared/cors.ts";
-import { categorizeMany, type Locale, type ParsedTransaction } from "../_shared/categorize.ts";
+import { categorizeMany, type CustomCategory, type Locale, type ParsedTransaction } from "../_shared/categorize.ts";
 import { logAiEvent, minConfidence, userIdFromAuthHeader, type AiEvent } from "../_shared/aiEvents.ts";
+import { fetchCustomCategories } from "../_shared/customCategories.ts";
 import { withSentry } from "../_shared/sentry.ts";
 
 const MAX_TEXT_LENGTH = 2000;
@@ -18,7 +19,10 @@ export interface HandlerDeps {
     text: string,
     locale: Locale,
     apiKey: string,
+    extra?: CustomCategory[],
   ) => Promise<ParsedTransaction[]>;
+  /** Fetch the caller's custom categories (omitted in tests -> built-ins only). */
+  fetchCategoriesFn?: (userId: string | null) => Promise<CustomCategory[]>;
   /** Optional observability sink (omitted in tests). */
   logEvent?: (e: AiEvent) => void;
 }
@@ -71,9 +75,10 @@ export async function handleCategorize(
 
   // Call the LLM.
   const userId = userIdFromAuthHeader(req);
+  const extra = deps.fetchCategoriesFn ? await deps.fetchCategoriesFn(userId) : [];
   const t0 = Date.now();
   try {
-    const transactions = await deps.categorizeFn(text, locale, deps.apiKey);
+    const transactions = await deps.categorizeFn(text, locale, deps.apiKey, extra);
     deps.logEvent?.({
       user_id: userId,
       fn: "categorize",
@@ -105,7 +110,9 @@ if (import.meta.main) {
   Deno.serve(withSentry("categorize", (req) =>
     handleCategorize(req, {
       apiKey: Deno.env.get("GROQ_API_KEY") ?? "",
-      categorizeFn: (text, locale, apiKey) => categorizeMany(text, locale, apiKey),
+      categorizeFn: (text, locale, apiKey, extra) =>
+        categorizeMany(text, locale, apiKey, { customCategories: extra }),
+      fetchCategoriesFn: fetchCustomCategories,
       logEvent: (e) => void logAiEvent(e),
     })
   ));

@@ -5,6 +5,8 @@ import { useTransactions } from '../transactions/useTransactions';
 import { useRefetchOnTxnChange } from '../sync/dataSync';
 import { summarize } from '../dashboard/summary';
 import { monthRange, currentMonthKey } from '../dashboard/monthRange';
+import { useMonthStart } from '../dashboard/MonthStartProvider';
+import { useHiddenCategories } from '../categories/HiddenCategoriesProvider';
 import { buildWidgetSnapshot, WIDGET_SNAPSHOT_KEY, type WidgetSnapshot } from './snapshot';
 import type { Locale } from '../../types';
 
@@ -55,12 +57,14 @@ export function clearWidgetSnapshot(): void {
 export function useWidgetSync(): void {
   const { user, profile } = useSession();
   const locale: Locale = (profile?.locale as Locale) ?? 'en';
+  const { startDay } = useMonthStart();
+  const { hidden } = useHiddenCategories();
 
-  // Always the current calendar month — recomputed on mount.
+  // Always the CURRENT financial month (honouring the user's start-of-month day).
   const filter = useMemo(() => {
-    const { from, to } = monthRange(currentMonthKey());
+    const { from, to } = monthRange(currentMonthKey(new Date(), startDay), startDay);
     return { from, to, status: 'confirmed' as const };
-  }, []);
+  }, [startDay]);
 
   const { data, loading, error, refresh } = useTransactions(filter);
   useRefetchOnTxnChange(useCallback(() => void refresh(), [refresh]));
@@ -71,9 +75,9 @@ export function useWidgetSync(): void {
   useEffect(() => {
     if (!user || loading || error) return;
     writeWidgetSnapshot(
-      buildWidgetSnapshot({ summary: summarize(data), transactions: data, locale, now: new Date() }),
+      buildWidgetSnapshot({ summary: summarize(data, hidden), transactions: data, locale, now: new Date(), hidden }),
     );
-  }, [data, loading, error, locale, user]);
+  }, [data, loading, error, locale, user, hidden]);
 
   // Keep it fresh: refetch the current month whenever the app comes to the
   // foreground, so the widget reflects new spend even if nothing changed in-app.

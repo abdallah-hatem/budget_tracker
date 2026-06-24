@@ -39,10 +39,19 @@ export function CollapsibleCard({
         testID={testID}
         accessibilityRole="button"
         onPress={toggle}
+        // The header text row is thin; without this, taps in the Card's 16px
+        // padding (which looks like part of the header) miss the touch target.
+        // hitSlop extends the tappable area to cover the whole header band; the
+        // small vertical padding makes the row itself a bit taller too.
+        // NOTE: keep `style` a plain OBJECT (not a `({pressed})=>…` function) —
+        // NativeWind mishandles function styles on Pressable and drops
+        // flexDirection, which wraps the chevron under the title.
+        hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
         style={{
           flexDirection: rtl ? 'row-reverse' : 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
+          paddingVertical: 4,
         }}
       >
         <Text

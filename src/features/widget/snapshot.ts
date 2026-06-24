@@ -2,6 +2,7 @@ import type { Summary } from '../dashboard/summary';
 import { categoryLabel } from '../transactions/display';
 import { categoryStyle } from '../../lib/categoryStyle';
 import { formatMoneyCompact } from '../../lib/money';
+import { localDayKey } from '../../lib/day';
 import { isRTL } from '../../lib/i18n';
 import type { Locale, Transaction } from '../../types';
 
@@ -41,12 +42,6 @@ export const WIDGET_SNAPSHOT_KEY = 'snapshot';
 
 const MAX_CATEGORIES = 3;
 
-/** Local helpers, kept out of the public shape. */
-function dayKey(d: Date): string {
-  // Matches the transactions list, which buckets by the stored ISO date prefix.
-  return d.toISOString().slice(0, 10);
-}
-
 /**
  * Fold the current month's summary + transactions into the widget payload.
  * Pure (takes `now` explicitly) so it unit-tests without a clock.
@@ -56,17 +51,20 @@ export function buildWidgetSnapshot(args: {
   transactions: Transaction[];
   locale: Locale;
   now: Date;
+  /** Categories hidden from home — also excluded from the widget's today total. */
+  hidden?: Set<string>;
 }): WidgetSnapshot {
-  const { summary, transactions, locale, now } = args;
+  const { summary, transactions, locale, now, hidden } = args;
   const ar = locale === 'ar';
-  const todayKey = dayKey(now);
+  const todayKey = localDayKey(now);
 
   const todayTotal = transactions
     .filter(
       (t) =>
         t.status === 'confirmed' &&
         t.type === 'expense' &&
-        t.occurred_at.slice(0, 10) === todayKey,
+        !hidden?.has(t.category_slug) &&
+        localDayKey(t.occurred_at) === todayKey,
     )
     .reduce((sum, t) => sum + t.amount, 0);
 

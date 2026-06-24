@@ -26,26 +26,93 @@ export const CATEGORIES: Category[] = [
   { slug: 'other_income',  name_en: 'Other',             name_ar: 'أخرى',          kind: 'income',  icon: 'dots-horizontal',  color: '#64748B', sort_order: 50 },
 ];
 
-const BY_SLUG: Record<string, Category> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.slug, c]),
-);
+// ---------------------------------------------------------------------------
+// Runtime registry: built-ins (above) + the signed-in user's CUSTOM categories,
+// loaded from the DB by CategoriesProvider. All lookups below resolve against
+// both, so every slug-based call site (rows, donut, pickers, avatar) renders
+// custom categories without changes. Custom slugs are opaque ("c_…").
+// ---------------------------------------------------------------------------
+let customCategories: Category[] = [];
+
+function indexBySlug(list: Category[]): Record<string, Category> {
+  return Object.fromEntries(list.map((c) => [c.slug, c]));
+}
+
+let bySlug: Record<string, Category> = indexBySlug(CATEGORIES);
+
+// The registry is a mutable module-level store read during render by slug-based
+// lookups. Because the user's custom categories load asynchronously, components
+// must re-render when it changes — otherwise a custom slug renders as its raw
+// "c_…" fallback until some other re-render happens. Expose a tiny external
+// store (useSyncExternalStore-compatible) so React subscribers stay in sync.
+let version = 0;
+const listeners = new Set<() => void>();
+
+function emitChange(): void {
+  version += 1;
+  listeners.forEach((l) => l());
+}
+
+/** Subscribe to registry changes. Returns an unsubscribe fn. */
+export function subscribeCategories(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/** Monotonic version, bumped whenever the registry changes (snapshot). */
+export function getCategoriesVersion(): number {
+  return version;
+}
+
+/** Replace the registered custom categories (called on load + after CRUD). */
+export function setCustomCategories(list: Category[]): void {
+  customCategories = list;
+  bySlug = indexBySlug([...CATEGORIES, ...list]);
+  emitChange();
+}
+
+/** Drop all custom categories (sign-out / tests). */
+export function clearCustomCategories(): void {
+  setCustomCategories([]);
+}
+
+/** True if the slug belongs to a registered custom category. */
+export function isCustomSlug(slug: string): boolean {
+  return customCategories.some((c) => c.slug === slug);
+}
+
+function allCategories(): Category[] {
+  return [...CATEGORIES, ...customCategories];
+}
+
+// The built-in "Other" catch-all should always sit at the very end of a list,
+// after the user's custom categories (which carry a large sort_order). Pin it
+// last so custom categories stay visible instead of being buried past "Other".
+const CATCH_ALL_SLUGS = new Set(['other_expense', 'other_income']);
+
+function byDisplayOrder(a: Category, b: Category): number {
+  const aCatchAll = CATCH_ALL_SLUGS.has(a.slug) ? 1 : 0;
+  const bCatchAll = CATCH_ALL_SLUGS.has(b.slug) ? 1 : 0;
+  if (aCatchAll !== bCatchAll) return aCatchAll - bCatchAll;
+  return a.sort_order - b.sort_order;
+}
 
 export function categoryBySlug(slug: string): Category | undefined {
-  return BY_SLUG[slug];
+  return bySlug[slug];
 }
 
 export function expenseCategories(): Category[] {
-  return CATEGORIES.filter((c) => c.kind === 'expense').sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
+  return allCategories()
+    .filter((c) => c.kind === 'expense')
+    .sort(byDisplayOrder);
 }
 
 export function incomeCategories(): Category[] {
-  return CATEGORIES.filter((c) => c.kind === 'income').sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
+  return allCategories()
+    .filter((c) => c.kind === 'income')
+    .sort(byDisplayOrder);
 }
 
 export function categorySlugs(): string[] {
-  return CATEGORIES.map((c) => c.slug);
+  return allCategories().map((c) => c.slug);
 }

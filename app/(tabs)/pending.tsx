@@ -15,7 +15,7 @@ import { EditTransactionSheet } from '../../src/features/transactions/EditTransa
 import { categoryLabel } from '../../src/features/transactions/display';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { t, isRTL } from '../../src/lib/i18n';
-import { Screen, Card, CategoryAvatar, EmptyState, Money, PressableScale } from '../../src/ui';
+import { Screen, Card, CategoryAvatar, EmptyState, Money, PressableScale, ListSkeleton } from '../../src/ui';
 import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT } from '../../src/lib/font';
@@ -91,7 +91,9 @@ export default function PendingScreen() {
       </View>
 
       {/* ── List ───────────────────────────────────────────────────── */}
-      {!loading && pendingCount === 0 ? (
+      {loading && pendingCount === 0 ? (
+        <ListSkeleton />
+      ) : !loading && pendingCount === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <EmptyState
             emoji="📥"
@@ -304,7 +306,8 @@ export default function PendingScreen() {
                 <EditTransactionSheet
                   transaction={editing}
                   locale={locale}
-                  confirmOnSave
+                  // Save keeps the item pending; Confirm saves + confirms it.
+                  showConfirm
                   onCancel={() => setEditing(null)}
                   onDone={() => {
                     setEditing(null);

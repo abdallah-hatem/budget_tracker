@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { categoryStyle } from '@/src/lib/categoryStyle';
+import { useCategoriesVersion } from '@/src/features/categories/useCategoriesVersion';
 
 export interface CategoryAvatarProps {
   /** Category slug (e.g. 'food', 'transport') */
@@ -16,6 +17,10 @@ export interface CategoryAvatarProps {
  * color) is centered.
  */
 export function CategoryAvatar({ slug, size = 40 }: CategoryAvatarProps) {
+  // Re-render when the custom-category registry loads/changes, so a custom
+  // slug's icon + color appear even inside virtualized lists (whose cells
+  // don't otherwise re-render on a global-registry change).
+  useCategoriesVersion();
   const { icon, color } = categoryStyle(slug);
 
   // Parse hex color and apply 14% opacity

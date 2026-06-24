@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, TextInput, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
 import { t, isRTL } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
@@ -10,14 +12,19 @@ import {
   updateAccount,
   setDefaultAccount,
   deleteAccount,
+  addToAccountBalance,
 } from '@/src/features/accounts/api';
 import type { Locale, AccountBalance } from '@/src/types';
 import { Screen, Card, CollapsibleCard, AppText, SectionLabel, Pill, Money } from '@/src/ui';
 import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
+import { MonthStartSection } from '@/src/features/dashboard/MonthStartSection';
+import { GoldSection } from '@/src/features/gold/GoldSection';
+import { CategoriesSection } from '@/src/features/categories/CategoriesSection';
 import { FONT } from '@/src/lib/font';
 
 export default function Settings() {
   const { user, profile, updateProfile } = useSession();
+  const router = useRouter();
   const locale: Locale = profile?.locale ?? 'en';
   const rtl = isRTL(locale);
   const [busy, setBusy] = useState(false);
@@ -43,6 +50,9 @@ export default function Settings() {
   const [formName, setFormName] = useState('');
   const [formBalance, setFormBalance] = useState('');
   const [formDefault, setFormDefault] = useState(false);
+  // Inline "add money to current balance" form (per account).
+  const [adjustId, setAdjustId] = useState<string | null>(null);
+  const [adjustAmount, setAdjustAmount] = useState('');
 
   const reloadAccounts = useCallback(() => {
     listAccountBalances().then(setAccounts).catch(() => {});
@@ -52,6 +62,7 @@ export default function Settings() {
   }, [reloadAccounts]);
 
   function openCreate() {
+    setAdjustId(null);
     setEditId(null);
     setFormName('');
     setFormBalance('');
@@ -59,6 +70,7 @@ export default function Settings() {
     setFormOpen(true);
   }
   function openEdit(a: AccountBalance) {
+    setAdjustId(null);
     setEditId(a.id);
     setFormName(a.name);
     setFormBalance(String(a.opening_balance));
@@ -81,6 +93,25 @@ export default function Settings() {
         await createAccount({ name: formName.trim(), opening_balance: opening, is_default: formDefault });
       }
       closeForm();
+      reloadAccounts();
+    } finally {
+      setBusy(false);
+    }
+  }
+  function openAddMoney(id: string) {
+    closeForm();
+    setAdjustId(id);
+    setAdjustAmount('');
+  }
+  async function onSubmitAdjust() {
+    if (!adjustId) return;
+    const amount = parseFloat(adjustAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    setBusy(true);
+    try {
+      await addToAccountBalance(adjustId, amount, t('accounts.topup_note', locale));
+      setAdjustId(null);
+      setAdjustAmount('');
       reloadAccounts();
     } finally {
       setBusy(false);
@@ -201,9 +232,12 @@ export default function Settings() {
                 <Money amount={a.balance} tone="ink" sign="auto" size={15} />
               </View>
               <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 16 }}>
+                <TouchableOpacity testID={`account-addmoney-${a.id}`} onPress={() => openAddMoney(a.id)}>
+                  <AppText className="text-accent" style={{ fontSize: 12 }}>{t('accounts.add_money', locale)}</AppText>
+                </TouchableOpacity>
                 {!a.is_default ? (
                   <TouchableOpacity testID={`account-setdefault-${a.id}`} disabled={busy} onPress={() => onSetDefault(a.id)}>
-                    <AppText className="text-accent" style={{ fontSize: 12 }}>{t('accounts.set_default', locale)}</AppText>
+                    <AppText className="text-ink2" style={{ fontSize: 12 }}>{t('accounts.set_default', locale)}</AppText>
                   </TouchableOpacity>
                 ) : null}
                 <TouchableOpacity testID={`account-edit-${a.id}`} onPress={() => openEdit(a)}>
@@ -215,6 +249,33 @@ export default function Settings() {
                   </TouchableOpacity>
                 ) : null}
               </View>
+
+              {/* Inline "add money to current balance" form */}
+              {adjustId === a.id ? (
+                <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10, alignItems: 'center' }}>
+                  <TextInput
+                    testID={`account-addmoney-input-${a.id}`}
+                    value={adjustAmount}
+                    onChangeText={setAdjustAmount}
+                    keyboardType="numeric"
+                    autoFocus
+                    placeholder={t('accounts.amount_to_add', locale)}
+                    placeholderTextColor="#6B7672"
+                    style={{ flex: 1, backgroundColor: '#1C2322', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: '#F4F7F5', fontFamily: FONT.soraSb, fontSize: 15, textAlign: rtl ? 'right' : 'left' }}
+                  />
+                  <TouchableOpacity
+                    testID={`account-addmoney-submit-${a.id}`}
+                    disabled={busy || !(parseFloat(adjustAmount) > 0)}
+                    onPress={onSubmitAdjust}
+                    style={{ backgroundColor: '#2BD98E', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', opacity: parseFloat(adjustAmount) > 0 ? 1 : 0.5 }}
+                  >
+                    <AppText weight="semibold" style={{ fontSize: 14, color: '#06251A' }}>{t('accounts.save', locale)}</AppText>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID={`account-addmoney-cancel-${a.id}`} onPress={() => setAdjustId(null)}>
+                    <AppText className="text-ink2" style={{ fontSize: 12 }}>{t('accounts.cancel', locale)}</AppText>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
           ))}
         </View>
@@ -296,6 +357,15 @@ export default function Settings() {
         </View>
       </CollapsibleCard>
 
+      {/* ── CATEGORIES ─────────────────────────────────────────────────────── */}
+      <CategoriesSection locale={locale} />
+
+      {/* ── GOLD ───────────────────────────────────────────────────────────── */}
+      <GoldSection locale={locale} accountsTotal={accounts.reduce((s, a) => s + a.balance, 0)} />
+
+      {/* ── START OF MONTH ─────────────────────────────────────────────────── */}
+      <MonthStartSection locale={locale} />
+
       {/* ── SMS AUTO-CAPTURE ───────────────────────────────────────────────── */}
       <CollapsibleCard title={t('sms_capture', locale)} rtl={rtl} testID="section-sms">
         <AppText
@@ -331,6 +401,34 @@ export default function Settings() {
             </AppText>
           ))}
         </View>
+
+        {/* Open the full visual walkthrough (same screen new users first see). */}
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: '/onboarding', params: { from: 'settings' } })}
+          testID="open-sms-tutorial"
+          style={{
+            flexDirection: rtl ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: '#1F2725',
+            borderRadius: 14,
+            paddingVertical: 13,
+            paddingHorizontal: 14,
+          }}
+        >
+          <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 10 }}>
+            <MaterialCommunityIcons name="book-open-variant" size={18} color="#2BD98E" />
+            <AppText weight="medium" style={{ fontSize: 14 }}>
+              {t('sms_tut.view', locale)}
+            </AppText>
+          </View>
+          <MaterialCommunityIcons
+            name={rtl ? 'chevron-left' : 'chevron-right'}
+            size={20}
+            color="#5C6661"
+          />
+        </TouchableOpacity>
 
       </CollapsibleCard>
 

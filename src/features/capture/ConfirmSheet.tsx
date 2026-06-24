@@ -7,6 +7,7 @@ import React, { useReducer, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import type { Locale, ParsedTransaction, Transaction, TxnSource } from '../../types';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
+import { NumericInput } from '../../ui';
 import { insertTransaction } from '../transactions/api';
 import { buildCaptureRow } from './toTransactionRow';
 import {
@@ -120,11 +121,10 @@ export function ConfirmSheet({
       <Text className="mb-1 text-xs text-gray-500">
         {locale === 'ar' ? 'المبلغ (ج.م)' : 'Amount (EGP)'}
       </Text>
-      <TextInput
+      <NumericInput
         testID="confirm-amount"
         value={state.amountText}
-        onChangeText={(v) => dispatch({ kind: 'SET_AMOUNT', value: v })}
-        keyboardType="decimal-pad"
+        onChangeValue={(v) => dispatch({ kind: 'SET_AMOUNT', value: v })}
         placeholder="0"
         className="mb-3 rounded-xl border border-gray-300 px-3 py-2 text-lg"
       />

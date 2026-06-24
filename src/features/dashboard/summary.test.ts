@@ -95,4 +95,19 @@ describe('summarize', () => {
     ]);
     expect(result.incomeByCategory).toEqual([{ slug: 'salary', total: 50 }]);
   });
+
+  it('excludes hidden categories from totals AND breakdown', () => {
+    const result = summarize(
+      [
+        txn({ id: 'a', type: 'expense', amount: 90, category_slug: 'food' }),
+        txn({ id: 'b', type: 'expense', amount: 10, category_slug: 'transport' }),
+        txn({ id: 'c', type: 'income', amount: 1000, category_slug: 'salary' }),
+      ],
+      new Set(['transport', 'salary']),
+    );
+    expect(result.expense).toBe(90); // transport (10) excluded
+    expect(result.income).toBe(0); // salary excluded
+    expect(result.expenseByCategory).toEqual([{ slug: 'food', total: 90 }]);
+    expect(result.incomeByCategory).toEqual([]);
+  });
 });

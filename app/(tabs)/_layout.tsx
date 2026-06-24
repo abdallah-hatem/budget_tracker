@@ -3,8 +3,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { t } from '@/src/lib/i18n';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { PendingProvider, usePendingContext } from '@/src/features/transactions/PendingProvider';
+import { MonthStartProvider } from '@/src/features/dashboard/MonthStartProvider';
+import { HiddenCategoriesProvider } from '@/src/features/categories/HiddenCategoriesProvider';
 import { useWidgetSync } from '@/src/features/widget/sync';
 import { useHomeQuickActions } from '@/src/features/capture/useHomeQuickActions';
+import { usePendingBadge } from '@/src/features/notifications/usePendingBadge';
 import { FloatingTabBar } from '@/src/ui/FloatingTabBar';
 
 function TabsInner() {
@@ -15,6 +18,8 @@ function TabsInner() {
   useWidgetSync();
   // Home-screen icon long-press: Voice / Type / Manual / Transactions.
   useHomeQuickActions(locale);
+  // Show the pending count on the app icon badge.
+  usePendingBadge(pendingCount);
 
   return (
     <Tabs
@@ -69,8 +74,12 @@ function TabsInner() {
 
 export default function TabsLayout() {
   return (
-    <PendingProvider>
-      <TabsInner />
-    </PendingProvider>
+    <MonthStartProvider>
+      <HiddenCategoriesProvider>
+        <PendingProvider>
+          <TabsInner />
+        </PendingProvider>
+      </HiddenCategoriesProvider>
+    </MonthStartProvider>
   );
 }

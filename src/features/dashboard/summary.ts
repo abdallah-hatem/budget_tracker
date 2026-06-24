@@ -25,7 +25,7 @@ export interface Summary {
  *   so the dashboard can show one or the other — never a mix — and each ring's
  *   slices sum to its own total. Both are sorted descending by total.
  */
-export function summarize(txns: Transaction[]): Summary {
+export function summarize(txns: Transaction[], hidden?: Set<string>): Summary {
   let income = 0;
   let expense = 0;
   const expenseTotals = new Map<string, number>();
@@ -33,6 +33,9 @@ export function summarize(txns: Transaction[]): Summary {
 
   for (const tx of txns) {
     if (tx.status !== 'confirmed') continue;
+    // Categories hidden from home are excluded from totals + breakdown, so the
+    // donut slices still sum to the hero figure.
+    if (hidden?.has(tx.category_slug)) continue;
     if (tx.type === 'income') {
       income += tx.amount;
       incomeTotals.set(tx.category_slug, (incomeTotals.get(tx.category_slug) ?? 0) + tx.amount);

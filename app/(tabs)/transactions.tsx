@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,12 +15,15 @@ import { useTransactions } from '../../src/features/transactions/useTransactions
 import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import { categoryLabel } from '../../src/features/transactions/display';
-import { CATEGORIES } from '../../src/lib/categories';
+import { expenseCategories, incomeCategories } from '../../src/lib/categories';
+import { useCategoriesVersion } from '../../src/features/categories/useCategoriesVersion';
 import { categoryStyle } from '../../src/lib/categoryStyle';
+import { localDayKey } from '../../src/lib/day';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { monthRange, addMonth, currentMonthKey, type MonthKey } from '../../src/features/dashboard/monthRange';
+import { useMonthStart } from '../../src/features/dashboard/MonthStartProvider';
 import { t, isRTL } from '../../src/lib/i18n';
-import { Screen, Pill, EmptyState, TransactionRow, Money, PressableScale, ViewToggle } from '../../src/ui';
+import { Screen, Pill, EmptyState, TransactionRow, Money, PressableScale, ViewToggle, ListSkeleton } from '../../src/ui';
 import { TAB_BAR_CLEARANCE } from '../../src/ui/FloatingTabBar';
 import { MonthPicker } from '../../src/ui/MonthPicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,7 +47,7 @@ function monthLabel(month: number, locale: Locale): string {
 function groupByDay(txns: Transaction[]): { title: string; data: Transaction[] }[] {
   const map = new Map<string, Transaction[]>();
   for (const txn of txns) {
-    const day = txn.occurred_at.slice(0, 10); // "YYYY-MM-DD"
+    const day = localDayKey(txn.occurred_at); // local "YYYY-MM-DD"
     if (!map.has(day)) map.set(day, []);
     map.get(day)!.push(txn);
   }
@@ -77,7 +80,12 @@ export default function TransactionsScreen() {
   const dir = rtl ? 'rtl' : 'ltr';
   const insets = useSafeAreaInsets();
 
-  const [monthKey, setMonthKey] = useState<MonthKey>(() => currentMonthKey());
+  const { startDay } = useMonthStart();
+  const [monthKey, setMonthKey] = useState<MonthKey>(() => currentMonthKey(new Date(), startDay));
+  const userNavigatedMonth = useRef(false);
+  useEffect(() => {
+    if (!userNavigatedMonth.current) setMonthKey(currentMonthKey(new Date(), startDay));
+  }, [startDay]);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [view, setView] = useState<TxnType>('expense');
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -90,7 +98,7 @@ export default function TransactionsScreen() {
   }, []);
 
   const filter = useMemo(() => {
-    const { from, to } = monthRange(monthKey);
+    const { from, to } = monthRange(monthKey, startDay);
     return {
       from,
       to,
@@ -98,7 +106,7 @@ export default function TransactionsScreen() {
       type: view,
       ...(categoryFilter ? { category_slug: categoryFilter } : {}),
     };
-  }, [monthKey, categoryFilter, view]);
+  }, [monthKey, categoryFilter, view, startDay]);
 
   const { data, loading, refresh } = useTransactions(filter);
 
@@ -108,14 +116,19 @@ export default function TransactionsScreen() {
 
   const sections = useMemo(() => groupByDay(data ?? []), [data]);
 
-  // Only show the categories that belong to the active view (expense vs income).
+  // Re-derive the filter pills once custom categories load (registry version),
+  // so the user's custom categories appear alongside the built-ins.
+  const catVersion = useCategoriesVersion();
+
+  // Only show the categories that belong to the active view (expense vs income),
+  // including the user's custom ones.
   const filterItems = useMemo(() => [
     { slug: null as string | null, label: t('all_categories', locale) },
-    ...CATEGORIES.filter((c) => c.kind === view).map((c) => ({
+    ...(view === 'income' ? incomeCategories() : expenseCategories()).map((c) => ({
       slug: c.slug,
       label: categoryLabel(c.slug, locale),
     })),
-  ], [locale, view]);
+  ], [locale, view, catVersion]);
 
   return (
     <Screen padded={false}>
@@ -149,7 +162,7 @@ export default function TransactionsScreen() {
           <PressableScale
             accessibilityRole="button"
             accessibilityLabel={t('prev_month', locale)}
-            onPress={() => setMonthKey((k) => addMonth(k, -1))}
+            onPress={() => { userNavigatedMonth.current = true; setMonthKey((k) => addMonth(k, -1)); }}
             style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 }}
           >
             <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>‹</Text>
@@ -172,7 +185,7 @@ export default function TransactionsScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('next_month', locale)}
-            onPress={() => setMonthKey((k) => addMonth(k, 1))}
+            onPress={() => { userNavigatedMonth.current = true; setMonthKey((k) => addMonth(k, 1)); }}
             style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 }}
           >
             <Text style={{ fontFamily: FONT.jakartaSb, fontSize: 18, color: '#A8B2AF' }}>›</Text>
@@ -183,6 +196,7 @@ export default function TransactionsScreen() {
           visible={pickerOpen}
           value={monthKey}
           onSelect={(m) => {
+            userNavigatedMonth.current = true;
             setMonthKey(m);
             setPickerOpen(false);
           }}
@@ -217,7 +231,9 @@ export default function TransactionsScreen() {
       </View>
 
       {/* ── Transaction list grouped by day ────────────────────────────── */}
-      {(!loading && sections.length === 0) ? (
+      {(loading && sections.length === 0) ? (
+        <ListSkeleton />
+      ) : (!loading && sections.length === 0) ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <EmptyState
             emoji="📭"

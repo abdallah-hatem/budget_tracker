@@ -61,6 +61,47 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'settings.title': { en: 'Settings', ar: 'الإعدادات' },
   'settings.account': { en: 'Account', ar: 'الحساب' },
   'settings.language': { en: 'Language', ar: 'اللغة' },
+  'settings.month_start': { en: 'Start of month', ar: 'بداية الشهر' },
+  'settings.month_start_hint': {
+    en: 'Your “this month” runs from this day to the same day next month (e.g. your salary day).',
+    ar: 'يبدأ شهرك من هذا اليوم حتى نفس اليوم الشهر القادم (مثلاً يوم راتبك).',
+  },
+  // Gold assets
+  'gold.section': { en: 'Gold', ar: 'الذهب' },
+  'gold.value': { en: 'Gold value', ar: 'قيمة الذهب' },
+  'gold.net_worth': { en: 'Net worth', ar: 'صافي الثروة' },
+  'gold.as_of': { en: 'as of', ar: 'حتى' },
+  'gold.outdated': { en: 'price may be outdated', ar: 'قد يكون السعر قديمًا' },
+  'gold.value_unavailable': { en: 'Value unavailable', ar: 'القيمة غير متاحة' },
+  'gold.add': { en: 'Add gold', ar: 'إضافة ذهب' },
+  'gold.grams': { en: 'Grams', ar: 'جرامات' },
+  'gold.karat': { en: 'Karat', ar: 'العيار' },
+  'gold.label_optional': { en: 'Label (optional)', ar: 'وصف (اختياري)' },
+  'gold.empty': {
+    en: 'No gold yet — add a piece to track its value.',
+    ar: 'لا يوجد ذهب بعد — أضف قطعة لتتبع قيمتها.',
+  },
+  'cat.section': { en: 'Categories', ar: 'التصنيفات' },
+  'cat.your': { en: 'Your categories', ar: 'تصنيفاتك' },
+  'cat.builtin': { en: 'Built-in', ar: 'افتراضية' },
+  'cat.add': { en: 'New category', ar: 'تصنيف جديد' },
+  'cat.empty': {
+    en: 'No custom categories yet — add one to tag spending your way.',
+    ar: 'لا توجد تصنيفات مخصصة بعد — أضف واحدًا لتصنيف مصاريفك بطريقتك.',
+  },
+  'cat.name': { en: 'Name', ar: 'الاسم' },
+  'cat.icon': { en: 'Icon', ar: 'الأيقونة' },
+  'cat.color': { en: 'Color', ar: 'اللون' },
+  'cat.deleteConfirm': {
+    en: 'Delete this category? Its transactions move to Other.',
+    ar: 'حذف هذا التصنيف؟ ستنتقل معاملاته إلى «أخرى».',
+  },
+  'cat.hide': { en: 'Hide', ar: 'إخفاء' },
+  'cat.hidden': { en: 'Hidden:', ar: 'مخفي:' },
+  'cat.hideHomePrompt': {
+    en: 'Hide this category from Home? Long-press hides; tap it under "Hidden" to bring it back.',
+    ar: 'إخفاء هذا التصنيف من الرئيسية؟ يمكنك إعادته بالضغط عليه تحت «مخفي».',
+  },
   'settings.langEnglish': { en: 'English', ar: 'الإنجليزية' },
   'settings.langArabic': { en: 'Arabic', ar: 'العربية' },
   'settings.signOut': { en: 'Sign out', ar: 'تسجيل الخروج' },
@@ -95,6 +136,9 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'accounts.cancel': { en: 'Cancel', ar: 'إلغاء' },
   'accounts.account': { en: 'Account', ar: 'الحساب' },
   'accounts.none': { en: 'No account', ar: 'بدون حساب' },
+  'accounts.add_money': { en: 'Add money', ar: 'إضافة رصيد' },
+  'accounts.amount_to_add': { en: 'Amount to add', ar: 'المبلغ المراد إضافته' },
+  'accounts.topup_note': { en: 'Balance top-up', ar: 'إضافة رصيد' },
 
   // ── Stub placeholders (replaced by M5/M6) ─────────────────────────────────
   'home.placeholder': { en: 'Dashboard coming soon', ar: 'لوحة المعلومات قريباً' },
@@ -179,6 +223,44 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   copy: { en: 'Copy', ar: 'نسخ' },
   copied: { en: 'Copied!', ar: 'تم النسخ!' },
   shortcut_guide: { en: 'Manual setup (advanced)', ar: 'الإعداد اليدوي (متقدم)' },
+
+  // SMS auto-capture onboarding tutorial
+  'sms_tut.heading': { en: 'Auto-capture your bank SMS', ar: 'التقاط رسائل بنكك تلقائيًا' },
+  'sms_tut.sub': {
+    en: 'Set this up once — then every bank SMS becomes a transaction to review.',
+    ar: 'اضبطه مرة واحدة — وكل رسالة بنك تتحوّل لمعاملة تراجعها.',
+  },
+  'sms_tut.s1.t': { en: 'Open Masareef once, signed in', ar: 'افتح مصاريف مرة وأنت مسجّل الدخول' },
+  'sms_tut.s1.d': {
+    en: 'Sets up your secure key automatically — no copy-paste.',
+    ar: 'يجهّز مفتاحك الآمن تلقائيًا — بدون نسخ ولصق.',
+  },
+  'sms_tut.s2.t': { en: 'Shortcuts → Automation → tap +', ar: 'الاختصارات ← الأتمتة ← اضغط +' },
+  'sms_tut.s2.d': { en: 'Create a new personal automation.', ar: 'أنشئ أتمتة شخصية جديدة.' },
+  'sms_tut.s3.t': { en: 'Message → “Contains” → type EGP', ar: 'رسالة ← «تحتوي على» ← اكتب EGP' },
+  'sms_tut.s3.d': {
+    en: 'You can use your bank’s name too. Choose Run Immediately.',
+    ar: 'تقدر تستخدم اسم بنكك أيضًا. اختر «تشغيل فوري».',
+  },
+  'sms_tut.s4.t': { en: 'Add “Log SMS to Masareef”', ar: 'أضف «Log SMS to Masareef»' },
+  'sms_tut.s4.d': { en: 'Set its Message to Shortcut Input.', ar: 'اضبط Message على «مدخلات الاختصار».' },
+  'sms_tut.s5.t': { en: 'Done — review in Pending', ar: 'تم — راجِعها في «قيد المراجعة»' },
+  'sms_tut.s5.d': {
+    en: 'New bank SMS appear there to confirm or edit.',
+    ar: 'تظهر رسائل البنك الجديدة هناك للتأكيد أو التعديل.',
+  },
+  'sms_tut.start': { en: 'Get started', ar: 'لنبدأ' },
+  'sms_tut.skip': { en: 'Skip for now', ar: 'تخطّي الآن' },
+  'sms_tut.done': { en: 'Got it', ar: 'تمام' },
+  'sms_tut.view': { en: 'View SMS setup guide', ar: 'عرض دليل إعداد الرسائل' },
+
+  // Forced-update gate
+  'update.title': { en: 'Update required', ar: 'مطلوب تحديث' },
+  'update.body': {
+    en: 'A newer version of Masareef is required to continue. Please update from the App Store.',
+    ar: 'يلزم تحديث مصاريف للمتابعة. رجاءً حدّث التطبيق من App Store.',
+  },
+  'update.cta': { en: 'Update now', ar: 'حدّث الآن' },
 };
 
 export function isRTL(locale: Locale): boolean {
