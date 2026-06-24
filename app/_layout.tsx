@@ -30,6 +30,8 @@ import { CaptureProvider } from '@/src/features/capture/CaptureProvider';
 import { CategoriesProvider } from '@/src/features/categories/CategoriesProvider';
 import { DataSyncProvider } from '@/src/features/sync/dataSync';
 import { getSmsTutorialSeen, isNewAccount } from '@/src/features/onboarding/onboardingStorage';
+import { useForceUpdate } from '@/src/features/appConfig/useForceUpdate';
+import { UpdateRequiredScreen } from '@/src/features/appConfig/UpdateRequiredScreen';
 import { initSentry } from '@/src/lib/sentry';
 
 // Crash/error monitoring — must run before the app renders so early crashes
@@ -40,9 +42,13 @@ initSentry();
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
-  const { session, user, loading } = useSession();
+  const { session, user, profile, loading } = useSession();
   const segments = useSegments();
   const router = useRouter();
+
+  // Force-update gate: block when the installed version is below the remote
+  // minimum (app_config). Fails open. Must take precedence over everything.
+  const updateRequired = useForceUpdate();
 
   // Register push token + wire tap-to-navigate deep-link (no-op on simulator).
   useNotifications();
@@ -75,6 +81,10 @@ function RootNavigator() {
       if (!seen) router.push('/onboarding');
     });
   }, [loading, user, segments, router]);
+
+  if (updateRequired) {
+    return <UpdateRequiredScreen locale={profile?.locale ?? 'en'} />;
+  }
 
   if (loading) {
     return (

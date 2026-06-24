@@ -247,6 +247,14 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'sms_tut.skip': { en: 'Skip for now', ar: 'تخطّي الآن' },
   'sms_tut.done': { en: 'Got it', ar: 'تمام' },
   'sms_tut.view': { en: 'View SMS setup guide', ar: 'عرض دليل إعداد الرسائل' },
+
+  // Forced-update gate
+  'update.title': { en: 'Update required', ar: 'مطلوب تحديث' },
+  'update.body': {
+    en: 'A newer version of Masareef is required to continue. Please update from the App Store.',
+    ar: 'يلزم تحديث مصاريف للمتابعة. رجاءً حدّث التطبيق من App Store.',
+  },
+  'update.cta': { en: 'Update now', ar: 'حدّث الآن' },
 };
 
 export function isRTL(locale: Locale): boolean {
