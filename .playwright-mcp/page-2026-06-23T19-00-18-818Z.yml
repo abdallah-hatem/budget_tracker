@@ -1,0 +1,88 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "WashFlow" [active] [ref=e6] [cursor=pointer]:
+      - /url: /app/dashboard
+      - generic [ref=e7]: WashFlow
+    - generic [ref=e8]:
+      - button "Enable notifications" [ref=e9] [cursor=pointer]:
+        - img
+      - button "Language" [ref=e10] [cursor=pointer]: ع
+      - button "Sign out" [ref=e11] [cursor=pointer]
+  - generic [ref=e12]:
+    - complementary [ref=e13]:
+      - navigation [ref=e14]:
+        - link "Dashboard" [ref=e15] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img [ref=e16]
+          - text: Dashboard
+        - link "Analytics" [ref=e21] [cursor=pointer]:
+          - /url: /app/analytics
+          - img [ref=e22]
+          - text: Analytics
+        - link "Queue" [ref=e24] [cursor=pointer]:
+          - /url: /app/queue
+          - img [ref=e25]
+          - text: Queue
+        - link "Washes" [ref=e28] [cursor=pointer]:
+          - /url: /app/washes
+          - img [ref=e29]
+          - text: Washes
+        - link "Customers" [ref=e33] [cursor=pointer]:
+          - /url: /app/customers
+          - img [ref=e34]
+          - text: Customers
+        - link "Branches" [ref=e39] [cursor=pointer]:
+          - /url: /app/branches
+          - img [ref=e40]
+          - text: Branches
+        - link "Packages" [ref=e44] [cursor=pointer]:
+          - /url: /app/packages
+          - img [ref=e45]
+          - text: Packages
+        - link "Staff" [ref=e49] [cursor=pointer]:
+          - /url: /app/staff
+          - img [ref=e50]
+          - text: Staff
+        - link "Users" [ref=e52] [cursor=pointer]:
+          - /url: /app/users
+          - img [ref=e53]
+          - text: Users
+    - main [ref=e65]:
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - heading "Dashboard" [level=1] [ref=e110]
+          - button "Refresh" [ref=e112] [cursor=pointer]:
+            - img
+            - text: Refresh
+        - generic [ref=e113]:
+          - generic [ref=e115]:
+            - generic [ref=e116]:
+              - generic [ref=e117]: Revenue today
+              - generic [ref=e118]: "0"
+            - img [ref=e120]
+          - generic [ref=e124]:
+            - generic [ref=e125]:
+              - generic [ref=e126]: Washes today
+              - generic [ref=e127]: "3"
+            - img [ref=e129]
+          - generic [ref=e134]:
+            - generic [ref=e135]:
+              - generic [ref=e136]: Waiting
+              - generic [ref=e137]: "1"
+            - img [ref=e139]
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - generic [ref=e145]: In Progress
+              - generic [ref=e146]: "2"
+            - img [ref=e148]
+        - generic [ref=e151]:
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - generic [ref=e155]: Done
+              - generic [ref=e156]: "0"
+            - img [ref=e158]
+          - generic [ref=e162]:
+            - generic [ref=e163]:
+              - generic [ref=e164]: Cancelled
+              - generic [ref=e165]: "0"
+            - img [ref=e167]

@@ -1,0 +1,100 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "WashFlow" [ref=e6] [cursor=pointer]:
+      - /url: /app/dashboard
+      - generic [ref=e7]: WashFlow
+    - generic [ref=e8]:
+      - button "Enable notifications" [ref=e9] [cursor=pointer]:
+        - img
+      - button "Language" [ref=e10] [cursor=pointer]: ع
+      - button "Sign out" [ref=e11] [cursor=pointer]
+  - generic [ref=e12]:
+    - complementary [ref=e13]:
+      - navigation [ref=e14]:
+        - link "Dashboard" [ref=e15] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img [ref=e16]
+          - text: Dashboard
+        - link "Analytics" [ref=e21] [cursor=pointer]:
+          - /url: /app/analytics
+          - img [ref=e22]
+          - text: Analytics
+        - link "Queue" [ref=e24] [cursor=pointer]:
+          - /url: /app/queue
+          - img [ref=e25]
+          - text: Queue
+        - link "Washes" [ref=e28] [cursor=pointer]:
+          - /url: /app/washes
+          - img [ref=e29]
+          - text: Washes
+        - link "Customers" [ref=e33] [cursor=pointer]:
+          - /url: /app/customers
+          - img [ref=e34]
+          - text: Customers
+        - link "Branches" [ref=e39] [cursor=pointer]:
+          - /url: /app/branches
+          - img [ref=e40]
+          - text: Branches
+        - link "Packages" [ref=e44] [cursor=pointer]:
+          - /url: /app/packages
+          - img [ref=e45]
+          - text: Packages
+        - link "Staff" [ref=e49] [cursor=pointer]:
+          - /url: /app/staff
+          - img [ref=e50]
+          - text: Staff
+        - link "Users" [ref=e52] [cursor=pointer]:
+          - /url: /app/users
+          - img [ref=e53]
+          - text: Users
+    - main [ref=e65]:
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - heading "Staff" [level=1] [ref=e68]
+          - button "New employee" [ref=e69] [cursor=pointer]:
+            - img
+            - text: New employee
+        - table [ref=e72]:
+          - rowgroup [ref=e73]:
+            - row "Name Phone Branch Status Actions" [ref=e74]:
+              - columnheader "Name" [ref=e75]
+              - columnheader "Phone" [ref=e76]
+              - columnheader "Branch" [ref=e77]
+              - columnheader "Status" [ref=e78]
+              - columnheader "Actions" [ref=e79]
+          - rowgroup [ref=e80]:
+            - row "Ahmed Hassan — Main Branch Active Edit Deactivate Delete" [ref=e81]:
+              - cell "Ahmed Hassan" [ref=e82]
+              - cell "—" [ref=e83]
+              - cell "Main Branch" [ref=e84]
+              - cell "Active" [ref=e85]:
+                - generic [ref=e86]: Active
+              - cell "Edit Deactivate Delete" [ref=e87]:
+                - generic [ref=e88]:
+                  - button "Edit" [ref=e89] [cursor=pointer]:
+                    - img
+                  - button "Deactivate" [ref=e90] [cursor=pointer]:
+                    - img
+                  - button "Delete" [ref=e91] [cursor=pointer]:
+                    - img
+            - row "Mona Said — Main Branch Active Edit Deactivate Delete" [ref=e92]:
+              - cell "Mona Said" [ref=e93]
+              - cell "—" [ref=e94]
+              - cell "Main Branch" [ref=e95]
+              - cell "Active" [ref=e96]:
+                - generic [ref=e97]: Active
+              - cell "Edit Deactivate Delete" [ref=e98]:
+                - generic [ref=e99]:
+                  - button "Edit" [ref=e100] [cursor=pointer]:
+                    - img
+                  - button "Deactivate" [ref=e101] [cursor=pointer]:
+                    - img
+                  - button "Delete" [ref=e102] [cursor=pointer]:
+                    - img
+        - generic [ref=e103]:
+          - generic [ref=e104]: 1–2 of 2
+          - generic [ref=e105]:
+            - button "Previous page" [disabled] [ref=e106]:
+              - img
+            - button "Next page" [disabled] [ref=e107]:
+              - img

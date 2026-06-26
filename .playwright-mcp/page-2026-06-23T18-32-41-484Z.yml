@@ -1,0 +1,38 @@
+- generic [ref=e3]:
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - img [ref=e12]
+      - generic [ref=e15]: WashFlow
+    - generic [ref=e16]:
+      - paragraph [ref=e17]:
+        - img [ref=e18]
+        - text: Carwash, run beautifully
+      - heading "Every wash, spotlessly managed." [level=1] [ref=e21]:
+        - text: Every wash,
+        - text: spotlessly managed.
+      - paragraph [ref=e22]: Bookings, bays, staff and payments — one calm console for your whole operation. Sign in to pick up right where you left off.
+    - generic [ref=e23]:
+      - generic [ref=e24]: Fast checkouts
+      - generic [ref=e26]: Live bay status
+      - generic [ref=e28]: Multi-branch
+  - generic [ref=e29]:
+    - button "Language" [ref=e31] [cursor=pointer]: ع
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - heading "Sign in" [level=2] [ref=e34]
+        - paragraph [ref=e35]: The cleanest way to run your car wash.
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - text: Email
+          - generic [ref=e38]:
+            - img
+            - textbox "Email" [ref=e39]:
+              - /placeholder: you@carwash.com
+        - generic [ref=e40]:
+          - text: Password
+          - generic [ref=e41]:
+            - img
+            - textbox "Password" [ref=e42]:
+              - /placeholder: ••••••••
+        - button "Sign in" [ref=e44] [cursor=pointer]
+      - paragraph [ref=e45]: © 2026 WashFlow · Carwash operations platform

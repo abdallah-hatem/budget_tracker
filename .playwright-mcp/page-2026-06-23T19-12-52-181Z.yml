@@ -1,0 +1,236 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - link "WashFlow" [ref=e6] [cursor=pointer]:
+        - /url: /app/dashboard
+        - generic [ref=e7]: WashFlow
+      - generic [ref=e8]:
+        - button "تفعيل الإشعارات" [ref=e1421] [cursor=pointer]:
+          - img
+        - button "اللغة" [active] [ref=e1422] [cursor=pointer]: EN
+        - button "تسجيل الخروج" [ref=e1423] [cursor=pointer]
+    - generic [ref=e12]:
+      - complementary [ref=e13]:
+        - navigation [ref=e14]:
+          - link "لوحة التحكم" [ref=e1424] [cursor=pointer]:
+            - /url: /app/dashboard
+            - img [ref=e16]
+            - text: لوحة التحكم
+          - link "التحليلات" [ref=e1425] [cursor=pointer]:
+            - /url: /app/analytics
+            - img [ref=e22]
+            - text: التحليلات
+          - link "قائمة الانتظار" [ref=e1426] [cursor=pointer]:
+            - /url: /app/queue
+            - img [ref=e25]
+            - text: قائمة الانتظار
+          - link "سجل الغسيل" [ref=e1427] [cursor=pointer]:
+            - /url: /app/washes
+            - img [ref=e29]
+            - text: سجل الغسيل
+          - link "العملاء" [ref=e1428] [cursor=pointer]:
+            - /url: /app/customers
+            - img [ref=e34]
+            - text: العملاء
+          - link "الفروع" [ref=e1429] [cursor=pointer]:
+            - /url: /app/branches
+            - img [ref=e40]
+            - text: الفروع
+          - link "الباقات" [ref=e1430] [cursor=pointer]:
+            - /url: /app/packages
+            - img [ref=e45]
+            - text: الباقات
+          - link "الموظفون" [ref=e1431] [cursor=pointer]:
+            - /url: /app/staff
+            - img [ref=e50]
+            - text: الموظفون
+          - link "المستخدمون" [ref=e1432] [cursor=pointer]:
+            - /url: /app/users
+            - img [ref=e53]
+            - text: المستخدمون
+      - main [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - img [ref=e69]
+            - heading "التحليلات" [level=1] [ref=e1433]
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - generic [ref=e74]: نطاق التاريخ
+              - button "25 مايو 2026 – 23 يونيو 2026" [ref=e1434] [cursor=pointer]:
+                - img
+                - generic [ref=e76]: 25 مايو 2026 – 23 يونيو 2026
+            - generic [ref=e77]:
+              - generic [ref=e78]: الفرع
+              - combobox [ref=e79] [cursor=pointer]:
+                - generic: جميع الفروع
+                - img [ref=e80]
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - generic [ref=e1436]:
+                - generic [ref=e1437]:
+                  - generic [ref=e1438]: الإيرادات
+                  - generic [ref=e1439]: 2,720
+                - img [ref=e1441]
+              - generic [ref=e1445]:
+                - generic [ref=e1446]:
+                  - generic [ref=e1447]: الغسيلات
+                  - generic [ref=e1448]: "43"
+                - img [ref=e1450]
+              - generic [ref=e1454]:
+                - generic [ref=e1455]:
+                  - generic [ref=e1456]: متوسط الفاتورة
+                  - generic [ref=e1457]: "68"
+                - img [ref=e1459]
+              - generic [ref=e1463]:
+                - generic [ref=e1464]:
+                  - generic [ref=e1465]: نسبة الإتمام
+                  - generic [ref=e1466]: 93%
+                - img [ref=e1468]
+              - generic [ref=e1472]:
+                - generic [ref=e1473]:
+                  - generic [ref=e1474]: متوسط الانتظار
+                  - generic [ref=e1475]: 5m
+                - img [ref=e1477]
+              - generic [ref=e1481]:
+                - generic [ref=e1482]:
+                  - generic [ref=e1483]: متوسط الخدمة
+                  - generic [ref=e1484]: 20m
+                - img [ref=e1486]
+            - generic [ref=e202]:
+              - generic [ref=e203]:
+                - img [ref=e205]
+                - generic [ref=e208]: اتجاه الإيرادات
+              - img [ref=e1174]:
+                - generic [ref=e1178]:
+                  - generic [ref=e1490]: 12 يونيو
+                  - generic [ref=e1492]: 13 يونيو
+                  - generic [ref=e1494]: 14 يونيو
+                  - generic [ref=e1496]: 15 يونيو
+                  - generic [ref=e1498]: 16 يونيو
+                  - generic [ref=e1500]: 17 يونيو
+                  - generic [ref=e1502]: 18 يونيو
+                  - generic [ref=e1504]: 19 يونيو
+                  - generic [ref=e1506]: 20 يونيو
+                  - generic [ref=e1508]: 21 يونيو
+                  - generic [ref=e1510]: 23 يونيو
+                - generic [ref=e1204]:
+                  - generic [ref=e1206]: "0"
+                  - generic [ref=e1208]: "80"
+                  - generic [ref=e1210]: "160"
+                  - generic [ref=e1212]: "240"
+                  - generic [ref=e1214]: "320"
+            - generic [ref=e260]:
+              - generic [ref=e261]:
+                - generic [ref=e262]:
+                  - img [ref=e264]
+                  - generic [ref=e267]: الغسيلات حسب الحالة
+                - generic [ref=e268]:
+                  - img [ref=e272]:
+                    - generic [ref=e1511]:
+                      - img [ref=e1513]
+                      - img [ref=e1515]
+                      - img [ref=e1517]
+                  - list [ref=e281]:
+                    - listitem [ref=e282]:
+                      - generic [ref=e284]: في الانتظار
+                      - generic [ref=e285]: "1"
+                    - listitem [ref=e286]:
+                      - generic [ref=e288]: جارٍ الغسيل
+                      - generic [ref=e289]: "2"
+                    - listitem [ref=e290]:
+                      - generic [ref=e292]: مكتمل
+                      - generic [ref=e293]: "40"
+                    - listitem [ref=e294]:
+                      - generic [ref=e296]: ملغى
+                      - generic [ref=e297]: "0"
+              - generic [ref=e298]:
+                - generic [ref=e299]:
+                  - img [ref=e301]
+                  - generic [ref=e303]: أكثر الأيام ازدحاماً
+                - img [ref=e1222]:
+                  - generic [ref=e1226]:
+                    - generic [ref=e1519]: الأحد
+                    - generic [ref=e1521]: الاثنين
+                    - generic [ref=e1523]: الثلاثاء
+                    - generic [ref=e1525]: الأربعاء
+                    - generic [ref=e1527]: الخميس
+                    - generic [ref=e1529]: الجمعة
+                    - generic [ref=e1531]: السبت
+                  - generic [ref=e1242]:
+                    - generic [ref=e1244]: "0"
+                    - generic [ref=e1246]: "3"
+                    - generic [ref=e1248]: "6"
+                    - generic [ref=e1250]: "9"
+                    - generic [ref=e1252]: "12"
+              - generic [ref=e356]:
+                - generic [ref=e357]:
+                  - img [ref=e359]
+                  - generic [ref=e362]: أكثر الساعات ازدحاماً
+                - img [ref=e1254]:
+                  - generic [ref=e1258]:
+                    - generic [ref=e1548]: 00:00
+                    - generic [ref=e1550]: 03:00
+                    - generic [ref=e1552]: 06:00
+                    - generic [ref=e1554]: 09:00
+                    - generic [ref=e1556]: 12:00
+                    - generic [ref=e1558]: 15:00
+                    - generic [ref=e1560]: 18:00
+                    - generic [ref=e1562]: 21:00
+                  - generic [ref=e1276]:
+                    - generic [ref=e1278]: "0"
+                    - generic [ref=e1280]: "2"
+                    - generic [ref=e1282]: "4"
+                    - generic [ref=e1284]: "6"
+                    - generic [ref=e1286]: "8"
+              - generic [ref=e451]:
+                - generic [ref=e452]:
+                  - img [ref=e454]
+                  - generic [ref=e457]: أكثر الباقات طلباً
+                - img [ref=e1288]:
+                  - generic [ref=e1292]:
+                    - generic [ref=e1294]: Premium Wash
+                    - generic [ref=e1296]: Basic Wash
+                    - generic [ref=e1298]: Express
+                    - generic [ref=e1300]: —
+                  - generic [ref=e1621]:
+                    - generic [ref=e1622]: "14"
+                    - generic [ref=e1623]: "13"
+                    - generic [ref=e1624]: "13"
+                    - generic [ref=e1625]: "3"
+              - generic [ref=e491]:
+                - generic [ref=e492]:
+                  - img [ref=e494]
+                  - generic [ref=e498]: حسب الفرع
+                - img [ref=e1302]:
+                  - generic [ref=e1306]:
+                    - generic [ref=e1627]: Main Branch
+                    - generic [ref=e1629]: Downtown Br…
+                  - generic [ref=e1312]:
+                    - generic [ref=e1314]: "0"
+                    - generic [ref=e1316]: "550"
+                    - generic [ref=e1318]: "1100"
+                    - generic [ref=e1320]: "1650"
+                    - generic [ref=e1322]: "2200"
+              - generic [ref=e538]:
+                - generic [ref=e539]:
+                  - img [ref=e541]
+                  - generic [ref=e545]: الإلغاءات حسب السبب
+                - paragraph [ref=e548]: لا توجد بيانات لهذه الفترة
+              - generic [ref=e549]:
+                - generic [ref=e550]:
+                  - img [ref=e552]
+                  - generic [ref=e557]: أفضل الموظفين
+                - list [ref=e559]:
+                  - listitem [ref=e560]:
+                    - generic [ref=e561]:
+                      - generic [ref=e562]:
+                        - generic [ref=e563]: "1"
+                        - generic [ref=e564]: Ahmed Hassan
+                      - generic [ref=e565]: "20"
+                  - listitem [ref=e568]:
+                    - generic [ref=e569]:
+                      - generic [ref=e570]:
+                        - generic [ref=e571]: "2"
+                        - generic [ref=e572]: Mona Said
+                      - generic [ref=e573]: "20"
+  - generic [ref=e576]: الأحد

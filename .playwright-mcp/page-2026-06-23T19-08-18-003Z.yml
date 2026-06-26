@@ -1,0 +1,67 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "WashFlow" [ref=e6] [cursor=pointer]:
+      - /url: /app/dashboard
+      - generic [ref=e7]: WashFlow
+    - generic [ref=e8]:
+      - button "Enable notifications" [ref=e9] [cursor=pointer]:
+        - img
+      - button "Language" [ref=e10] [cursor=pointer]: ع
+      - button "Sign out" [ref=e11] [cursor=pointer]
+  - generic [ref=e12]:
+    - complementary [ref=e13]:
+      - navigation [ref=e14]:
+        - link "Dashboard" [ref=e15] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img [ref=e16]
+          - text: Dashboard
+        - link "Analytics" [ref=e21] [cursor=pointer]:
+          - /url: /app/analytics
+          - img [ref=e22]
+          - text: Analytics
+        - link "Queue" [ref=e24] [cursor=pointer]:
+          - /url: /app/queue
+          - img [ref=e25]
+          - text: Queue
+        - link "Washes" [ref=e28] [cursor=pointer]:
+          - /url: /app/washes
+          - img [ref=e29]
+          - text: Washes
+        - link "Customers" [ref=e33] [cursor=pointer]:
+          - /url: /app/customers
+          - img [ref=e34]
+          - text: Customers
+        - link "Branches" [ref=e39] [cursor=pointer]:
+          - /url: /app/branches
+          - img [ref=e40]
+          - text: Branches
+        - link "Packages" [ref=e44] [cursor=pointer]:
+          - /url: /app/packages
+          - img [ref=e45]
+          - text: Packages
+        - link "Staff" [ref=e49] [cursor=pointer]:
+          - /url: /app/staff
+          - img [ref=e50]
+          - text: Staff
+        - link "Users" [ref=e52] [cursor=pointer]:
+          - /url: /app/users
+          - img [ref=e53]
+          - text: Users
+    - main [ref=e65]:
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - img [ref=e69]
+          - heading "Analytics" [level=1] [ref=e71]
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]: Date range
+            - button "May 25, 2026 – Jun 23, 2026" [ref=e75] [cursor=pointer]:
+              - img
+              - generic [ref=e76]: May 25, 2026 – Jun 23, 2026
+          - generic [ref=e77]:
+            - generic [ref=e78]: Branch
+            - combobox [ref=e79] [cursor=pointer]:
+              - generic: All branches
+              - img [ref=e80]
+        - status [ref=e82]:
+          - generic [ref=e83]: Loading…

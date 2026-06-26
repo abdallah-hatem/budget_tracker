@@ -1,0 +1,129 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic: WashFlow
+        - generic:
+          - button:
+            - img
+          - button: ع
+          - button: Sign out
+      - generic:
+        - complementary:
+          - navigation:
+            - link:
+              - /url: /app/dashboard
+              - img
+              - text: Dashboard
+            - link:
+              - /url: /app/analytics
+              - img
+              - text: Analytics
+            - link:
+              - /url: /app/queue
+              - img
+              - text: Queue
+            - link:
+              - /url: /app/washes
+              - img
+              - text: Washes
+            - link:
+              - /url: /app/customers
+              - img
+              - text: Customers
+            - link:
+              - /url: /app/branches
+              - img
+              - text: Branches
+            - link:
+              - /url: /app/packages
+              - img
+              - text: Packages
+            - link:
+              - /url: /app/staff
+              - img
+              - text: Staff
+            - link:
+              - /url: /app/users
+              - img
+              - text: Users
+        - main:
+          - generic:
+            - generic:
+              - heading [level=1]: Queue
+              - generic:
+                - button:
+                  - img
+                  - text: New Wash
+            - generic:
+              - generic:
+                - heading [level=2]: Waiting (0)
+                - paragraph: No orders waiting.
+              - generic:
+                - heading [level=2]: In Progress (0)
+                - paragraph: No orders in progress.
+              - generic:
+                - heading [level=2]: Done (0)
+                - paragraph: No completed orders today.
+  - dialog:
+    - generic:
+      - generic:
+        - heading [level=2]: Create wash
+      - generic:
+        - generic:
+          - generic: Plate number *
+          - generic:
+            - textbox:
+              - /placeholder: Find or add vehicle
+            - button [pressed]:
+              - img
+          - generic:
+            - generic:
+              - text: Plate letters
+              - generic:
+                - textbox: أ
+                - textbox: ب
+                - textbox: ج
+              - text: Plate digits
+              - textbox: "456"
+              - paragraph: "Preview: أ ب ج 456"
+            - textbox:
+              - /placeholder: Make
+            - textbox:
+              - /placeholder: Model
+            - textbox:
+              - /placeholder: Color
+        - generic:
+          - generic:
+            - text: Customer name
+            - generic: (optional)
+          - textbox
+        - generic:
+          - generic:
+            - text: Customer phone
+            - generic: (optional)
+          - textbox
+        - generic:
+          - generic: Package
+          - combobox [expanded]:
+            - generic: Package
+            - img
+          - combobox
+        - generic:
+          - generic: Price
+          - spinbutton
+        - generic:
+          - generic:
+            - text: Notes
+            - generic: (optional)
+          - textbox
+      - generic:
+        - button: Cancel
+        - button:
+          - img
+          - text: Create wash
+    - button:
+      - img
+      - generic: Close
+  - listbox [active] [ref=e138]

@@ -1,0 +1,50 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]: WashFlow
+    - generic [ref=e7]:
+      - button "Enable notifications" [ref=e8] [cursor=pointer]:
+        - img
+      - button "Language" [ref=e9] [cursor=pointer]: ع
+      - button "Sign out" [ref=e10] [cursor=pointer]
+  - generic [ref=e11]:
+    - complementary [ref=e12]:
+      - navigation [ref=e13]:
+        - link "Dashboard" [ref=e14] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img [ref=e15]
+          - text: Dashboard
+        - link "Analytics" [ref=e20] [cursor=pointer]:
+          - /url: /app/analytics
+          - img [ref=e21]
+          - text: Analytics
+        - link "Queue" [ref=e23] [cursor=pointer]:
+          - /url: /app/queue
+          - img [ref=e24]
+          - text: Queue
+        - link "Washes" [ref=e27] [cursor=pointer]:
+          - /url: /app/washes
+          - img [ref=e28]
+          - text: Washes
+        - link "Customers" [ref=e32] [cursor=pointer]:
+          - /url: /app/customers
+          - img [ref=e33]
+          - text: Customers
+        - link "Branches" [ref=e38] [cursor=pointer]:
+          - /url: /app/branches
+          - img [ref=e39]
+          - text: Branches
+        - link "Packages" [ref=e43] [cursor=pointer]:
+          - /url: /app/packages
+          - img [ref=e44]
+          - text: Packages
+        - link "Staff" [ref=e48] [cursor=pointer]:
+          - /url: /app/staff
+          - img [ref=e49]
+          - text: Staff
+        - link "Users" [ref=e51] [cursor=pointer]:
+          - /url: /app/users
+          - img [ref=e52]
+          - text: Users
+    - main [ref=e64]:
+      - status [ref=e65]:
+        - generic [ref=e66]: Loading…

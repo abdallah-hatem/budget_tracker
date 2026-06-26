@@ -1,0 +1,101 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic: WashFlow
+        - generic:
+          - button:
+            - img
+          - button: ع
+          - button: Sign out
+      - generic:
+        - complementary:
+          - navigation:
+            - link:
+              - /url: /app/dashboard
+              - img
+              - text: Dashboard
+            - link:
+              - /url: /app/analytics
+              - img
+              - text: Analytics
+            - link:
+              - /url: /app/queue
+              - img
+              - text: Queue
+            - link:
+              - /url: /app/washes
+              - img
+              - text: Washes
+            - link:
+              - /url: /app/customers
+              - img
+              - text: Customers
+            - link:
+              - /url: /app/branches
+              - img
+              - text: Branches
+            - link:
+              - /url: /app/packages
+              - img
+              - text: Packages
+            - link:
+              - /url: /app/staff
+              - img
+              - text: Staff
+            - link:
+              - /url: /app/users
+              - img
+              - text: Users
+        - main:
+          - generic:
+            - generic:
+              - heading [level=1]: Queue
+              - generic:
+                - button:
+                  - img
+                  - text: New Wash
+            - generic:
+              - generic:
+                - heading [level=2]: Waiting (1)
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: أبج 123
+                      - generic: Waiting
+                  - generic:
+                    - paragraph:
+                      - generic: "Price:"
+                      - text: "60"
+                    - generic:
+                      - generic: Unpaid
+                      - generic: "Remaining: 60"
+                  - generic:
+                    - button:
+                      - img
+                      - text: Start
+                    - button:
+                      - img
+                      - text: Cancel
+              - generic:
+                - heading [level=2]: In Progress (0)
+                - paragraph: No orders in progress.
+              - generic:
+                - heading [level=2]: Done (0)
+                - paragraph: No completed orders today.
+  - dialog "Assign employee" [ref=e100]:
+    - heading "Assign employee" [level=2] [ref=e102]
+    - generic [ref=e104]:
+      - generic [ref=e105]: Assign employee *
+      - combobox "Assign employee" [active] [ref=e106] [cursor=pointer]:
+        - generic: Select a staff member
+        - img [ref=e107]
+    - generic [ref=e109]:
+      - button "Cancel" [ref=e110] [cursor=pointer]
+      - button "Start" [disabled] [ref=e111]:
+        - img
+        - text: Start
+    - button "Close" [ref=e112] [cursor=pointer]:
+      - img [ref=e113]
+      - generic [ref=e116]: Close

@@ -1,0 +1,112 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic: WashFlow
+        - generic:
+          - button:
+            - img
+          - button: ع
+          - button: Sign out
+      - generic:
+        - complementary:
+          - navigation:
+            - link:
+              - /url: /app/dashboard
+              - img
+              - text: Dashboard
+            - link:
+              - /url: /app/analytics
+              - img
+              - text: Analytics
+            - link:
+              - /url: /app/queue
+              - img
+              - text: Queue
+            - link:
+              - /url: /app/washes
+              - img
+              - text: Washes
+            - link:
+              - /url: /app/customers
+              - img
+              - text: Customers
+            - link:
+              - /url: /app/branches
+              - img
+              - text: Branches
+            - link:
+              - /url: /app/packages
+              - img
+              - text: Packages
+            - link:
+              - /url: /app/staff
+              - img
+              - text: Staff
+            - link:
+              - /url: /app/users
+              - img
+              - text: Users
+        - main:
+          - generic:
+            - generic:
+              - heading [level=1]: Queue
+              - generic:
+                - button:
+                  - img
+                  - text: New Wash
+            - generic:
+              - generic:
+                - heading [level=2]: Waiting (0)
+                - paragraph: No orders waiting.
+              - generic:
+                - heading [level=2]: In Progress (0)
+                - paragraph: No orders in progress.
+              - generic:
+                - heading [level=2]: Done (0)
+                - paragraph: No completed orders today.
+  - dialog "Create wash" [ref=e87]:
+    - generic [ref=e88]:
+      - heading "Create wash" [level=2] [ref=e90]
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]: Plate number *
+          - generic [ref=e94]:
+            - textbox "Plate number" [active] [ref=e95]:
+              - /placeholder: Find or add vehicle
+            - button "New vehicle" [ref=e96] [cursor=pointer]:
+              - img
+          - paragraph [ref=e97]: Select a car, or add a new one
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - text: Customer name
+            - generic [ref=e100]: (optional)
+          - textbox "Customer name (optional)" [ref=e101]
+        - generic [ref=e102]:
+          - generic [ref=e103]:
+            - text: Customer phone
+            - generic [ref=e104]: (optional)
+          - textbox "Customer phone (optional)" [ref=e105]
+        - generic [ref=e106]:
+          - generic [ref=e107]: Package
+          - combobox "Package" [ref=e108] [cursor=pointer]:
+            - generic: Package
+            - img [ref=e109]
+          - combobox [ref=e111]
+        - generic [ref=e112]:
+          - generic [ref=e113]: Price
+          - spinbutton "Price" [ref=e114]
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - text: Notes
+            - generic [ref=e117]: (optional)
+          - textbox "Notes (optional)" [ref=e118]
+      - generic [ref=e119]:
+        - button "Cancel" [ref=e120] [cursor=pointer]
+        - button "Create wash" [disabled] [ref=e121]:
+          - img
+          - text: Create wash
+    - button "Close" [ref=e122] [cursor=pointer]:
+      - img [ref=e123]
+      - generic [ref=e126]: Close

@@ -1,0 +1,132 @@
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic: WashFlow
+        - generic:
+          - button:
+            - img
+          - button: ع
+          - button: Sign out
+      - generic:
+        - complementary:
+          - navigation:
+            - link:
+              - /url: /app/dashboard
+              - img
+              - text: Dashboard
+            - link:
+              - /url: /app/analytics
+              - img
+              - text: Analytics
+            - link:
+              - /url: /app/queue
+              - img
+              - text: Queue
+            - link:
+              - /url: /app/washes
+              - img
+              - text: Washes
+            - link:
+              - /url: /app/customers
+              - img
+              - text: Customers
+            - link:
+              - /url: /app/branches
+              - img
+              - text: Branches
+            - link:
+              - /url: /app/packages
+              - img
+              - text: Packages
+            - link:
+              - /url: /app/staff
+              - img
+              - text: Staff
+            - link:
+              - /url: /app/users
+              - img
+              - text: Users
+        - main:
+          - generic:
+            - generic:
+              - heading [level=1]: Queue
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                    - text: New Wash
+            - generic:
+              - generic:
+                - heading [level=2]: Waiting (1)
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: أبج 123
+                      - generic: Waiting
+                  - generic:
+                    - paragraph:
+                      - generic: "Price:"
+                      - text: "75"
+                    - generic:
+                      - generic: Unpaid
+                      - generic: "Remaining: 75"
+                  - generic:
+                    - button:
+                      - img
+                      - text: Start
+                    - button:
+                      - img
+                      - text: Cancel
+              - generic:
+                - heading [level=2]: In Progress (1)
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: أبج 123
+                      - generic: In Progress
+                  - generic:
+                    - paragraph:
+                      - generic: "Price:"
+                      - text: "60"
+                    - paragraph:
+                      - generic: "Assigned to:"
+                      - text: Ahmed Hassan
+                    - generic:
+                      - generic: Unpaid
+                      - generic: "Remaining: 60"
+                  - generic:
+                    - button:
+                      - img
+                      - text: Complete
+                    - button:
+                      - img
+                      - text: Cancel
+              - generic:
+                - heading [level=2]: Done (0)
+                - paragraph: No completed orders today.
+  - dialog:
+    - generic:
+      - heading [level=2]: Assign employee
+    - generic:
+      - generic:
+        - generic: Assign employee *
+        - combobox [expanded]:
+          - generic: Select a staff member
+          - img
+    - generic:
+      - button: Cancel
+      - button [disabled]:
+        - img
+        - text: Start
+    - button:
+      - img
+      - generic: Close
+  - listbox [ref=e133]:
+    - option "Ahmed Hassan· Busy" [disabled]:
+      - generic:
+        - text: Ahmed Hassan
+        - generic: · Busy
+    - option "Mona Said" [active] [ref=e134]:
+      - generic [ref=e136]: Mona Said

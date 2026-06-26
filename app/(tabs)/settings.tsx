@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
@@ -17,6 +17,7 @@ import {
 import type { Locale, AccountBalance } from '@/src/types';
 import { Screen, Card, CollapsibleCard, AppText, SectionLabel, Pill, Money } from '@/src/ui';
 import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
+import { AndroidCaptureSection } from '@/src/features/ingest/AndroidCaptureSection';
 import { MonthStartSection } from '@/src/features/dashboard/MonthStartSection';
 import { GoldSection } from '@/src/features/gold/GoldSection';
 import { CategoriesSection } from '@/src/features/categories/CategoriesSection';
@@ -366,7 +367,11 @@ export default function Settings() {
       {/* ── START OF MONTH ─────────────────────────────────────────────────── */}
       <MonthStartSection locale={locale} />
 
-      {/* ── SMS AUTO-CAPTURE ───────────────────────────────────────────────── */}
+      {/* ── ANDROID BANK-NOTIFICATION CAPTURE (NotificationListener) ────────── */}
+      {Platform.OS === 'android' && <AndroidCaptureSection locale={locale} />}
+
+      {/* ── SMS AUTO-CAPTURE (iOS Shortcuts / App Intent) ──────────────────── */}
+      {Platform.OS === 'ios' && (
       <CollapsibleCard title={t('sms_capture', locale)} rtl={rtl} testID="section-sms">
         <AppText
           className="text-ink2"
@@ -431,8 +436,9 @@ export default function Settings() {
         </TouchableOpacity>
 
       </CollapsibleCard>
+      )}
 
-      {/* ── SMS rules (keyword → category/note) ─────────────────────────────── */}
+      {/* ── SMS rules (keyword → category/note) — server-side, both platforms ─ */}
       <SmsRulesSection locale={locale} collapsible />
 
       {/* ── Sign out ───────────────────────────────────────────────────────── */}

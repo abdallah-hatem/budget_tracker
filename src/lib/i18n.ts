@@ -224,6 +224,34 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   copied: { en: 'Copied!', ar: 'تم النسخ!' },
   shortcut_guide: { en: 'Manual setup (advanced)', ar: 'الإعداد اليدوي (متقدم)' },
 
+  // Android bank-notification auto-capture (NotificationListener)
+  'acap.title': { en: 'Bank Notification Capture', ar: 'التقاط إشعارات البنك' },
+  'acap.intro': {
+    en: 'Automatically log transactions from your bank\'s notifications. Grant notification access, then add the word your bank always includes (like EGP).',
+    ar: 'سجّل معاملاتك تلقائيًا من إشعارات بنكك. امنح صلاحية الوصول للإشعارات، ثم أضف الكلمة التي يرسلها بنكك دائمًا (مثل EGP).',
+  },
+  'acap.granted': { en: 'Notification access granted', ar: 'تم منح صلاحية الإشعارات' },
+  'acap.notgranted': { en: 'Notification access needed', ar: 'يلزم صلاحية الإشعارات' },
+  'acap.grant': { en: 'Grant access', ar: 'منح الصلاحية' },
+  'acap.keywords': { en: 'Keywords to capture', ar: 'الكلمات المفتاحية' },
+  'acap.keyword_ph': { en: 'e.g. EGP, جم', ar: 'مثلاً EGP، جم' },
+  'acap.add': { en: 'Add', ar: 'أضف' },
+  'acap.hint': {
+    en: 'Only notifications containing one of these words ever leave your device.',
+    ar: 'فقط الإشعارات التي تحتوي على إحدى هذه الكلمات تُرسَل من جهازك.',
+  },
+  'acap.enable': { en: 'Enable capture', ar: 'تفعيل الالتقاط' },
+  'acap.disable': { en: 'Disable capture', ar: 'إيقاف الالتقاط' },
+  'acap.on': { en: '✓ Capturing bank notifications', ar: '✓ يتم التقاط إشعارات البنك' },
+  'acap.need_perm': {
+    en: 'Grant notification access first.',
+    ar: 'امنح صلاحية الإشعارات أولاً.',
+  },
+  'acap.need_kw': {
+    en: 'Add at least one keyword first.',
+    ar: 'أضف كلمة مفتاحية واحدة على الأقل.',
+  },
+
   // SMS auto-capture onboarding tutorial
   'sms_tut.heading': { en: 'Auto-capture your bank SMS', ar: 'التقاط رسائل بنكك تلقائيًا' },
   'sms_tut.sub': {

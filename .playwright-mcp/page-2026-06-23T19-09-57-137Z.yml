@@ -1,0 +1,237 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - link "WashFlow" [ref=e6] [cursor=pointer]:
+        - /url: /app/dashboard
+        - generic [ref=e7]: WashFlow
+      - generic [ref=e8]:
+        - button "Enable notifications" [ref=e942] [cursor=pointer]:
+          - img
+        - button "Language" [active] [ref=e943] [cursor=pointer]: ع
+        - button "Sign out" [ref=e944] [cursor=pointer]
+    - generic [ref=e12]:
+      - complementary [ref=e13]:
+        - navigation [ref=e14]:
+          - link "Dashboard" [ref=e945] [cursor=pointer]:
+            - /url: /app/dashboard
+            - img [ref=e16]
+            - text: Dashboard
+          - link "Analytics" [ref=e946] [cursor=pointer]:
+            - /url: /app/analytics
+            - img [ref=e22]
+            - text: Analytics
+          - link "Queue" [ref=e947] [cursor=pointer]:
+            - /url: /app/queue
+            - img [ref=e25]
+            - text: Queue
+          - link "Washes" [ref=e948] [cursor=pointer]:
+            - /url: /app/washes
+            - img [ref=e29]
+            - text: Washes
+          - link "Customers" [ref=e949] [cursor=pointer]:
+            - /url: /app/customers
+            - img [ref=e34]
+            - text: Customers
+          - link "Branches" [ref=e950] [cursor=pointer]:
+            - /url: /app/branches
+            - img [ref=e40]
+            - text: Branches
+          - link "Packages" [ref=e951] [cursor=pointer]:
+            - /url: /app/packages
+            - img [ref=e45]
+            - text: Packages
+          - link "Staff" [ref=e952] [cursor=pointer]:
+            - /url: /app/staff
+            - img [ref=e50]
+            - text: Staff
+          - link "Users" [ref=e953] [cursor=pointer]:
+            - /url: /app/users
+            - img [ref=e53]
+            - text: Users
+      - main [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - img [ref=e69]
+            - heading "Analytics" [level=1] [ref=e954]
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - generic [ref=e74]: Date range
+              - button "May 25, 2026 – Jun 23, 2026" [ref=e955] [cursor=pointer]:
+                - img
+                - generic [ref=e76]: May 25, 2026 – Jun 23, 2026
+            - generic [ref=e77]:
+              - generic [ref=e78]: Branch
+              - combobox [ref=e79] [cursor=pointer]:
+                - generic: All branches
+                - img [ref=e80]
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - generic [ref=e957]:
+                - generic [ref=e958]:
+                  - generic [ref=e959]: Revenue
+                  - generic [ref=e960]: 2,720
+                - img [ref=e962]
+              - generic [ref=e966]:
+                - generic [ref=e967]:
+                  - generic [ref=e968]: Washes
+                  - generic [ref=e969]: "43"
+                - img [ref=e971]
+              - generic [ref=e975]:
+                - generic [ref=e976]:
+                  - generic [ref=e977]: Avg ticket
+                  - generic [ref=e978]: "68"
+                - img [ref=e980]
+              - generic [ref=e984]:
+                - generic [ref=e985]:
+                  - generic [ref=e986]: Completion rate
+                  - generic [ref=e987]: 93%
+                - img [ref=e989]
+              - generic [ref=e993]:
+                - generic [ref=e994]:
+                  - generic [ref=e995]: Avg wait
+                  - generic [ref=e996]: 5m
+                - img [ref=e998]
+              - generic [ref=e1002]:
+                - generic [ref=e1003]:
+                  - generic [ref=e1004]: Avg service
+                  - generic [ref=e1005]: 20m
+                - img [ref=e1007]
+            - generic [ref=e202]:
+              - generic [ref=e203]:
+                - img [ref=e205]
+                - generic [ref=e208]: Revenue trend
+              - img [ref=e795]:
+                - generic [ref=e799]:
+                  - generic [ref=e1011]: Jun 12
+                  - generic [ref=e1013]: Jun 13
+                  - generic [ref=e1015]: Jun 14
+                  - generic [ref=e1017]: Jun 15
+                  - generic [ref=e1019]: Jun 16
+                  - generic [ref=e1021]: Jun 17
+                  - generic [ref=e1023]: Jun 18
+                  - generic [ref=e1025]: Jun 19
+                  - generic [ref=e1027]: Jun 20
+                  - generic [ref=e1029]: Jun 21
+                  - generic [ref=e1031]: Jun 22
+                  - generic [ref=e1033]: Jun 23
+                - generic [ref=e823]:
+                  - generic [ref=e825]: "0"
+                  - generic [ref=e827]: "80"
+                  - generic [ref=e829]: "160"
+                  - generic [ref=e831]: "240"
+                  - generic [ref=e833]: "320"
+            - generic [ref=e260]:
+              - generic [ref=e261]:
+                - generic [ref=e262]:
+                  - img [ref=e264]
+                  - generic [ref=e267]: Washes by status
+                - generic [ref=e268]:
+                  - img [ref=e272]:
+                    - generic [ref=e1034]:
+                      - img [ref=e1036]
+                      - img [ref=e1038]
+                      - img [ref=e1040]
+                  - list [ref=e281]:
+                    - listitem [ref=e282]:
+                      - generic [ref=e284]: Waiting
+                      - generic [ref=e285]: "1"
+                    - listitem [ref=e286]:
+                      - generic [ref=e288]: In Progress
+                      - generic [ref=e289]: "2"
+                    - listitem [ref=e290]:
+                      - generic [ref=e292]: Done
+                      - generic [ref=e293]: "40"
+                    - listitem [ref=e294]:
+                      - generic [ref=e296]: Cancelled
+                      - generic [ref=e297]: "0"
+              - generic [ref=e298]:
+                - generic [ref=e299]:
+                  - img [ref=e301]
+                  - generic [ref=e303]: Busiest weekdays
+                - img [ref=e841]:
+                  - generic [ref=e845]:
+                    - generic [ref=e1042]: Sun
+                    - generic [ref=e1044]: Mon
+                    - generic [ref=e1046]: Tue
+                    - generic [ref=e1048]: Wed
+                    - generic [ref=e1050]: Thu
+                    - generic [ref=e1052]: Fri
+                    - generic [ref=e1054]: Sat
+                  - generic [ref=e861]:
+                    - generic [ref=e863]: "0"
+                    - generic [ref=e865]: "3"
+                    - generic [ref=e867]: "6"
+                    - generic [ref=e869]: "9"
+                    - generic [ref=e871]: "12"
+              - generic [ref=e356]:
+                - generic [ref=e357]:
+                  - img [ref=e359]
+                  - generic [ref=e362]: Busiest hours
+                - img [ref=e873]:
+                  - generic [ref=e877]:
+                    - generic [ref=e1073]: 00:00
+                    - generic [ref=e1075]: 03:00
+                    - generic [ref=e1077]: 06:00
+                    - generic [ref=e1079]: 09:00
+                    - generic [ref=e1081]: 12:00
+                    - generic [ref=e1083]: 15:00
+                    - generic [ref=e1085]: 18:00
+                    - generic [ref=e1087]: 21:00
+                  - generic [ref=e895]:
+                    - generic [ref=e897]: "0"
+                    - generic [ref=e899]: "2"
+                    - generic [ref=e901]: "4"
+                    - generic [ref=e903]: "6"
+                    - generic [ref=e905]: "8"
+              - generic [ref=e451]:
+                - generic [ref=e452]:
+                  - img [ref=e454]
+                  - generic [ref=e457]: Top packages
+                - img [ref=e907]:
+                  - generic [ref=e911]:
+                    - generic [ref=e913]: Premium Wash
+                    - generic [ref=e915]: Basic Wash
+                    - generic [ref=e917]: Express
+                    - generic [ref=e919]: —
+                  - generic [ref=e1150]:
+                    - generic [ref=e1151]: "14"
+                    - generic [ref=e1152]: "13"
+                    - generic [ref=e1153]: "13"
+                    - generic [ref=e1154]: "3"
+              - generic [ref=e491]:
+                - generic [ref=e492]:
+                  - img [ref=e494]
+                  - generic [ref=e498]: By branch
+                - img [ref=e921]:
+                  - generic [ref=e925]:
+                    - generic [ref=e1156]: Main Branch
+                    - generic [ref=e1158]: Downtown Br…
+                  - generic [ref=e931]:
+                    - generic [ref=e933]: "0"
+                    - generic [ref=e935]: "550"
+                    - generic [ref=e937]: "1100"
+                    - generic [ref=e939]: "1650"
+                    - generic [ref=e941]: "2200"
+              - generic [ref=e538]:
+                - generic [ref=e539]:
+                  - img [ref=e541]
+                  - generic [ref=e545]: Cancellations by reason
+                - paragraph [ref=e548]: No data for this period
+              - generic [ref=e549]:
+                - generic [ref=e550]:
+                  - img [ref=e552]
+                  - generic [ref=e557]: Top employees
+                - list [ref=e559]:
+                  - listitem [ref=e560]:
+                    - generic [ref=e561]:
+                      - generic [ref=e562]:
+                        - generic [ref=e563]: "1"
+                        - generic [ref=e564]: Ahmed Hassan
+                      - generic [ref=e565]: "20"
+                  - listitem [ref=e568]:
+                    - generic [ref=e569]:
+                      - generic [ref=e570]:
+                        - generic [ref=e571]: "2"
+                        - generic [ref=e572]: Mona Said
+                      - generic [ref=e573]: "20"
+  - generic [ref=e576]: الأحد

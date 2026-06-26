@@ -1,0 +1,67 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - link "WashFlow" [ref=e6] [cursor=pointer]:
+      - /url: /app/dashboard
+      - generic [ref=e7]: WashFlow
+    - generic [ref=e8]:
+      - button "تفعيل الإشعارات" [ref=e9] [cursor=pointer]:
+        - img
+      - button "اللغة" [ref=e10] [cursor=pointer]: EN
+      - button "تسجيل الخروج" [ref=e11] [cursor=pointer]
+  - generic [ref=e12]:
+    - complementary [ref=e13]:
+      - navigation [ref=e14]:
+        - link "لوحة التحكم" [ref=e15] [cursor=pointer]:
+          - /url: /app/dashboard
+          - img [ref=e16]
+          - text: لوحة التحكم
+        - link "التحليلات" [ref=e21] [cursor=pointer]:
+          - /url: /app/analytics
+          - img [ref=e22]
+          - text: التحليلات
+        - link "قائمة الانتظار" [ref=e24] [cursor=pointer]:
+          - /url: /app/queue
+          - img [ref=e25]
+          - text: قائمة الانتظار
+        - link "سجل الغسيل" [ref=e28] [cursor=pointer]:
+          - /url: /app/washes
+          - img [ref=e29]
+          - text: سجل الغسيل
+        - link "العملاء" [ref=e33] [cursor=pointer]:
+          - /url: /app/customers
+          - img [ref=e34]
+          - text: العملاء
+        - link "الفروع" [ref=e39] [cursor=pointer]:
+          - /url: /app/branches
+          - img [ref=e40]
+          - text: الفروع
+        - link "الباقات" [ref=e44] [cursor=pointer]:
+          - /url: /app/packages
+          - img [ref=e45]
+          - text: الباقات
+        - link "الموظفون" [ref=e49] [cursor=pointer]:
+          - /url: /app/staff
+          - img [ref=e50]
+          - text: الموظفون
+        - link "المستخدمون" [ref=e52] [cursor=pointer]:
+          - /url: /app/users
+          - img [ref=e53]
+          - text: المستخدمون
+    - main [ref=e65]:
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - img [ref=e69]
+          - heading "التحليلات" [level=1] [ref=e71]
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]: نطاق التاريخ
+            - button "25 مايو 2026 – 23 يونيو 2026" [ref=e75] [cursor=pointer]:
+              - img
+              - generic [ref=e76]: 25 مايو 2026 – 23 يونيو 2026
+          - generic [ref=e77]:
+            - generic [ref=e78]: الفرع
+            - combobox [ref=e79] [cursor=pointer]:
+              - generic: جميع الفروع
+              - img [ref=e80]
+        - status [ref=e82]:
+          - generic [ref=e83]: جارٍ التحميل…

@@ -1,7 +1,7 @@
 import '../global.css';
 import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -66,9 +66,11 @@ function RootNavigator() {
   // Show the SMS auto-capture tutorial once to a brand-new account after it
   // lands in the app. Gated on a recent created_at + a per-user "seen" flag so
   // it never gets pushed at existing users (OTA-safe). Runs at most once per
-  // signed-in session; resets on sign-out.
+  // signed-in session; resets on sign-out. iOS-only: the walkthrough is for the
+  // iOS Shortcuts automation (Android uses NotificationListener in Settings).
   const onboardCheckedRef = useRef(false);
   useEffect(() => {
+    if (Platform.OS !== 'ios') return;
     if (loading || !user) {
       onboardCheckedRef.current = false;
       return;
