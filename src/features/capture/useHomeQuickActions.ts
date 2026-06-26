@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCapture } from './CaptureProvider';
 import { t } from '../../lib/i18n';
@@ -78,11 +79,17 @@ export function useHomeQuickActions(locale: Locale): void {
 
   useEffect(() => {
     if (!QA?.setItems) return;
+    // SF Symbols ('symbol:…') are iOS-only; Android shortcuts would need bundled
+    // drawables, so omit icons there (text-only shortcuts still work).
+    const withIcon = (
+      item: { id: string; title: string },
+      symbol: string,
+    ) => (Platform.OS === 'ios' ? { ...item, icon: symbol } : item);
     QA.setItems([
-      { id: 'voice', title: t('qa.voice', locale), icon: 'symbol:mic.fill' },
-      { id: 'type', title: t('qa.type', locale), icon: 'symbol:keyboard' },
-      { id: 'manual', title: t('qa.manual', locale), icon: 'symbol:plus.circle' },
-      { id: 'list', title: t('qa.list', locale), icon: 'symbol:list.bullet' },
+      withIcon({ id: 'voice', title: t('qa.voice', locale) }, 'symbol:mic.fill'),
+      withIcon({ id: 'type', title: t('qa.type', locale) }, 'symbol:keyboard'),
+      withIcon({ id: 'manual', title: t('qa.manual', locale) }, 'symbol:plus.circle'),
+      withIcon({ id: 'list', title: t('qa.list', locale) }, 'symbol:list.bullet'),
     ]).catch(() => {});
   }, [locale]);
 }

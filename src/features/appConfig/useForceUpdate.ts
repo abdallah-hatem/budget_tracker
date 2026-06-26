@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import * as Updates from 'expo-updates';
-import { getMinSupportedVersion } from './api';
+import { getMinSupportedVersions } from './api';
 import { isUpdateRequired } from './version';
 
 /**
  * Returns true when the installed app version is below the remote-configured
- * minimum (app_config.min_ios_version) — i.e. the user must update. Fails OPEN:
- * unknown installed version (dev) or a failed/empty config fetch never blocks.
+ * minimum for the current platform (app_config.min_ios_version /
+ * min_android_version). Fails OPEN: unknown installed version (dev) or a
+ * failed/empty config fetch never blocks.
  *
  * Installed version comes from expo-updates' runtimeVersion (policy=appVersion),
  * so no extra native module is needed — this ships via OTA.
@@ -24,7 +26,8 @@ export function useForceUpdate(): boolean {
     }
     if (!installed) return; // dev / unknown → never block
 
-    void getMinSupportedVersion().then((min) => {
+    void getMinSupportedVersions().then((mins) => {
+      const min = Platform.OS === 'android' ? mins.android : mins.ios;
       if (active && isUpdateRequired(installed, min)) setBlocked(true);
     });
     return () => {

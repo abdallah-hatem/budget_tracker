@@ -10,6 +10,9 @@
       "channel": "development",
       "ios": {
         "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "preview": {
@@ -17,6 +20,9 @@
       "channel": "preview",
       "ios": {
         "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://pzyadiwfjmjsafssxshc.supabase.co",
@@ -27,6 +33,9 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://pzyadiwfjmjsafssxshc.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6eWFkaXdmam1qc2Fmc3N4c2hjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NTgxODksImV4cCI6MjA5NjIzNDE4OX0.x8c2nINYkWT_PJeOwx3qYxJvD1-1TTWrO-GfpXcpBUM",
@@ -38,6 +47,9 @@
     "production": {
       "ios": {
         "ascAppId": "6777166627"
+      },
+      "android": {
+        "track": "internal"
       }
     }
   }

@@ -1,16 +1,24 @@
 import { supabase } from '../../lib/supabase';
 
+export interface MinSupportedVersions {
+  ios: string | null;
+  android: string | null;
+}
+
 /**
- * The minimum supported iOS app version from the remote app_config row.
- * Returns null on any error (caller must fail open — never block on a failed
+ * Per-platform minimum supported app version from the remote app_config row.
+ * Returns nulls on any error (caller must fail open — never block on a failed
  * fetch).
  */
-export async function getMinSupportedVersion(): Promise<string | null> {
+export async function getMinSupportedVersions(): Promise<MinSupportedVersions> {
   const { data, error } = await supabase
     .from('app_config')
-    .select('min_ios_version')
+    .select('min_ios_version, min_android_version')
     .eq('id', 1)
     .maybeSingle();
-  if (error || !data) return null;
-  return (data.min_ios_version as string) ?? null;
+  if (error || !data) return { ios: null, android: null };
+  return {
+    ios: (data.min_ios_version as string) ?? null,
+    android: (data.min_android_version as string) ?? null,
+  };
 }

@@ -35,6 +35,7 @@
       }
     },
     "android": {
+      "package": "com.abdallah.masareef",
       "adaptiveIcon": {
         "backgroundColor": "#0B0F0E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

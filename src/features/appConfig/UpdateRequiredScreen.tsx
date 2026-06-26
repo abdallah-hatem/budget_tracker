@@ -1,12 +1,16 @@
 import React from 'react';
-import { View, Linking } from 'react-native';
+import { View, Linking, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppText, PrimaryButton } from '@/src/ui';
 import { t } from '@/src/lib/i18n';
 import type { Locale } from '@/src/types';
 
-// App Store deep link (ascAppId from eas.json). itms-apps opens the App Store app.
-const STORE_URL = 'itms-apps://apps.apple.com/app/id6777166627';
+// Store deep links — itms-apps opens the App Store app; market:// opens Play.
+const STORE_URL = Platform.select({
+  ios: 'itms-apps://apps.apple.com/app/id6777166627',
+  android: 'market://details?id=com.abdallah.masareef',
+  default: 'https://play.google.com/store/apps/details?id=com.abdallah.masareef',
+}) as string;
 
 /**
  * Full-screen, non-dismissible gate shown when the installed app version is
