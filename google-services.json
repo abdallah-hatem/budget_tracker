@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "528169201740",
+    "project_id": "masareef-4fb61",
+    "storage_bucket": "masareef-4fb61.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:528169201740:android:89c974e6ec67e5a352c4e9",
+        "android_client_info": {
+          "package_name": "com.abdallah.masareef"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyYq6p2Ky8tiJfLvsv_lajcRU3XX3SQG4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
