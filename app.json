@@ -36,6 +36,7 @@
     },
     "android": {
       "package": "com.abdallah.masareef",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0B0F0E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

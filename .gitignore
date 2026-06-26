@@ -46,3 +46,9 @@ targets/*/Info.plist
 
 # Local prod credentials — NEVER commit
 supabase_credentials.md
+
+# Firebase Android config (contains API keys — keep local; use EAS secret for cloud builds)
+google-services.json
+
+# FCM service-account private key (push sender) — NEVER commit
+fcm-service-account.json
