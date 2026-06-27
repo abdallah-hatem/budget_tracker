@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { isRunningInExpoGo } from 'expo';
 import * as Notifications from 'expo-notifications';
 import { useRouter, useRootNavigationState } from 'expo-router';
@@ -79,7 +80,9 @@ export function useNotifications(): void {
 
     registeredUserIdRef.current = user.id;
     void registerForPushNotificationsAsync(user.id);
-    // Provision the SMS-ingest token into the Keychain for the App Intent.
-    void ensureIngestToken();
+    // iOS App Intent reads the ingest token from the Keychain. Android's
+    // notification capture manages its own token (AndroidCaptureSection); calling
+    // ensureIngestToken there would mint a token that REVOKES the capture token.
+    if (Platform.OS === 'ios') void ensureIngestToken();
   }, [user]);
 }

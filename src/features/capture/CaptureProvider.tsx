@@ -10,7 +10,6 @@ import {
   Modal,
   Pressable,
   KeyboardAvoidingView,
-  Platform,
   View,
   Text,
 } from 'react-native';
@@ -332,7 +331,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
           style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
           onPress={() => setTypeOpen(false)}
         >
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView behavior="padding">
             <Pressable onPress={() => {}}>
               <TypeSheet locale={locale} loading={loading} onSubmit={onTypeSubmit} onCancel={() => setTypeOpen(false)} />
             </Pressable>
@@ -346,7 +345,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
           style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
           onPress={() => setManualOpen(false)}
         >
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView behavior="padding">
             <Pressable onPress={() => {}}>
               <ManualEntrySheet locale={locale} onSubmit={onManualSubmit} onCancel={() => setManualOpen(false)} />
             </Pressable>

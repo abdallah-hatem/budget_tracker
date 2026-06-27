@@ -104,11 +104,11 @@ export function AndroidCaptureSection({ locale }: { locale: Locale }) {
     }
     setBusy(true);
     try {
-      const cfg = await getCaptureConfig();
-      let token = cfg.token;
-      if (!token) {
-        token = await createIngestToken();
-      }
+      // Always mint a FRESH token on enable. A previously-stored token may have
+      // been revoked (sign-out, or createIngestToken called elsewhere), which
+      // would 401 the headless POST. createIngestToken revokes older tokens
+      // server-side, so this device's capture token is always the active one.
+      const token = await createIngestToken();
       await setCaptureConfig({ enabled: true, keywords, token });
       setEnabled(true);
     } catch (e) {
