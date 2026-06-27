@@ -12,7 +12,20 @@
           "package_name": "com.abdallah.masareef"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "528169201740-t60lno9ef5emi65jf9pktttiv0eoudq3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.abdallah.masareef",
+            "certificate_hash": "4a58635e56aecaa12b88e38358f594a458d3a210"
+          }
+        },
+        {
+          "client_id": "528169201740-b86bngtnrhl579saff5npg7liqrapefp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAyYq6p2Ky8tiJfLvsv_lajcRU3XX3SQG4"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "528169201740-b86bngtnrhl579saff5npg7liqrapefp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
