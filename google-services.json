@@ -41,6 +41,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:528169201740:android:c0ad520b31eab88652c4e9",
+        "android_client_info": {
+          "package_name": "com.masareef.budget"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "528169201740-b86bngtnrhl579saff5npg7liqrapefp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyYq6p2Ky8tiJfLvsv_lajcRU3XX3SQG4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "528169201740-b86bngtnrhl579saff5npg7liqrapefp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"
