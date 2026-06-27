@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { Modal, View, Text, Pressable, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryAvatar, Money, PressableScale } from '../../ui';
@@ -62,7 +62,7 @@ export function AddedCardModal({
       >
         {editing ? (
           // ── Edit a tapped row (same modal — no stacking) ──────────────────
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView behavior="padding">
             <Pressable onPress={() => {}}>
               <EditTransactionSheet
                 transaction={editing}

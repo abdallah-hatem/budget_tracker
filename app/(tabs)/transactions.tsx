@@ -7,7 +7,6 @@ import {
   Pressable,
   Modal,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -306,7 +305,7 @@ export default function TransactionsScreen() {
           style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
           onPress={() => setEditing(null)}
         >
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView behavior="padding">
             <Pressable onPress={() => {}}>
               {editing ? (
                 <EditTransactionSheet
