@@ -91,7 +91,13 @@
       "@bacons/apple-targets",
       "@react-native-community/datetimepicker",
       "@sentry/react-native",
-      "expo-quick-actions"
+      "expo-quick-actions",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.PLACEHOLDER-ios-only"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
