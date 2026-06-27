@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_CLEARANCE } from './FloatingTabBar';
 
@@ -25,19 +25,25 @@ export function Screen({ children, scroll = false, padded = true }: ScreenProps)
   if (scroll) {
     return (
       <SafeAreaView edges={['top']} className="bg-canvas flex-1">
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          // Inset the scroll view when the keyboard shows so the focused input
-          // can be scrolled into view instead of being hidden behind it (iOS).
-          automaticallyAdjustKeyboardInsets
-          contentContainerStyle={[
-            paddingStyle,
-            { paddingBottom: insets.bottom + TAB_BAR_CLEARANCE },
-          ]}
-          showsVerticalScrollIndicator={false}
+        {/* iOS scrolls the focused input into view via automaticallyAdjustKeyboardInsets
+            (iOS-only); Android needs KeyboardAvoidingView to shrink the scroll area so
+            content isn't stuck behind the keyboard. */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'android' ? 'padding' : undefined}
         >
-          {children}
-        </ScrollView>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
+            contentContainerStyle={[
+              paddingStyle,
+              { paddingBottom: insets.bottom + TAB_BAR_CLEARANCE },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }

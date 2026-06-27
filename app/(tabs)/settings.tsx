@@ -15,7 +15,7 @@ import {
   addToAccountBalance,
 } from '@/src/features/accounts/api';
 import type { Locale, AccountBalance } from '@/src/types';
-import { Screen, Card, CollapsibleCard, AppText, SectionLabel, Pill, Money } from '@/src/ui';
+import { Screen, Card, CollapsibleCard, AppText, SectionLabel, Pill, Money, NumericInput } from '@/src/ui';
 import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
 import { AndroidCaptureSection } from '@/src/features/ingest/AndroidCaptureSection';
 import { MonthStartSection } from '@/src/features/dashboard/MonthStartSection';
@@ -254,11 +254,10 @@ export default function Settings() {
               {/* Inline "add money to current balance" form */}
               {adjustId === a.id ? (
                 <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10, alignItems: 'center' }}>
-                  <TextInput
+                  <NumericInput
                     testID={`account-addmoney-input-${a.id}`}
                     value={adjustAmount}
-                    onChangeText={setAdjustAmount}
-                    keyboardType="numeric"
+                    onChangeValue={setAdjustAmount}
                     autoFocus
                     placeholder={t('accounts.amount_to_add', locale)}
                     placeholderTextColor="#6B7672"
@@ -292,11 +291,10 @@ export default function Settings() {
               placeholderTextColor="#6B7672"
               style={{ backgroundColor: '#1C2322', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#F4F7F5', fontFamily: FONT.jakartaMd, fontSize: 15, textAlign: rtl ? 'right' : 'left' }}
             />
-            <TextInput
+            <NumericInput
               testID="account-balance-input"
               value={formBalance}
-              onChangeText={setFormBalance}
-              keyboardType="numeric"
+              onChangeValue={setFormBalance}
               placeholder={t('accounts.starting_balance', locale)}
               placeholderTextColor="#6B7672"
               style={{ backgroundColor: '#1C2322', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: '#F4F7F5', fontFamily: FONT.soraSb, fontSize: 15, textAlign: rtl ? 'right' : 'left' }}

@@ -39,6 +39,10 @@ jest.mock('../notifications', () => ({
   registerForPushNotificationsAsync: jest.fn(async () => 'ExponentPushToken[test]'),
 }));
 
+// The hooks skip push/badge work in Expo Go (isRunningInExpoGo). Tests cover a
+// real build, so force it false.
+jest.mock('expo', () => ({ isRunningInExpoGo: () => false }));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -139,7 +138,7 @@ export default function SignUp() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: '#0B0F0E' }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
     >
       <ScrollView
         style={{ flex: 1 }}
