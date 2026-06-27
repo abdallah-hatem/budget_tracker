@@ -49,12 +49,13 @@
 
     <h2>1. Information we collect</h2>
     <ul>
-      <li><strong>Account information</strong> — your email address, used to create and sign in to your account. Your password is handled by our authentication provider and stored only as a secure hash; we never see it in plain text.</li>
+      <li><strong>Account information</strong> — your email address, used to create and sign in to your account (or your Google or Apple account identifier if you choose social sign-in). Your password is handled by our authentication provider and stored only as a secure hash; we never see it in plain text.</li>
       <li><strong>Transactions you create</strong> — the amount, category, date, type (expense/income), any note, and the original text you spoke or typed (kept so the app can categorize it and show your history).</li>
       <li><strong>Accounts &amp; balances</strong> — the account names and starting balances you add (e.g. "Bank", "Cash").</li>
       <li><strong>Notification token</strong> — if you enable notifications, a push token so we can alert you about pending SMS transactions.</li>
-      <li><strong>SMS auto-capture (optional)</strong> — if you set up the iOS Shortcut, the text of a bank SMS you forward is sent to our server to extract the amount and category, then saved as a pending transaction.</li>
+      <li><strong>Bank transaction auto-capture (optional)</strong> — if you opt in, the text of a bank transaction alert is sent to our server to extract the amount and category, then saved as a pending transaction for you to review. On iOS this uses an iOS Shortcut you set up; on Android it uses notification access (see below). This feature is off by default.</li>
     </ul>
+    <p><strong>Android notification access.</strong> On Android, the optional auto-capture feature uses notification access (a <em>NotificationListenerService</em>). It is <strong>off by default</strong>. When you enable it in Settings and choose a keyword (for example your bank's currency word), only notifications containing that keyword are read, and their text is used solely to create a pending transaction for you to review. We do not read your other notifications, and notification data is never sold or shared with third parties or used for advertising.</p>
     <p>We do <strong>not</strong> collect your contacts, location, advertising identifiers, or analytics about how you use the app.</p>
 
     <h2>2. How we use your information</h2>
@@ -74,7 +75,8 @@
     <ul>
       <li><strong>Supabase</strong> — authentication and database storage.</li>
       <li><strong>Groq</strong> — AI categorization of transaction text.</li>
-      <li><strong>Apple</strong> — push notification delivery (if enabled).</li>
+      <li><strong>Google</strong> — sign-in (if you use it) and Android push-notification delivery (Firebase Cloud Messaging).</li>
+      <li><strong>Apple</strong> — sign-in (if you use it) and iOS push-notification delivery.</li>
     </ul>
 
     <h2>7. Data retention &amp; your choices</h2>
