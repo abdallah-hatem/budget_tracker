@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { isRunningInExpoGo } from 'expo';
 import * as Notifications from 'expo-notifications';
 
 /**
@@ -9,6 +10,7 @@ import * as Notifications from 'expo-notifications';
  */
 export function usePendingBadge(count: number): void {
   useEffect(() => {
+    if (isRunningInExpoGo()) return; // badge/push APIs absent in Expo Go
     Notifications.setBadgeCountAsync(Math.max(0, count)).catch(() => {});
   }, [count]);
 }

@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { isRunningInExpoGo } from 'expo';
 import * as Notifications from 'expo-notifications';
 import { useRouter, useRootNavigationState } from 'expo-router';
 import { useSession } from '@/src/features/auth/SessionProvider';
@@ -36,6 +37,7 @@ export function useNotifications(): void {
   // already mounted, so navigate immediately.
   // ------------------------------------------------------------------
   useEffect(() => {
+    if (isRunningInExpoGo()) return;
     const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const url = response.notification.request.content.data?.url;
@@ -54,6 +56,7 @@ export function useNotifications(): void {
   // navigator is mounted AND the session has resolved before navigating.
   // ------------------------------------------------------------------
   useEffect(() => {
+    if (isRunningInExpoGo()) return;
     if (coldStartHandledRef.current) return;
     if (!navReady || loading) return;
     coldStartHandledRef.current = true;
@@ -70,6 +73,7 @@ export function useNotifications(): void {
   // Token registration — once per signed-in user
   // ------------------------------------------------------------------
   useEffect(() => {
+    if (isRunningInExpoGo()) return;
     if (!user) return;
     if (registeredUserIdRef.current === user.id) return;
 

@@ -11,6 +11,7 @@
  * stays alive even when running in Expo Go / simulator / no EAS link.
  */
 
+import { isRunningInExpoGo } from 'expo';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
@@ -38,6 +39,7 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotificationsAsync(
   userId: string,
 ): Promise<string | null> {
+  if (isRunningInExpoGo()) return null; // push removed from Expo Go (SDK 53+)
   try {
     // Android: create a notification channel so banners are visible.
     if (Platform.OS === 'android') {
