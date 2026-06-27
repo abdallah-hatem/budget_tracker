@@ -87,6 +87,7 @@
       ],
       "./plugins/withSmsAppIntent",
       "./plugins/withLocalUpdateChannel",
+      "./plugins/withAndroidPermissionCleanup",
       "expo-secure-store",
       "@bacons/apple-targets",
       "@react-native-community/datetimepicker",
