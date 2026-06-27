@@ -153,3 +153,121 @@ features via FREE OTA (EAS Update is not a build — it doesn't touch build cred
   `version` (runtimeVersion policy is `appVersion`) so old OTAs aren't served to
   the new native runtime.
 - Signing persists via `ios.appleTeamId` (CN24UJRFFJ); see the device-build notes.
+
+## Android port — full setup + how it differs from iOS
+
+Everything Android-native lives on branch **`feat/android`** (NOT merged to `main`,
+which stays iOS-OTA-shippable). If picking this up cold, read this whole section.
+
+### Identity — the package names DIFFER (intentional, do not "fix")
+- **iOS** bundle id: `com.abdallah.masareef` (live on the App Store).
+- **Android** package: **`com.masareef.budget`** — different on purpose (the Play
+  app entry was created as `com.masareef.budget`; package names are invisible to
+  users). `app.json` → `ios.bundleIdentifier=com.abdallah.masareef`,
+  `android.package=com.masareef.budget`. The iOS **App Group** stays
+  `group.com.abdallah.masareef`. Android-specific refs use the Android package:
+  `androidCapture.ts` `OWN_PACKAGE`, `UpdateRequiredScreen` Play URLs.
+
+### Signing — the big gotcha
+- The Play app (`com.masareef.budget`) is enrolled in **Play App Signing** with the
+  **upload key = the ORIGINAL EAS keystore, SHA-1 `4A:58:63:5E:56:AE:CA:A1:2B:88:E3:83:58:F5:94:A4:58:D3:A2:10`**
+  (it got locked from the first upload attempt). After the package switch EAS
+  generated a NEW keystore (`90:9C…`) for `com.masareef.budget`, which Play REJECTS.
+- **Builds must sign with the `4A:58` keystore.** It's provided locally via
+  `credentials.json` (gitignored) → `credentials/android/keystore.jks` + passwords
+  (downloaded via `eas credentials`). To use it set
+  `build.production.credentialsSource:"local"` in `eas.json` (keep this change
+  UNCOMMITTED + per-build; it also forces iOS to local so only use it for
+  `-p android` builds), or better: upload the `4A:58` keystore to EAS **remote**
+  credentials for `com.masareef.budget` (`eas credentials -p android`).
+- ⚠️ EAS **remote** credentials for `com.masareef.budget` currently hold the WRONG
+  `90:9C` keystore. Until that's replaced, a plain `eas build` signs wrong and Play
+  rejects it — use `credentials.json` (local) for now.
+- Verify an AAB's signer: `unzip -oq app.aab -d x && keytool -printcert -file x/META-INF/*.RSA | grep SHA1`.
+
+### Firebase / FCM (push)
+- Firebase project `masareef-4fb61`. `google-services.json` (committed) contains
+  BOTH packages. FCM V1 service-account key uploaded to EAS (push sender).
+  `fcm-service-account.json` is gitignored.
+
+### Bank-notification auto-capture = Android's version of the iOS SMS App Intent
+- iOS: bank SMS → Shortcuts automation → "Log SMS to Masareef" App Intent → `ingest-sms`.
+- Android: `react-native-android-notification-listener` (a NotificationListenerService)
+  → **Headless JS task** registered in the custom entry **`index.js`** →
+  `src/features/ingest/androidCapture.ts` forwards notifications whose text matches
+  a user keyword to the SAME `ingest-sms` endpoint. Has a 90s dedup + ignores our
+  OWN package (avoids a feedback loop from our "transaction logged" push). Settings
+  UI: `AndroidCaptureSection` (Settings → Bank Notification Capture). The capture
+  token is minted fresh on enable; `ensureIngestToken` (iOS Keychain mirror) is
+  iOS-only-guarded so it can't revoke the Android token.
+- The lib is patched via **patch-package** (`patches/react-native-android-notification-listener+5.0.1.patch`)
+  for AGP 8 (adds Gradle `namespace`, drops deprecated manifest `package` +
+  `allowBackup`). `.npmrc` has `legacy-peer-deps=true` (lib peers react@18);
+  `postinstall: patch-package`. `plugins/withAndroidPermissionCleanup.js` strips
+  `READ_PHONE_STATE` (lib adds it; Play sensitive permission we don't use).
+
+### Sign-in providers differ by platform
+- iOS = **Apple** (`expo-apple-authentication`). Android = **native Google**
+  (`@react-native-google-signin/google-signin` → `signInWithGoogle` in
+  `socialAuth.ts` → `supabase.auth.signInWithIdToken`). Google is Android-only (its
+  iOS pod build is unresolved). `SocialAuthButtons` shows Apple on iOS, Google on Android.
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = 528169201740-b86bngtnrhl579saff5npg7liqrapefp.apps.googleusercontent.com`
+  (the **Web** OAuth client = the idToken audience; per-project, same for both
+  packages). In `.env` (local) + `eas.json` prod/preview env. The google-signin
+  config plugin requires a placeholder `iosUrlScheme` (Android ignores it).
+- Google sign-in also needs the **Android OAuth client** (package + signing SHA-1)
+  in Google Cloud — created by adding SHA-1s to the Firebase `com.masareef.budget`
+  app. Add BOTH: the upload key (`4A:58…`) AND the **Play App Signing key SHA-1**
+  (Play Console → App integrity → App signing) — the latter is what Play-distributed
+  installs run.
+- Supabase Google provider: LOCAL `supabase/config.toml` `[auth.external.google]`
+  (client_id=web id, `secret=""`, `skip_nonce_check=true`) — kept UNCOMMITTED
+  local-dev. PROD: enable Google in the Supabase dashboard (web client id + secret).
+  (`config.toml` `enable_confirmations=false` is also a local-dev convenience, uncommitted.)
+
+### Play Store
+- App `com.masareef.budget`, **internal testing** track. `eas submit` wired:
+  `eas.json submit.production.android` (track internal, `serviceAccountKeyPath
+  ./play-service-account.json` — gitignored). Service account
+  `play-publisher@masareef-4fb61.iam.gserviceaccount.com` has Release in Play
+  Console; **Google Play Android Developer API** enabled in the Cloud project.
+- The FIRST upload had to be MANUAL (Google rule); afterwards
+  `eas submit -p android --profile production --latest` works.
+- Listing assets in `store-assets/play/` (icon-512, feature-graphic-1024x500,
+  screenshots). Legal pages served from the repo's **gh-pages** branch:
+  `https://abdallah-hatem.github.io/budget_tracker/privacy.html` (covers
+  notification access) + `/delete-account.html`. Demo review account
+  `review@masareef.app` (password in gitignored `credentials.md`).
+
+### Android build / OTA
+- Prod AAB: `eas build -p android --profile production` (app-bundle, channel
+  `production`, prod env incl. `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`). dev/preview = apk;
+  `development` profile needs `expo-dev-client`.
+- OTA: `eas update --branch production --platform android` with prod env inlined
+  (same rule as iOS — inline prod URL + anon + GOOGLE_WEB_CLIENT_ID). **Scope to
+  `--platform android`** so the shared `production` channel doesn't push
+  feat/android JS to iOS clients.
+- EAS free-plan build quota is **per-platform** (iOS and Android count separately).
+- Forced-update gate is per-platform: `app_config.min_android_version` (migration
+  0017, prod = `0.0.0` = nobody blocked). `UpdateRequiredScreen` Android URL =
+  `market://details?id=com.masareef.budget`.
+
+### Local Android dev + emulator
+- Android SDK at `~/Library/Android/sdk` (`ANDROID_HOME` + PATH in `~/.zshrc`):
+  cmdline-tools, platform-tools, emulator, build-tools 35, platform android-35.
+- AVDs: `Pixel7_API35` (google_apis) and **`Pixel7_Play`** (google_apis_playstore —
+  needed to add a real Google account to test Google sign-in). `hw.keyboard=yes` set
+  in each AVD's `config.ini` (else the Mac keyboard can't type).
+- Emulator ↔ host: `adb reverse tcp:8081 tcp:8081` + `adb reverse tcp:54321 tcp:54321`,
+  and run Metro with `EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321`. Open dev
+  client: `adb shell am start -a android.intent.action.VIEW -d
+  "masareef://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"`. Expo Go:
+  `exp://127.0.0.1:8081` (note: native modules — Google sign-in, notification
+  listener — DON'T work in Expo Go; use the dev-client build).
+- Long-lived processes (emulator, Metro) are flaky as harness background tasks —
+  launch them in a visible Terminal via `osascript` so they survive.
+
+### Keyboard handling (Android)
+- `automaticallyAdjustKeyboardInsets` (the ScrollView prop) is **iOS-only**. Android
+  needs `KeyboardAvoidingView behavior="padding"` — applied in `Screen` (scroll),
+  the auth screens, and the capture/manual/type sheets.
