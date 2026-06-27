@@ -180,9 +180,11 @@ which stays iOS-OTA-shippable). If picking this up cold, read this whole section
   UNCOMMITTED + per-build; it also forces iOS to local so only use it for
   `-p android` builds), or better: upload the `4A:58` keystore to EAS **remote**
   credentials for `com.masareef.budget` (`eas credentials -p android`).
-- ⚠️ EAS **remote** credentials for `com.masareef.budget` currently hold the WRONG
-  `90:9C` keystore. Until that's replaced, a plain `eas build` signs wrong and Play
-  rejects it — use `credentials.json` (local) for now.
+- ✅ EAS **remote** credentials for `com.masareef.budget` were updated to the
+  `4A:58` keystore (set as default), so a plain `eas build -p android --profile
+  production` now signs correctly — no `credentials.json`/local override needed.
+  (`credentials.json` + `credentials/android/keystore.jks` remain as a gitignored
+  local backup.)
 - Verify an AAB's signer: `unzip -oq app.aab -d x && keytool -printcert -file x/META-INF/*.RSA | grep SHA1`.
 
 ### Firebase / FCM (push)
