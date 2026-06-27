@@ -59,6 +59,16 @@ export async function setCaptureConfig(
 // Headless task — runs for every notification (app may be killed).
 // ---------------------------------------------------------------------------
 
+// Our own package — NEVER re-ingest Masareef's own notifications (e.g. the
+// "transaction logged" push). Capturing those would create a feedback loop.
+const OWN_PACKAGE = 'com.abdallah.masareef';
+
+// Android delivers the same notification to the listener multiple times (ranking
+// updates, group summaries, re-posts). Dedup identical text within this window
+// so one bank alert can't create several pending rows / push echoes.
+const DEDUP_KEY = 'android_capture_dedup_v1';
+const DEDUP_WINDOW_MS = 90_000;
+
 interface AndroidNotification {
   time?: string;
   app?: string;
@@ -84,6 +94,9 @@ export const headlessNotificationListener = async ({
     const n: AndroidNotification =
       typeof notification === 'string' ? JSON.parse(notification) : notification;
 
+    // Never re-ingest our own notifications (avoids a capture feedback loop).
+    if (n.app === OWN_PACKAGE) return;
+
     const cfg = await getCaptureConfig();
     if (!cfg.enabled || cfg.keywords.length === 0 || !cfg.token) return;
 
@@ -101,6 +114,20 @@ export const headlessNotificationListener = async ({
     const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
     const anon = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !anon) return;
+
+    // Dedup repeated deliveries of the same notification within the window.
+    const now = Date.now();
+    let recent: { sig: string; t: number }[] = [];
+    try {
+      const rawDedup = await AsyncStorage.getItem(DEDUP_KEY);
+      if (rawDedup) recent = JSON.parse(rawDedup);
+    } catch {
+      recent = [];
+    }
+    recent = recent.filter((r) => now - r.t < DEDUP_WINDOW_MS);
+    if (recent.some((r) => r.sig === text)) return; // already handled — skip
+    recent.push({ sig: text, t: now });
+    await AsyncStorage.setItem(DEDUP_KEY, JSON.stringify(recent.slice(-25)));
 
     await fetch(`${url}/functions/v1/ingest-sms`, {
       method: 'POST',

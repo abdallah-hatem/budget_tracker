@@ -81,4 +81,18 @@ describe('android notification capture', () => {
     ).resolves.toBeUndefined();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+  it('ignores our own app notifications (no feedback loop)', async () => {
+    await setCaptureConfig({ enabled: true, keywords: ['EGP'], token: 'tok' });
+    await headlessNotificationListener({
+      notification: notif({ app: 'com.abdallah.masareef' }),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('dedupes the same notification within the window', async () => {
+    await setCaptureConfig({ enabled: true, keywords: ['EGP'], token: 'tok' });
+    await headlessNotificationListener({ notification: notif() });
+    await headlessNotificationListener({ notification: notif() });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
