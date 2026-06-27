@@ -61,7 +61,7 @@ export async function setCaptureConfig(
 
 // Our own package — NEVER re-ingest Masareef's own notifications (e.g. the
 // "transaction logged" push). Capturing those would create a feedback loop.
-const OWN_PACKAGE = 'com.abdallah.masareef';
+const OWN_PACKAGE = 'com.masareef.budget';
 
 // Android delivers the same notification to the listener multiple times (ranking
 // updates, group summaries, re-posts). Dedup identical text within this window

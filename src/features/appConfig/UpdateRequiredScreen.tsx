@@ -8,8 +8,8 @@ import type { Locale } from '@/src/types';
 // Store deep links — itms-apps opens the App Store app; market:// opens Play.
 const STORE_URL = Platform.select({
   ios: 'itms-apps://apps.apple.com/app/id6777166627',
-  android: 'market://details?id=com.abdallah.masareef',
-  default: 'https://play.google.com/store/apps/details?id=com.abdallah.masareef',
+  android: 'market://details?id=com.masareef.budget',
+  default: 'https://play.google.com/store/apps/details?id=com.masareef.budget',
 }) as string;
 
 /**

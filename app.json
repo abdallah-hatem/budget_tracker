@@ -35,7 +35,7 @@
       }
     },
     "android": {
-      "package": "com.abdallah.masareef",
+      "package": "com.masareef.budget",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0B0F0E",

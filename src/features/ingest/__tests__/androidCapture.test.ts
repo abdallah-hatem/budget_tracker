@@ -84,7 +84,7 @@ describe('android notification capture', () => {
   it('ignores our own app notifications (no feedback loop)', async () => {
     await setCaptureConfig({ enabled: true, keywords: ['EGP'], token: 'tok' });
     await headlessNotificationListener({
-      notification: notif({ app: 'com.abdallah.masareef' }),
+      notification: notif({ app: 'com.masareef.budget' }),
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
