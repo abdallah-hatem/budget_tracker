@@ -50,3 +50,8 @@ supabase_credentials.md
 
 # FCM service-account private key (push sender) — NEVER commit
 fcm-service-account.json
+
+# Google Play publisher service-account key — NEVER commit
+play-service-account.json
+credentials.json
+credentials/
