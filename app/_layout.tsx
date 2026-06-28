@@ -28,6 +28,7 @@ import { redirectTarget } from '@/src/features/auth/redirectTarget';
 import { useNotifications } from '@/src/features/notifications/useNotifications';
 import { CaptureProvider } from '@/src/features/capture/CaptureProvider';
 import { CategoriesProvider } from '@/src/features/categories/CategoriesProvider';
+import { hydrateAmountVisibility } from '@/src/features/privacy/amountVisibility';
 import { DataSyncProvider } from '@/src/features/sync/dataSync';
 import { getSmsTutorialSeen, isNewAccount } from '@/src/features/onboarding/onboardingStorage';
 import { useForceUpdate } from '@/src/features/appConfig/useForceUpdate';
@@ -52,6 +53,11 @@ function RootNavigator() {
 
   // Register push token + wire tap-to-navigate deep-link (no-op on simulator).
   useNotifications();
+
+  // Restore the persisted "hide amounts" privacy toggle before first paint.
+  useEffect(() => {
+    void hydrateAmountVisibility();
+  }, []);
 
   useEffect(() => {
     const inAuthGroup = (segments[0] as string) === '(auth)';
