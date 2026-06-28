@@ -1,7 +1,9 @@
 import React from 'react';
-import { Text, type TextStyle } from 'react-native';
+import { Text, View, type TextStyle, type ViewStyle } from 'react-native';
 import { formatMoney, type MoneySign } from '@/src/lib/money';
 import { FONT } from '@/src/lib/font';
+import { useAmountsHidden } from '@/src/features/privacy/useAmountsHidden';
+import { MaskDots } from './MaskDots';
 
 export type MoneyTone = 'ink' | 'accent' | 'ink2' | 'auto';
 
@@ -44,7 +46,34 @@ export function Money({
   const resolvedTone: Exclude<MoneyTone, 'auto'> =
     tone === 'auto' ? (amount > 0 ? 'accent' : 'ink') : tone;
 
+  const hidden = useAmountsHidden();
   const color = TONE_COLORS[resolvedTone];
+
+  // Masked: keep the "E£" symbol so the row still reads as money, then a row of
+  // dots (drawn, not a glyph) in place of the digits.
+  if (hidden) {
+    return (
+      <View
+        testID={testID}
+        className={className}
+        style={[{ flexDirection: 'row', alignItems: 'center', direction: 'ltr' }, style as unknown as ViewStyle]}
+      >
+        <Text
+          style={{
+            fontFamily: FONT.soraSb,
+            fontSize: size,
+            color,
+            writingDirection: 'ltr',
+            marginRight: Math.round(size * 0.34),
+          }}
+        >
+          E£
+        </Text>
+        <MaskDots size={size} color={color} />
+      </View>
+    );
+  }
+
   const formatted = formatMoney(amount, { sign });
 
   return (

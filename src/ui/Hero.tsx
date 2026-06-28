@@ -2,6 +2,8 @@ import React from 'react';
 import { Text, View, type TextStyle } from 'react-native';
 import { splitMoney } from '@/src/lib/money';
 import { FONT } from '@/src/lib/font';
+import { useAmountsHidden } from '@/src/features/privacy/useAmountsHidden';
+import { MaskDots } from './MaskDots';
 
 export interface HeroProps {
   /** Small uppercase label above the number */
@@ -36,12 +38,14 @@ const MUTED_STYLE: TextStyle = {
 };
 
 export function Hero({ label, amount, delta }: HeroProps) {
+  const hidden = useAmountsHidden();
   const { negative, symbol, integer, decimals } = splitMoney(amount);
 
   const deltaColor = delta !== undefined && delta >= 0 ? '#2BD98E' : '#FF5C6C';
   const deltaArrow = delta !== undefined && delta >= 0 ? '▲' : '▼';
+  // Mask the delta percentage too — it leaks how much was spent.
   const deltaLabel =
-    delta !== undefined ? `${deltaArrow} ${Math.abs(delta).toFixed(1)}%` : null;
+    delta !== undefined ? (hidden ? null : `${deltaArrow} ${Math.abs(delta).toFixed(1)}%`) : null;
 
   return (
     <View className="items-center">
@@ -62,37 +66,47 @@ export function Hero({ label, amount, delta }: HeroProps) {
       {/* Big split number — flex-row, each Text guards its own bidi. Force LTR
           so the sign/symbol/integer/decimals never reverse under an ambient RTL
           (the dashboard wraps its content in direction:'rtl' for Arabic). */}
-      <View className="flex-row items-end" style={{ direction: 'ltr' }}>
+      <View
+        className={hidden ? 'flex-row items-center' : 'flex-row items-end'}
+        style={{ direction: 'ltr', height: 60 }}
+      >
         {/* Unicode minus prefix when net is negative — same muted ink2 treatment */}
-        {negative && (
+        {!hidden && negative && (
           <Text style={[MUTED_STYLE, { marginRight: 1 }]}>
             {UNICODE_MINUS}
           </Text>
         )}
 
         {/* E£ symbol — smaller, ink2 */}
-        <Text style={[MUTED_STYLE, { marginRight: 2 }]}>
+        <Text style={[MUTED_STYLE, { marginRight: hidden ? 8 : 2 }]}>
           {symbol}
         </Text>
 
-        {/* Integer part — large, ink */}
-        <Text
-          style={{
-            fontFamily: FONT.sora,
-            fontSize: 52,
-            color: '#F4F7F5',
-            lineHeight: 60,
-            fontVariant: ['tabular-nums', 'lining-nums'],
-            writingDirection: 'ltr',
-          }}
-        >
-          {integer}
-        </Text>
+        {hidden ? (
+          /* Masked — drawn dots, vertically centered against the 60pt line */
+          <MaskDots size={48} color="#F4F7F5" />
+        ) : (
+          <>
+            {/* Integer part — large, ink */}
+            <Text
+              style={{
+                fontFamily: FONT.sora,
+                fontSize: 52,
+                color: '#F4F7F5',
+                lineHeight: 60,
+                fontVariant: ['tabular-nums', 'lining-nums'],
+                writingDirection: 'ltr',
+              }}
+            >
+              {integer}
+            </Text>
 
-        {/* Decimal part — smaller, ink2 */}
-        <Text style={[MUTED_STYLE, { marginLeft: 1 }]}>
-          .{decimals}
-        </Text>
+            {/* Decimal part — smaller, ink2 */}
+            <Text style={[MUTED_STYLE, { marginLeft: 1 }]}>
+              .{decimals}
+            </Text>
+          </>
+        )}
       </View>
 
       {/* Delta pill */}

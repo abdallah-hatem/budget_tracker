@@ -27,6 +27,8 @@ import { categoryStyle } from '../../src/lib/categoryStyle';
 import { categoryBySlug } from '../../src/lib/categories';
 import { useHiddenCategories } from '../../src/features/categories/HiddenCategoriesProvider';
 import { useCategoriesVersion } from '../../src/features/categories/useCategoriesVersion';
+import { useAmountsHidden } from '../../src/features/privacy/useAmountsHidden';
+import { toggleAmountsHidden } from '../../src/features/privacy/amountVisibility';
 import { t, isRTL } from '../../src/lib/i18n';
 import { FONT, uiFontSemiBold } from '../../src/lib/font';
 import type { Locale, TxnType } from '../../src/types';
@@ -67,6 +69,9 @@ export default function Dashboard() {
   // Re-render the breakdown once the user's custom categories finish loading,
   // so custom slugs resolve to their name/icon instead of the raw "c_…" fallback.
   useCategoriesVersion();
+
+  // Global "hide amounts" privacy toggle (eye in the header).
+  const amountsHidden = useAmountsHidden();
 
   // Warm sibling tabs in the background after the dashboard is interactive, so
   // the first switch to each isn't janky (they're lazy-mounted by default).
@@ -199,6 +204,33 @@ export default function Dashboard() {
                 <Text style={{ fontFamily: FONT.sora, fontSize: 18, color: '#A8B2AF' }}>›</Text>
               </PressableScale>
             </View>
+
+            {/* Privacy eye — toggles masking of every amount. Absolutely placed at
+                the trailing edge so the month pill stays optically centered. */}
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel={t(amountsHidden ? 'show_amounts' : 'hide_amounts', locale)}
+              onPress={() => {
+                void Haptics.selectionAsync();
+                toggleAmountsHidden();
+              }}
+              hitSlop={10}
+              style={{
+                position: 'absolute',
+                [rtl ? 'left' : 'right']: 0,
+                top: 0,
+                bottom: 0,
+                width: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons
+                name={amountsHidden ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#A8B2AF"
+              />
+            </PressableScale>
           </View>
         </Reveal>
 

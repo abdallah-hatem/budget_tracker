@@ -182,6 +182,8 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   // Month navigation
   prev_month: { en: 'Previous month', ar: 'الشهر السابق' },
   next_month: { en: 'Next month', ar: 'الشهر التالي' },
+  hide_amounts: { en: 'Hide amounts', ar: 'إخفاء المبالغ' },
+  show_amounts: { en: 'Show amounts', ar: 'إظهار المبالغ' },
 
   // Loading state
   loading: { en: 'Loading…', ar: 'جارٍ التحميل…' },

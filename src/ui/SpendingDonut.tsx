@@ -4,6 +4,8 @@ import { PieChart } from 'react-native-gifted-charts';
 import { formatMoneyCompact } from '@/src/lib/money';
 import { categoryStyle } from '@/src/lib/categoryStyle';
 import { useCategoriesVersion } from '@/src/features/categories/useCategoriesVersion';
+import { useAmountsHidden } from '@/src/features/privacy/useAmountsHidden';
+import { MaskDots } from './MaskDots';
 import { FONT } from '@/src/lib/font';
 import type { Locale } from '@/src/types';
 import { Text } from 'react-native';
@@ -47,6 +49,7 @@ export function SpendingDonut({ data, total, locale, label, emptyHint }: Spendin
   // Re-render when custom categories load, so their slice color resolves
   // instead of falling back to the grey default on a cold open.
   useCategoriesVersion();
+  const hidden = useAmountsHidden();
   const slices = buildSlices(data);
   const hasData = slices.length > 0 && total > 0;
 
@@ -104,22 +107,39 @@ export function SpendingDonut({ data, total, locale, label, emptyHint }: Spendin
               width: CENTER_WIDTH,
             }}
           >
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
-              style={{
-                fontFamily: FONT.soraSb,
-                fontSize: 26,
-                lineHeight: 30,
-                color: '#F4F7F5',
-                fontVariant: ['tabular-nums', 'lining-nums'],
-                writingDirection: 'ltr',
-                textAlign: 'center',
-              }}
-            >
-              {formatMoneyCompact(total, { sign: 'none' })}
-            </Text>
+            {hidden ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', height: 30 }}>
+                <Text
+                  style={{
+                    fontFamily: FONT.soraSb,
+                    fontSize: 22,
+                    color: '#F4F7F5',
+                    writingDirection: 'ltr',
+                    marginRight: 6,
+                  }}
+                >
+                  E£
+                </Text>
+                <MaskDots size={22} color="#F4F7F5" />
+              </View>
+            ) : (
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+                style={{
+                  fontFamily: FONT.soraSb,
+                  fontSize: 26,
+                  lineHeight: 30,
+                  color: '#F4F7F5',
+                  fontVariant: ['tabular-nums', 'lining-nums'],
+                  writingDirection: 'ltr',
+                  textAlign: 'center',
+                }}
+              >
+                {formatMoneyCompact(total, { sign: 'none' })}
+              </Text>
+            )}
             <Text
               style={{
                 fontFamily: FONT.jakartaMd,
