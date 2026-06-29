@@ -3,6 +3,7 @@ import { View, Text, TextInput, ScrollView, Pressable, Keyboard } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categoryLabel } from './display';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
+import { useCategoriesVersion } from '../categories/useCategoriesVersion';
 import { t, isRTL } from '../../lib/i18n';
 import { CategoryAvatar, PressableScale, NumericInput } from '../../ui';
 import { DateTimeField } from '../../ui/DateTimeField';
@@ -32,6 +33,8 @@ interface Props {
  */
 export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
   const rtl = isRTL(locale);
+  // Re-render when custom categories load/change so the picker stays current.
+  useCategoriesVersion();
   const insets = useSafeAreaInsets();
   const [type, setType] = useState<TxnType>('expense');
   const [amount, setAmount] = useState('');

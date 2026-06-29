@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Keyboard } from 'react-native';
 import { Card, CollapsibleCard, SectionLabel, CategoryAvatar, PressableScale } from '../../ui';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
+import { useCategoriesVersion } from '../categories/useCategoriesVersion';
 import { categoryLabel } from '../transactions/display';
 import { t, isRTL } from '../../lib/i18n';
 import { FONT } from '../../lib/font';
@@ -14,8 +15,6 @@ const INK2 = '#A8B2AF';
 const INK3 = '#6B7672';
 const ACCENT = '#2BD98E';
 const DANGER = '#FF5C6C';
-
-const ALL_CATEGORIES = [...expenseCategories(), ...incomeCategories()];
 
 function inputStyle(rtl: boolean) {
   return {
@@ -43,9 +42,18 @@ export function SmsRulesSection({
   collapsible?: boolean;
 }) {
   const rtl = isRTL(locale);
+  // Re-derive the category list when the user's custom categories load/change,
+  // so they appear in the picker (not just the built-ins available at mount).
+  const catVersion = useCategoriesVersion();
+  const allCategories = useMemo(
+    () => [...expenseCategories(), ...incomeCategories()],
+    [catVersion],
+  );
   const [rules, setRules] = useState<SmsRule[]>([]);
   const [keyword, setKeyword] = useState('');
-  const [categorySlug, setCategorySlug] = useState(ALL_CATEGORIES[0]?.slug ?? 'food');
+  const [categorySlug, setCategorySlug] = useState(
+    () => expenseCategories()[0]?.slug ?? 'food',
+  );
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +204,7 @@ export function SmsRulesSection({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: 8, paddingRight: 4 }}
         >
-          {ALL_CATEGORIES.map((c) => {
+          {allCategories.map((c) => {
             const active = categorySlug === c.slug;
             return (
               <PressableScale

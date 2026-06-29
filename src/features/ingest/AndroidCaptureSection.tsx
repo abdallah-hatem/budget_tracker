@@ -93,13 +93,11 @@ export function AndroidCaptureSection({ locale }: { locale: Locale }) {
       await setCaptureConfig({ enabled: false });
       return;
     }
-    // Turning ON — require permission + at least one keyword, then provision a token.
+    // Turning ON — require permission, then provision a token. Keywords are
+    // OPTIONAL: with none, capture auto-detects any transaction (server-filtered);
+    // power users can still narrow with keywords.
     if (perm !== 'authorized') {
       setError(t('acap.need_perm', locale));
-      return;
-    }
-    if (keywords.length === 0) {
-      setError(t('acap.need_kw', locale));
       return;
     }
     setBusy(true);
@@ -172,7 +170,7 @@ export function AndroidCaptureSection({ locale }: { locale: Locale }) {
         weight="medium"
         style={{ fontSize: 13, color: INK2, marginBottom: 8, textAlign: rtl ? 'right' : 'left' }}
       >
-        {t('acap.keywords', locale)}
+        {t('acap.keywords_optional', locale)}
       </AppText>
       <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 8, marginBottom: 10 }}>
         <TextInput

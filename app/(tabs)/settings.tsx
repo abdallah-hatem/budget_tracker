@@ -18,6 +18,7 @@ import type { Locale, AccountBalance } from '@/src/types';
 import { Screen, Card, CollapsibleCard, AppText, SectionLabel, Pill, Money, NumericInput } from '@/src/ui';
 import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
 import { AndroidCaptureSection } from '@/src/features/ingest/AndroidCaptureSection';
+import { CardsSection } from '@/src/features/ingest/CardsSection';
 import { MonthStartSection } from '@/src/features/dashboard/MonthStartSection';
 import { GoldSection } from '@/src/features/gold/GoldSection';
 import { CategoriesSection } from '@/src/features/categories/CategoriesSection';
@@ -364,6 +365,9 @@ export default function Settings() {
 
       {/* ── START OF MONTH ─────────────────────────────────────────────────── */}
       <MonthStartSection locale={locale} />
+
+      {/* ── DETECTED CARDS (auto-grouped from bank messages; both platforms) ── */}
+      <CardsSection locale={locale} />
 
       {/* ── ANDROID BANK-NOTIFICATION CAPTURE (NotificationListener) ────────── */}
       {Platform.OS === 'android' && <AndroidCaptureSection locale={locale} />}

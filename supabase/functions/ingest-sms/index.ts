@@ -17,6 +17,7 @@ import { INCOME_SLUGS } from "../_shared/categories.ts";
 import { sha256Hex } from "../_shared/hash.ts";
 import { logAiEvent, type AiEvent } from "../_shared/aiEvents.ts";
 import { withSentry } from "../_shared/sentry.ts";
+import { extractCard, looksLikeTransaction } from "../_shared/smsDetect.ts";
 
 const MAX_TEXT_LENGTH = 2000;
 
@@ -64,6 +65,17 @@ export interface IngestDeps {
   getRules: (userId: string) => Promise<SmsRule[]>;
   /** Insert a pending transaction row into the DB. Throw on error. */
   insertPending: (row: Record<string, unknown>) => Promise<void>;
+  /**
+   * Find or create the user's Card for `fingerprint`, bumping txn_count and
+   * last_seen_at. Returns the card id, whether it is enabled, and whether it was
+   * just created (so the caller can notify "new card detected"). Omitted in
+   * older tests → card grouping is skipped.
+   */
+  findOrCreateCard?: (
+    userId: string,
+    fingerprint: string,
+    label: string,
+  ) => Promise<{ id: string; enabled: boolean; isNew: boolean }>;
   /** Best-effort: update last_used_at for the token. */
   touchToken: (tokenHash: string) => Promise<void>;
   /** Return Expo push tokens registered for the given user_id. */
@@ -145,6 +157,18 @@ export async function handleIngest(
   // --- Update last_used_at (best-effort; do not fail the request) ---
   deps.touchToken(tokenHash).catch(() => {/* swallow */});
 
+  // --- Cheap pre-filter: skip obvious non-transactions BEFORE the LLM ---
+  // Keyword-free capture forwards more messages (OTP, promo, …); this avoids
+  // spending a Groq call on text with no amount + currency/verb signal. The LLM
+  // remains the authoritative extractor for anything that passes.
+  if (!looksLikeTransaction(text)) {
+    deps.logEvent?.({
+      user_id: userId, fn: "ingest-sms", source: "sms", ok: true,
+      input_len: text.length, result_count: 0,
+    });
+    return json({ ok: true, skipped: true, reason: "not_a_transaction" }, 200);
+  }
+
   // --- Categorize the SMS ---
   const extra = deps.fetchCategoriesFn ? await deps.fetchCategoriesFn(userId) : [];
   const t0 = Date.now();
@@ -221,6 +245,26 @@ export async function handleIngest(
     occurredAt = new Date().toISOString();
   }
 
+  // --- Resolve the Card this message belongs to (find or create) ---
+  // A disabled card means the user has opted this card OUT of capture, so we
+  // discard the message without storing anything.
+  let cardId: string | null = null;
+  let newCardLabel: string | null = null;
+  if (deps.findOrCreateCard) {
+    const { fingerprint, label } = extractCard(text);
+    try {
+      const card = await deps.findOrCreateCard(userId, fingerprint, label);
+      if (!card.enabled) {
+        return json({ ok: true, skipped: true, reason: "card_disabled" }, 200);
+      }
+      cardId = card.id;
+      if (card.isNew) newCardLabel = label;
+    } catch (_e) {
+      // Card resolution is best-effort — fall back to an untagged txn.
+      cardId = null;
+    }
+  }
+
   // --- Insert the pending transaction row ---
   try {
     await deps.insertPending({
@@ -235,6 +279,7 @@ export async function handleIngest(
       status: "pending",
       confidence: parsed.confidence,
       occurred_at: occurredAt,
+      ...(cardId ? { card_id: cardId } : {}),
     });
   } catch (_e) {
     return json({ error: "Failed to save transaction." }, 502);
@@ -249,13 +294,28 @@ export async function handleIngest(
       // the notification arrives (even when the app is closed/backgrounded).
       const badge = await deps.countPending(userId).catch(() => undefined);
       const bodyText = `E£ ${amount} · ${note || categorySlug}`;
-      const messages: ExpoPushMessage[] = tokens.map((to) => ({
-        to,
-        title: "New transaction to review",
-        body: bodyText,
-        data: { url: "/(tabs)/pending", type: "sms_pending" },
-        ...(typeof badge === "number" ? { badge } : {}),
-      }));
+      const messages: ExpoPushMessage[] = [];
+      for (const to of tokens) {
+        // Always: the transaction-to-review notification.
+        messages.push({
+          to,
+          title: "New transaction to review",
+          body: bodyText,
+          data: { url: "/(tabs)/pending", type: "sms_pending" },
+          ...(typeof badge === "number" ? { badge } : {}),
+        });
+        // Additionally, when this message introduced a brand-new card, a
+        // separate "manage it" nudge so the user knows a new source started
+        // auto-capturing (and can rename/disable it).
+        if (newCardLabel) {
+          messages.push({
+            to,
+            title: `New card detected: ${newCardLabel}`,
+            body: "Tap to rename, or turn it off to stop capturing it.",
+            data: { url: "/(tabs)/settings", type: "new_card" },
+          });
+        }
+      }
       await deps.sendPush(messages);
     } catch (_e) {
       // Swallow — push failure must never affect the 200 response.
@@ -313,6 +373,54 @@ if (import.meta.main) {
     async insertPending(row) {
       const { error } = await sb.from("transactions").insert(row);
       if (error) throw new Error(`DB insert failed: ${error.message}`);
+    },
+
+    async findOrCreateCard(userId, fingerprint, label) {
+      const nowIso = new Date().toISOString();
+      // Try to fetch an existing card for this (user, fingerprint).
+      const { data: existing } = await sb
+        .from("detected_cards")
+        .select("id, enabled")
+        .eq("user_id", userId)
+        .eq("fingerprint", fingerprint)
+        .maybeSingle();
+
+      if (existing) {
+        const row = existing as { id: string; enabled: boolean };
+        // Bump usage stats (best-effort — don't fail the ingest on this).
+        await sb.rpc("bump_detected_card", { p_id: row.id, p_seen: nowIso })
+          .then(undefined, () => {/* swallow */});
+        return { id: row.id, enabled: row.enabled, isNew: false };
+      }
+
+      // Insert a new card (enabled by default).
+      const { data: created, error } = await sb
+        .from("detected_cards")
+        .insert({
+          user_id: userId,
+          fingerprint,
+          label,
+          last_seen_at: nowIso,
+          txn_count: 1,
+        })
+        .select("id, enabled")
+        .single();
+      if (error || !created) {
+        // Lost an insert race? Re-fetch the now-existing row.
+        const { data: race } = await sb
+          .from("detected_cards")
+          .select("id, enabled")
+          .eq("user_id", userId)
+          .eq("fingerprint", fingerprint)
+          .maybeSingle();
+        if (race) {
+          const row = race as { id: string; enabled: boolean };
+          return { id: row.id, enabled: row.enabled, isNew: false };
+        }
+        throw new Error(`card upsert failed: ${error?.message ?? "unknown"}`);
+      }
+      const row = created as { id: string; enabled: boolean };
+      return { id: row.id, enabled: row.enabled, isNew: true };
     },
 
     async touchToken(tokenHash) {

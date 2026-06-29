@@ -253,6 +253,31 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
     en: 'Add at least one keyword first.',
     ar: 'أضف كلمة مفتاحية واحدة على الأقل.',
   },
+  // Keyword input is now optional ("advanced").
+  'acap.keywords_optional': {
+    en: 'Advanced — only forward messages containing these words (leave empty to auto-detect any transaction)',
+    ar: 'متقدّم — مرّر فقط الرسائل التي تحتوي هذه الكلمات (اتركها فارغة لاكتشاف أي معاملة تلقائيًا)',
+  },
+
+  // ── Detected Cards ────────────────────────────────────────────────────────
+  'cards.title': { en: 'Cards', ar: 'البطاقات' },
+  'cards.intro': {
+    en: 'Cards we detected from your bank messages. Turn one off to stop capturing its transactions.',
+    ar: 'البطاقات التي اكتشفناها من رسائل بنكك. أوقف أي بطاقة لإيقاف التقاط معاملاتها.',
+  },
+  'cards.empty': {
+    en: 'No cards yet — they appear automatically when your first bank message is captured.',
+    ar: 'لا توجد بطاقات بعد — تظهر تلقائيًا عند التقاط أول رسالة من بنكك.',
+  },
+  'cards.txns': { en: 'transactions', ar: 'معاملة' },
+  'cards.rename': { en: 'Rename', ar: 'إعادة تسمية' },
+  'cards.delete': { en: 'Delete', ar: 'حذف' },
+  'cards.delete_confirm': {
+    en: 'Delete this card? Its past transactions stay; new messages from it create a fresh card.',
+    ar: 'حذف هذه البطاقة؟ تبقى معاملاتها السابقة؛ وأي رسالة جديدة منها تنشئ بطاقة جديدة.',
+  },
+  'cards.save': { en: 'Save', ar: 'حفظ' },
+  'cards.cancel': { en: 'Cancel', ar: 'إلغاء' },
 
   // SMS auto-capture onboarding tutorial
   'sms_tut.heading': { en: 'Auto-capture your bank SMS', ar: 'التقاط رسائل بنكك تلقائيًا' },

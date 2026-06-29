@@ -7,6 +7,7 @@ import React, { useReducer, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import type { Locale, ParsedTransaction, Transaction, TxnSource } from '../../types';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
+import { useCategoriesVersion } from '../categories/useCategoriesVersion';
 import { NumericInput } from '../../ui';
 import { insertTransaction } from '../transactions/api';
 import { buildCaptureRow } from './toTransactionRow';
@@ -45,6 +46,8 @@ export function ConfirmSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Re-render when custom categories load/change so the picker stays current.
+  useCategoriesVersion();
   const categories =
     state.type === 'income' ? incomeCategories() : expenseCategories();
 

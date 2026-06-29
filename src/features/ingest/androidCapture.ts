@@ -14,6 +14,7 @@
 // provisioning lives in AndroidCaptureSection, which runs in the full app).
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { looksLikeTransaction } from './smsDetect';
 
 const CONFIG_KEY = 'android_capture_v1';
 
@@ -98,7 +99,9 @@ export const headlessNotificationListener = async ({
     if (n.app === OWN_PACKAGE) return;
 
     const cfg = await getCaptureConfig();
-    if (!cfg.enabled || cfg.keywords.length === 0 || !cfg.token) return;
+    // Keyword-free: keywords are now OPTIONAL. With none set we forward anything
+    // that looks like a transaction (the server is the authoritative filter).
+    if (!cfg.enabled || !cfg.token) return;
 
     // Prefer the expanded body; fall back to the collapsed text/title.
     const text = [n.title, n.titleBig, n.bigText, n.text, n.subText]
@@ -108,7 +111,10 @@ export const headlessNotificationListener = async ({
     if (!text) return;
 
     const hay = text.toLowerCase();
-    const matched = cfg.keywords.some((k) => k && hay.includes(k.toLowerCase()));
+    const matched =
+      cfg.keywords.length > 0
+        ? cfg.keywords.some((k) => k && hay.includes(k.toLowerCase())) // keyword override
+        : looksLikeTransaction(text, { strict: true }); // keyword-free, device-strict
     if (!matched) return;
 
     const url = process.env.EXPO_PUBLIC_SUPABASE_URL;

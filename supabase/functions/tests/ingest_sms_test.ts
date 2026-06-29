@@ -324,7 +324,9 @@ Deno.test("amount === 0 → insertPending NOT called → 200 {ok:true, skipped:t
   let insertCalled = 0;
 
   const res = await handleIngest(
-    postReq({ token: VALID_TOKEN, text: "Your OTP is 123456" }),
+    // Transaction-looking text so it passes the pre-filter and reaches the LLM,
+    // which then finds no amount (returns 0) → skipped via the amount<=0 path.
+    postReq({ token: VALID_TOKEN, text: "تم خصم 50 جم من حسابك" }),
     makeDeps({
       categorizeFn: () => Promise.resolve(SAMPLE_PARSED_ZERO),
       insertPending: () => {
@@ -344,7 +346,7 @@ Deno.test("very small positive amount that rounds to 0 → skipped", async () =>
   let insertCalled = 0;
 
   const res = await handleIngest(
-    postReq({ token: VALID_TOKEN, text: "some SMS" }),
+    postReq({ token: VALID_TOKEN, text: "Paid 0.001 EGP" }),
     makeDeps({
       categorizeFn: () =>
         Promise.resolve({ ...SAMPLE_PARSED, amount: 0.001 }),
@@ -449,6 +451,113 @@ Deno.test("invalid received_at falls back to current time (ISO string)", async (
 // Tests: categorize or insert throwing → 502
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Tests: keyword-free pre-filter + detected Cards
+// ---------------------------------------------------------------------------
+
+Deno.test("pre-filter: non-transaction text → skipped before the LLM (categorize NOT called)", async () => {
+  let categorizeCalled = 0;
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Your verification code is 4821" }),
+    makeDeps({
+      categorizeFn: () => {
+        categorizeCalled++;
+        return Promise.resolve(SAMPLE_PARSED);
+      },
+    }),
+  );
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body, { ok: true, skipped: true, reason: "not_a_transaction" });
+  assertEquals(categorizeCalled, 0);
+});
+
+Deno.test("card: new card → inserted with card_id + BOTH txn and new-card pushes", async () => {
+  let insertedRow: Record<string, unknown> | null = null;
+  let sent: ExpoPushMessage[] = [];
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "تم تحويل مبلغ 600EGP من حساب رقم xxx8889" }),
+    makeDeps({
+      findOrCreateCard: () =>
+        Promise.resolve({ id: "card-1", enabled: true, isNew: true }),
+      insertPending: (row) => {
+        insertedRow = row;
+        return Promise.resolve();
+      },
+      getPushTokens: () => Promise.resolve([FAKE_PUSH_TOKEN]),
+      sendPush: (msgs) => {
+        sent = msgs;
+        return Promise.resolve();
+      },
+    }),
+  );
+  assertEquals(res.status, 200);
+  assertEquals((insertedRow as unknown as Record<string, unknown>).card_id, "card-1");
+  // Allow the fire-and-forget push IIFE to run.
+  await new Promise((r) => setTimeout(r, 0));
+  // One device token → two notifications: the txn review + the new-card nudge.
+  assertEquals(sent.length, 2);
+  assert(sent.some((m) => m.title === "New transaction to review"));
+  const card = sent.find((m) => m.title.startsWith("New card detected"));
+  assert(card !== undefined);
+  assertEquals((card!.data as { type: string }).type, "new_card");
+});
+
+Deno.test("card: EXISTING card → only the txn push (no new-card nudge)", async () => {
+  let sent: ExpoPushMessage[] = [];
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+    makeDeps({
+      findOrCreateCard: () =>
+        Promise.resolve({ id: "card-9", enabled: true, isNew: false }),
+      getPushTokens: () => Promise.resolve([FAKE_PUSH_TOKEN]),
+      sendPush: (msgs) => {
+        sent = msgs;
+        return Promise.resolve();
+      },
+    }),
+  );
+  await new Promise((r) => setTimeout(r, 0));
+  assertEquals(sent.length, 1);
+  assertEquals(sent[0].title, "New transaction to review");
+});
+
+Deno.test("card: disabled card → discarded (no insert), 200 skipped", async () => {
+  let insertCalled = 0;
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+    makeDeps({
+      findOrCreateCard: () =>
+        Promise.resolve({ id: "card-2", enabled: false, isNew: false }),
+      insertPending: () => {
+        insertCalled++;
+        return Promise.resolve();
+      },
+    }),
+  );
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body, { ok: true, skipped: true, reason: "card_disabled" });
+  assertEquals(insertCalled, 0);
+});
+
+Deno.test("card: findOrCreateCard throwing → still inserts untagged (best-effort)", async () => {
+  let insertedRow: Record<string, unknown> | null = null;
+  await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+    makeDeps({
+      findOrCreateCard: () => Promise.reject(new Error("db down")),
+      insertPending: (row) => {
+        insertedRow = row;
+        return Promise.resolve();
+      },
+    }),
+  );
+  const row = insertedRow as unknown as Record<string, unknown> | null;
+  assert(row !== null);
+  assertEquals(row!.card_id, undefined);
+});
+
 Deno.test("categorizeFn throwing → 502", async () => {
   const res = await handleIngest(
     postReq({ token: VALID_TOKEN, text: "Paid 250 EGP" }),
@@ -481,7 +590,7 @@ Deno.test("amount is rounded to 2 decimal places before insert", async () => {
   let insertedRow: Record<string, unknown> | null = null;
 
   await handleIngest(
-    postReq({ token: VALID_TOKEN, text: "Paid some amount" }),
+    postReq({ token: VALID_TOKEN, text: "Paid 99.999 EGP at the store" }),
     makeDeps({
       categorizeFn: () => Promise.resolve({ ...SAMPLE_PARSED, amount: 99.999 }),
       insertPending: (row) => {

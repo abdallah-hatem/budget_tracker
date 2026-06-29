@@ -95,4 +95,20 @@ describe('android notification capture', () => {
     await headlessNotificationListener({ notification: notif() });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it('keyword-free: with no keywords, forwards a transaction-looking notification', async () => {
+    await setCaptureConfig({ enabled: true, keywords: [], token: 'tok' });
+    await headlessNotificationListener({
+      notification: notif({ text: 'تم خصم 250 جم من حسابك' }),
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keyword-free: with no keywords, ignores a non-transaction notification (OTP)', async () => {
+    await setCaptureConfig({ enabled: true, keywords: [], token: 'tok' });
+    await headlessNotificationListener({
+      notification: notif({ text: 'Your verification code is 123456' }),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
