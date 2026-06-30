@@ -14,6 +14,7 @@
 // provisioning lives in AndroidCaptureSection, which runs in the full app).
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NativeModules } from 'react-native';
 
 const CONFIG_KEY = 'android_capture_v1';
 
@@ -30,6 +31,33 @@ const DEFAULT_CONFIG: AndroidCaptureConfig = {
   keywords: [],
   token: null,
 };
+
+// Mirror the config into SharedPreferences via the native module, so the NATIVE
+// NotificationListenerService can read it and POST directly. This is the actual
+// capture path now — the HeadlessJS task is unreliable under the New
+// Architecture (bridgeless), so native handles delivery end-to-end. We include
+// the Supabase URL + anon key (inlined from EXPO_PUBLIC_* at build time) because
+// native has no access to process.env.
+function syncConfigToNative(cfg: AndroidCaptureConfig): void {
+  try {
+    const native = (NativeModules as Record<string, unknown>)
+      .RNAndroidNotificationListener as
+      | { setCaptureConfig?: (json: string) => void }
+      | undefined;
+    if (!native?.setCaptureConfig) return;
+    native.setCaptureConfig(
+      JSON.stringify({
+        enabled: cfg.enabled,
+        keywords: cfg.keywords,
+        token: cfg.token,
+        url: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
+        anon: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+      }),
+    );
+  } catch {
+    /* best-effort — native sync must never throw */
+  }
+}
 
 export async function getCaptureConfig(): Promise<AndroidCaptureConfig> {
   try {
@@ -52,7 +80,18 @@ export async function setCaptureConfig(
   const current = await getCaptureConfig();
   const next: AndroidCaptureConfig = { ...current, ...patch };
   await AsyncStorage.setItem(CONFIG_KEY, JSON.stringify(next));
+  syncConfigToNative(next);
   return next;
+}
+
+/**
+ * Push the persisted config to native (SharedPreferences). Call on app/Settings
+ * mount so users who enabled capture BEFORE this native-POST update get their
+ * config mirrored to native without having to re-toggle.
+ */
+export async function syncNativeCaptureConfig(): Promise<void> {
+  const cfg = await getCaptureConfig();
+  syncConfigToNative(cfg);
 }
 
 // ---------------------------------------------------------------------------

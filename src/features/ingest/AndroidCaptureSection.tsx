@@ -13,7 +13,7 @@ import { t } from '../../lib/i18n';
 import { FONT } from '../../lib/font';
 import type { Locale } from '../../types';
 import { createIngestToken } from './api';
-import { getCaptureConfig, setCaptureConfig } from './androidCapture';
+import { getCaptureConfig, setCaptureConfig, syncNativeCaptureConfig } from './androidCapture';
 
 const SURFACE = '#14191A';
 const INK = '#F4F7F5';
@@ -56,6 +56,8 @@ export function AndroidCaptureSection({ locale }: { locale: Locale }) {
       const cfg = await getCaptureConfig();
       setKeywords(cfg.keywords);
       setEnabled(cfg.enabled);
+      // Mirror config to native (covers users who enabled before this update).
+      void syncNativeCaptureConfig();
       await refreshPerm();
     })();
     const sub = AppState.addEventListener('change', (s) => {
