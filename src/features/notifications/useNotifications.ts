@@ -17,7 +17,7 @@ import { useRouter, useRootNavigationState } from 'expo-router';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { registerForPushNotificationsAsync } from './notifications';
 import { ensureIngestToken } from '@/src/features/ingest/api';
-import { updateTransaction, deleteTransaction, listTransactions } from '@/src/features/transactions/api';
+import { updateTransaction, deleteTransaction } from '@/src/features/transactions/api';
 import { useDataSync } from '@/src/features/sync/dataSync';
 import { t } from '@/src/lib/i18n';
 import type { Locale } from '@/src/types';
@@ -32,14 +32,15 @@ export function useNotifications(): void {
   const locale: Locale = profile?.locale ?? 'en';
   const { notifyTxnsChanged } = useDataSync();
 
-  // Recompute the app-icon badge from the true pending count. Called from the
-  // background Confirm/Reject handlers so the counter updates WITHOUT opening the
-  // app (the React tree / usePendingBadge may not be mounted in a background
-  // wake, so we set the badge directly here).
-  const refreshBadge = useCallback(async () => {
+  // Drop the app-icon badge by one, LOCALLY (no network). A notification action
+  // runs in a very short iOS background window; a network round-trip (fetching
+  // the true count) often doesn't finish before the app is suspended, so the
+  // badge never updates. Decrementing is instant, so it commits in time. Any
+  // drift is reconciled by usePendingBadge from the true count on next open.
+  const decrementBadge = useCallback(async () => {
     try {
-      const rows = await listTransactions({ status: 'pending' });
-      await Notifications.setBadgeCountAsync(rows.length);
+      const current = await Notifications.getBadgeCountAsync();
+      await Notifications.setBadgeCountAsync(Math.max(0, current - 1));
     } catch {
       /* best-effort */
     }
@@ -58,20 +59,22 @@ export function useNotifications(): void {
       const txnId = typeof data.txnId === 'string' ? data.txnId : null;
 
       if (action === 'confirm' && txnId) {
+        // Drop the badge first (instant, local) so it commits before iOS
+        // suspends the app, then do the DB write.
+        await decrementBadge();
         try {
           await updateTransaction(txnId, { status: 'confirmed' });
           notifyTxnsChanged();
-          await refreshBadge();
         } catch {
           /* best-effort */
         }
         return;
       }
       if (action === 'reject' && txnId) {
+        await decrementBadge();
         try {
           await deleteTransaction(txnId);
           notifyTxnsChanged();
-          await refreshBadge();
         } catch {
           /* best-effort */
         }
@@ -82,7 +85,7 @@ export function useNotifications(): void {
         router.push(data.url as never);
       }
     },
-    [router, notifyTxnsChanged, refreshBadge],
+    [router, notifyTxnsChanged, decrementBadge],
   );
 
   // Re-apply the LAST notification response on cold start and on every

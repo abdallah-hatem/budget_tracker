@@ -83,6 +83,7 @@ jest.mock('expo-notifications', () => ({
   setNotificationChannelAsync: jest.fn(),
   setNotificationCategoryAsync: jest.fn(async () => undefined),
   setBadgeCountAsync: jest.fn(async () => true),
+  getBadgeCountAsync: jest.fn(async () => 3),
   AndroidImportance: { DEFAULT: 3 },
 }));
 
