@@ -533,8 +533,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         backgroundColor: 'transparent',
       }}
     >
-      {/* One-time coach-mark teaching press-and-hold on the mic. */}
-      <MicHoldHint bottom={BAR_HEIGHT + FAB_OVERLAP + 20} />
+      {/* One-time full-screen coach-mark teaching press-and-hold on the mic. */}
+      <MicHoldHint />
 
       {/* The pill bar */}
       <View

@@ -197,6 +197,7 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
     en: 'Hold to add manually or by typing',
     ar: 'اضغط مطولاً للإضافة يدويًا أو بالكتابة',
   },
+  tap_anywhere: { en: 'Tap anywhere to continue', ar: 'اضغط في أي مكان للمتابعة' },
   via_sms: { en: 'via SMS', ar: 'عبر رسالة' },
 
   // SMS auto-capture / ingest token (P2.5)
