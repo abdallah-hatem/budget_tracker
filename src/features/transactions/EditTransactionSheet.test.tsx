@@ -184,17 +184,20 @@ describe('EditTransactionSheet', () => {
     expect(patch).not.toHaveProperty('status');
   });
 
-  it('with showConfirm: Save keeps status (item stays pending)', async () => {
-    mockUpdate.mockResolvedValueOnce({ ...txn });
+  it('with showConfirm: the primary button is Confirm (no plain Save), and confirms', async () => {
+    // Pending items replace Save with a Confirm primary — there is no edit-save.
+    mockUpdate.mockResolvedValueOnce({ ...txn, status: 'confirmed' });
     const onDone = jest.fn();
     render(
       <EditTransactionSheet
         transaction={txn} locale="en" onDone={onDone} onCancel={jest.fn()} showConfirm
       />
     );
-    fireEvent.press(screen.getByTestId('edit-save'));
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
-    expect(mockUpdate.mock.calls[0][1]).not.toHaveProperty('status');
+    expect(screen.queryByTestId('edit-save')).toBeNull();
+    fireEvent.press(screen.getByTestId('edit-confirm'));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith('t1', expect.objectContaining({ status: 'confirmed' })),
+    );
   });
 
   it('with showConfirm: Confirm saves edits AND sets status:confirmed', async () => {

@@ -45,7 +45,7 @@ function makeDeps(over: Partial<IngestDeps> = {}): IngestDeps {
     lookupUserId: (hash) =>
       hash === VALID_TOKEN_HASH ? Promise.resolve(VALID_USER_ID) : Promise.resolve(null),
     getRules: () => Promise.resolve([]),
-    insertPending: () => Promise.resolve(),
+    insertPending: () => Promise.resolve("txn-id"),
     touchToken: () => Promise.resolve(),
     getPushTokens: () => Promise.resolve([]),
     countPending: () => Promise.resolve(3),
@@ -211,7 +211,7 @@ Deno.test("valid token + amount > 0 → insertPending called once → 200 {ok:tr
       insertPending: (row) => {
         insertCalled++;
         insertedRow = row;
-        return Promise.resolve();
+        return Promise.resolve("txn-id");
       },
     }),
   );
@@ -253,7 +253,7 @@ Deno.test("a matching keyword rule overrides category + note (amount kept)", asy
       getRules: () => Promise.resolve([
         { keyword: "vodafone", category_slug: "bills", note: "Phone" },
       ]),
-      insertPending: (r) => { row = r; return Promise.resolve(); },
+      insertPending: (r) => { row = r; return Promise.resolve("txn-id"); },
     }),
   );
   assert(row !== null);
@@ -272,7 +272,7 @@ Deno.test("longest matching keyword wins", async () => {
         { keyword: "uber", category_slug: "transport", note: null },
         { keyword: "uber eats", category_slug: "food", note: "Food delivery" },
       ]),
-      insertPending: (r) => { row = r; return Promise.resolve(); },
+      insertPending: (r) => { row = r; return Promise.resolve("txn-id"); },
     }),
   );
   assert(row !== null);
@@ -290,7 +290,7 @@ Deno.test("a rule with an income category flips type to income", async () => {
       getRules: () => Promise.resolve([
         { keyword: "salary deposit", category_slug: "salary", note: null },
       ]),
-      insertPending: (r) => { row = r; return Promise.resolve(); },
+      insertPending: (r) => { row = r; return Promise.resolve("txn-id"); },
     }),
   );
   assert(row !== null);
@@ -307,7 +307,7 @@ Deno.test("no matching rule → AI category/note are used", async () => {
       getRules: () => Promise.resolve([
         { keyword: "vodafone", category_slug: "bills", note: "Phone" },
       ]),
-      insertPending: (r) => { row = r; return Promise.resolve(); },
+      insertPending: (r) => { row = r; return Promise.resolve("txn-id"); },
     }),
   );
   assert(row !== null);
@@ -329,7 +329,7 @@ Deno.test("amount === 0 → insertPending NOT called → 200 {ok:true, skipped:t
       categorizeFn: () => Promise.resolve(SAMPLE_PARSED_ZERO),
       insertPending: () => {
         insertCalled++;
-        return Promise.resolve();
+        return Promise.resolve("txn-id");
       },
     }),
   );
@@ -350,7 +350,7 @@ Deno.test("very small positive amount that rounds to 0 → skipped", async () =>
         Promise.resolve({ ...SAMPLE_PARSED, amount: 0.001 }),
       insertPending: () => {
         insertCalled++;
-        return Promise.resolve();
+        return Promise.resolve("txn-id");
       },
     }),
   );
@@ -413,7 +413,7 @@ Deno.test("valid received_at is reflected in occurred_at", async () => {
     makeDeps({
       insertPending: (row) => {
         insertedRow = row;
-        return Promise.resolve();
+        return Promise.resolve("txn-id");
       },
     }),
   );
@@ -433,7 +433,7 @@ Deno.test("invalid received_at falls back to current time (ISO string)", async (
     makeDeps({
       insertPending: (row) => {
         insertedRow = row;
-        return Promise.resolve();
+        return Promise.resolve("txn-id");
       },
     }),
   );
@@ -486,7 +486,7 @@ Deno.test("amount is rounded to 2 decimal places before insert", async () => {
       categorizeFn: () => Promise.resolve({ ...SAMPLE_PARSED, amount: 99.999 }),
       insertPending: (row) => {
         insertedRow = row;
-        return Promise.resolve();
+        return Promise.resolve("txn-id");
       },
     }),
   );
@@ -510,7 +510,7 @@ Deno.test("far-future received_at is clamped: occurred_at is not in the far futu
     makeDeps({
       insertPending: (row) => {
         insertedRow = row;
-        return Promise.resolve();
+        return Promise.resolve("txn-id");
       },
     }),
   );
@@ -580,6 +580,9 @@ Deno.test(
     assertEquals(msg.data?.type, "sms_pending");
     assertEquals(msg.badge, 4, "app-icon badge = pending count");
     assert(typeof msg.body === "string" && msg.body.length > 0);
+    // Long-press actions: category + the txn id the actions act on.
+    assertEquals(msg.categoryId, "sms_pending");
+    assertEquals(msg.data?.txnId, "txn-id");
   },
 );
 

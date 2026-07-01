@@ -10,15 +10,64 @@
  *     navigate to the embedded `data.url` on first mount.
  */
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { useRouter, useRootNavigationState } from 'expo-router';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { registerForPushNotificationsAsync } from './notifications';
 import { ensureIngestToken } from '@/src/features/ingest/api';
+import { updateTransaction, deleteTransaction } from '@/src/features/transactions/api';
+import { useDataSync } from '@/src/features/sync/dataSync';
+import { t } from '@/src/lib/i18n';
+import type { Locale } from '@/src/types';
+
+/** Category id set on the SMS-pending push (see ingest-sms). Long-pressing such
+ *  a notification surfaces Confirm / Edit / Reject action buttons. */
+export const SMS_PENDING_CATEGORY = 'sms_pending';
 
 export function useNotifications(): void {
   const router = useRouter();
+  const { profile } = useSession();
+  const locale: Locale = profile?.locale ?? 'en';
+  const { notifyTxnsChanged } = useDataSync();
+
+  // Handle a notification response: an action-button tap (Confirm/Edit/Reject)
+  // or a plain body tap. Confirm/Reject act on the transaction in the background
+  // (no app open); Edit and plain taps deep-link into the app.
+  const handleResponse = useCallback(
+    async (response: Notifications.NotificationResponse) => {
+      const data = (response.notification.request.content.data ?? {}) as {
+        url?: string;
+        txnId?: string;
+      };
+      const action = response.actionIdentifier;
+      const txnId = typeof data.txnId === 'string' ? data.txnId : null;
+
+      if (action === 'confirm' && txnId) {
+        try {
+          await updateTransaction(txnId, { status: 'confirmed' });
+          notifyTxnsChanged();
+        } catch {
+          /* best-effort */
+        }
+        return;
+      }
+      if (action === 'reject' && txnId) {
+        try {
+          await deleteTransaction(txnId);
+          notifyTxnsChanged();
+        } catch {
+          /* best-effort */
+        }
+        return;
+      }
+      // 'edit' action or a plain tap → open the app at the deep link.
+      if (typeof data.url === 'string') {
+        router.push(data.url as never);
+      }
+    },
+    [router, notifyTxnsChanged],
+  );
   // The root navigator is mounted only once this has a `key`. Navigating before
   // then — which is exactly what a cold-start notification tap did, while the
   // loading screen is up and the <Stack> isn't mounted yet — leaves the router
@@ -32,22 +81,46 @@ export function useNotifications(): void {
   const coldStartHandledRef = useRef(false);
 
   // ------------------------------------------------------------------
-  // Taps while the app is RUNNING (foreground / background): the navigator is
-  // already mounted, so navigate immediately.
+  // Register the SMS-pending action category (Confirm / Edit / Reject) shown on
+  // long-press. Pure JS via expo-notifications → OTA-able. Re-registered when
+  // the locale changes so the button titles are localized.
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    void Notifications.setNotificationCategoryAsync(SMS_PENDING_CATEGORY, [
+      {
+        identifier: 'confirm',
+        buttonTitle: t('confirm', locale),
+        options: { opensAppToForeground: false },
+      },
+      {
+        identifier: 'edit',
+        buttonTitle: t('edit', locale),
+        options: { opensAppToForeground: true },
+      },
+      {
+        identifier: 'reject',
+        buttonTitle: t('reject', locale),
+        options: { opensAppToForeground: false, isDestructive: true },
+      },
+    ]).catch(() => {
+      /* best-effort */
+    });
+  }, [locale]);
+
+  // ------------------------------------------------------------------
+  // Taps / action buttons while the app is RUNNING (foreground / background):
+  // the navigator is already mounted, so act immediately.
   // ------------------------------------------------------------------
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        const url = response.notification.request.content.data?.url;
-        if (typeof url === 'string') {
-          router.push(url as never);
-        }
+        void handleResponse(response);
       },
     );
     return () => {
       subscription.remove();
     };
-  }, [router]);
+  }, [handleResponse]);
 
   // ------------------------------------------------------------------
   // COLD START: the app was launched by tapping a notification. Wait until the
@@ -59,12 +132,9 @@ export function useNotifications(): void {
     coldStartHandledRef.current = true;
     void (async () => {
       const lastResponse = await Notifications.getLastNotificationResponseAsync();
-      const url = lastResponse?.notification.request.content.data?.url;
-      if (typeof url === 'string') {
-        router.push(url as never);
-      }
+      if (lastResponse) await handleResponse(lastResponse);
     })();
-  }, [navReady, loading, router]);
+  }, [navReady, loading, handleResponse]);
 
   // ------------------------------------------------------------------
   // Token registration — once per signed-in user

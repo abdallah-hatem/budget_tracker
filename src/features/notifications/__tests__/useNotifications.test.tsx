@@ -67,6 +67,8 @@ describe('useNotifications', () => {
     mockSession = { user: { id: 'user-123' }, loading: false };
     // Default: no cold-start response
     (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValue(null);
+    // The hook registers a notification category on mount — resolve it.
+    (Notifications.setNotificationCategoryAsync as jest.Mock).mockResolvedValue(undefined);
   });
 
   it('navigates to data.url when a notification response is received (foreground tap)', async () => {

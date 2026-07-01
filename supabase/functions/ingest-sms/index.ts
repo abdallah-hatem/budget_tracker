@@ -31,6 +31,8 @@ export interface ExpoPushMessage {
   data?: Record<string, unknown>;
   /** iOS app-icon badge count to set on arrival (= number of pending items). */
   badge?: number;
+  /** Notification category id → surfaces action buttons on long-press. */
+  categoryId?: string;
 }
 
 /** A user keyword rule: when `keyword` appears in the SMS, force this category/note. */
@@ -63,7 +65,8 @@ export interface IngestDeps {
   /** Return the user's keyword rules (override category + note on a match). */
   getRules: (userId: string) => Promise<SmsRule[]>;
   /** Insert a pending transaction row into the DB. Throw on error. */
-  insertPending: (row: Record<string, unknown>) => Promise<void>;
+  /** Insert a pending transaction; returns the new row id (for push actions). */
+  insertPending: (row: Record<string, unknown>) => Promise<string | null>;
   /** Best-effort: update last_used_at for the token. */
   touchToken: (tokenHash: string) => Promise<void>;
   /** Return Expo push tokens registered for the given user_id. */
@@ -222,8 +225,9 @@ export async function handleIngest(
   }
 
   // --- Insert the pending transaction row ---
+  let txnId: string | null = null;
   try {
-    await deps.insertPending({
+    txnId = await deps.insertPending({
       user_id: userId,
       type,
       amount,
@@ -253,7 +257,14 @@ export async function handleIngest(
         to,
         title: "New transaction to review",
         body: bodyText,
-        data: { url: "/(tabs)/pending", type: "sms_pending" },
+        // categoryId → long-press shows Confirm / Edit / Reject actions; txnId
+        // lets those actions act on this exact transaction (see useNotifications).
+        categoryId: "sms_pending",
+        data: {
+          url: "/(tabs)/pending",
+          type: "sms_pending",
+          ...(txnId ? { txnId } : {}),
+        },
         ...(typeof badge === "number" ? { badge } : {}),
       }));
       await deps.sendPush(messages);
@@ -311,8 +322,13 @@ if (import.meta.main) {
     },
 
     async insertPending(row) {
-      const { error } = await sb.from("transactions").insert(row);
+      const { data, error } = await sb
+        .from("transactions")
+        .insert(row)
+        .select("id")
+        .single();
       if (error) throw new Error(`DB insert failed: ${error.message}`);
+      return (data as { id: string } | null)?.id ?? null;
     },
 
     async touchToken(tokenHash) {
