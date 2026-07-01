@@ -39,6 +39,21 @@ jest.mock('../notifications', () => ({
   registerForPushNotificationsAsync: jest.fn(async () => 'ExponentPushToken[test]'),
 }));
 
+// Mock the transactions api so Confirm/Reject actions don't hit Supabase.
+const mockUpdateTransaction = jest.fn((..._args: unknown[]) => Promise.resolve({}));
+const mockDeleteTransaction = jest.fn((..._args: unknown[]) => Promise.resolve(undefined));
+jest.mock('@/src/features/transactions/api', () => ({
+  updateTransaction: (...args: unknown[]) => mockUpdateTransaction(...args),
+  deleteTransaction: (...args: unknown[]) => mockDeleteTransaction(...args),
+}));
+
+function makeActionResponse(actionIdentifier: string, txnId: string, identifier = 'n1') {
+  return {
+    actionIdentifier,
+    notification: { request: { identifier, content: { data: { txnId, url: '/(tabs)/pending' } } } },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -89,6 +104,38 @@ describe('useNotifications', () => {
     });
 
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/pending');
+  });
+
+  it('Reject action deletes the transaction (no navigation)', async () => {
+    let cb: ((r: unknown) => void) | null = null;
+    (Notifications.addNotificationResponseReceivedListener as jest.Mock).mockImplementation(
+      (f: (r: unknown) => void) => { cb = f; return { remove: jest.fn() }; },
+    );
+    renderHook(() => useNotifications());
+    await act(async () => { cb?.(makeActionResponse('reject', 't9')); });
+    await waitFor(() => expect(mockDeleteTransaction).toHaveBeenCalledWith('t9'));
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('Confirm action sets status:confirmed (no navigation)', async () => {
+    let cb: ((r: unknown) => void) | null = null;
+    (Notifications.addNotificationResponseReceivedListener as jest.Mock).mockImplementation(
+      (f: (r: unknown) => void) => { cb = f; return { remove: jest.fn() }; },
+    );
+    renderHook(() => useNotifications());
+    await act(async () => { cb?.(makeActionResponse('confirm', 't5')); });
+    await waitFor(() =>
+      expect(mockUpdateTransaction).toHaveBeenCalledWith('t5', { status: 'confirmed' }),
+    );
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('re-applies a background action on cold-start (getLastNotificationResponseAsync)', async () => {
+    (Notifications.getLastNotificationResponseAsync as jest.Mock).mockResolvedValue(
+      makeActionResponse('reject', 't7'),
+    );
+    renderHook(() => useNotifications());
+    await waitFor(() => expect(mockDeleteTransaction).toHaveBeenCalledWith('t7'));
   });
 
   it('navigates to data.url on cold-start (getLastNotificationResponseAsync)', async () => {

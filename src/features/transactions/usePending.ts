@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { listTransactions } from './api';
+import { useRefetchOnTxnChange } from '../sync/dataSync';
 import type { Transaction } from '../../types';
 
 export interface UsePendingResult {
@@ -45,6 +46,11 @@ export function usePending(): UsePendingResult {
     });
     return () => sub.remove();
   }, [refresh]);
+
+  // Also refetch on any transaction mutation (e.g. a notification Confirm/Reject
+  // action), so the pending count — and the app-icon badge driven by it — stays
+  // correct without needing a foreground round-trip.
+  useRefetchOnTxnChange(refresh);
 
   return { data, count: data.length, loading, error, refresh };
 }

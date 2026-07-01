@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useRouter, useRootNavigationState } from 'expo-router';
 import { useSession } from '@/src/features/auth/SessionProvider';
@@ -68,6 +69,24 @@ export function useNotifications(): void {
     },
     [router, notifyTxnsChanged],
   );
+
+  // Re-apply the LAST notification response on cold start and on every
+  // foreground. iOS does not reliably run background action handlers
+  // (Confirm/Reject use opensAppToForeground:false), so the action often doesn't
+  // execute until the app is opened — this makes it take effect then. Deduped by
+  // notification id + action so we never re-run (re-navigate / re-reject) the
+  // same response twice.
+  const handledResponseKeyRef = useRef<string | null>(null);
+  const responseKey = (r: Notifications.NotificationResponse) =>
+    `${r.notification.request.identifier}|${r.actionIdentifier}`;
+  const processLastResponse = useCallback(async () => {
+    const r = await Notifications.getLastNotificationResponseAsync();
+    if (!r) return;
+    const key = responseKey(r);
+    if (handledResponseKeyRef.current === key) return;
+    handledResponseKeyRef.current = key;
+    await handleResponse(r);
+  }, [handleResponse]);
   // The root navigator is mounted only once this has a `key`. Navigating before
   // then — which is exactly what a cold-start notification tap did, while the
   // loading screen is up and the <Stack> isn't mounted yet — leaves the router
@@ -77,8 +96,6 @@ export function useNotifications(): void {
   const { user, loading } = useSession();
   // Track which user id we've already registered so we don't repeat on re-renders.
   const registeredUserIdRef = useRef<string | null>(null);
-  // Cold-start navigation must run at most once.
-  const coldStartHandledRef = useRef(false);
 
   // ------------------------------------------------------------------
   // Register the SMS-pending action category (Confirm / Edit / Reject) shown on
@@ -114,6 +131,8 @@ export function useNotifications(): void {
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
+        // Mark handled so the foreground re-check below doesn't run it again.
+        handledResponseKeyRef.current = responseKey(response);
         void handleResponse(response);
       },
     );
@@ -123,18 +142,18 @@ export function useNotifications(): void {
   }, [handleResponse]);
 
   // ------------------------------------------------------------------
-  // COLD START: the app was launched by tapping a notification. Wait until the
-  // navigator is mounted AND the session has resolved before navigating.
+  // COLD START + FOREGROUND: apply the last notification action once the
+  // navigator is mounted and the session is resolved (so the DB write is
+  // authenticated), and re-check every time the app returns to the foreground.
   // ------------------------------------------------------------------
   useEffect(() => {
-    if (coldStartHandledRef.current) return;
     if (!navReady || loading) return;
-    coldStartHandledRef.current = true;
-    void (async () => {
-      const lastResponse = await Notifications.getLastNotificationResponseAsync();
-      if (lastResponse) await handleResponse(lastResponse);
-    })();
-  }, [navReady, loading, handleResponse]);
+    void processLastResponse();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') void processLastResponse();
+    });
+    return () => sub.remove();
+  }, [navReady, loading, processLastResponse]);
 
   // ------------------------------------------------------------------
   // Token registration — once per signed-in user
