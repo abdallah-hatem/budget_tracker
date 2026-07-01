@@ -209,7 +209,15 @@ function CategoryForm(p: FormProps) {
 
       {/* Icon grid */}
       <AppText className="text-ink3" style={{ fontSize: 11, textAlign: align }}>{t('cat.icon', locale)}</AppText>
-      <ScrollView style={{ maxHeight: 168 }} contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={{ maxHeight: 168 }}
+        contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
+        showsVerticalScrollIndicator={false}
+        // Android: without this, the parent Settings scroll swallows the gesture
+        // and the icon grid won't scroll on its own.
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+      >
         {CATEGORY_ICONS.map((g) => (
           <IconTile key={g} icon={g} color={p.color} size={40} selected={p.icon === g} onPress={() => p.setIcon(g)} />
         ))}
