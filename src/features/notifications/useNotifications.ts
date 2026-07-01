@@ -51,6 +51,8 @@ export function useNotifications(): void {
         } catch {
           /* best-effort */
         }
+        // Open Pending so the user sees the item resolved + the badge update.
+        router.push('/(tabs)/pending' as never);
         return;
       }
       if (action === 'reject' && txnId) {
@@ -60,6 +62,7 @@ export function useNotifications(): void {
         } catch {
           /* best-effort */
         }
+        router.push('/(tabs)/pending' as never);
         return;
       }
       // 'edit' action or a plain tap → open the app at the deep link.
@@ -104,10 +107,13 @@ export function useNotifications(): void {
   // ------------------------------------------------------------------
   useEffect(() => {
     void Notifications.setNotificationCategoryAsync(SMS_PENDING_CATEGORY, [
+      // All three open the app: iOS does NOT reliably run background action
+      // handlers, so a "silent" Confirm/Reject often never executed. Opening the
+      // app guarantees the DB write runs (session ready) and the badge updates.
       {
         identifier: 'confirm',
         buttonTitle: t('confirm', locale),
-        options: { opensAppToForeground: false },
+        options: { opensAppToForeground: true },
       },
       {
         identifier: 'edit',
@@ -117,7 +123,7 @@ export function useNotifications(): void {
       {
         identifier: 'reject',
         buttonTitle: t('reject', locale),
-        options: { opensAppToForeground: false, isDestructive: true },
+        options: { opensAppToForeground: true, isDestructive: true },
       },
     ]).catch(() => {
       /* best-effort */
