@@ -42,9 +42,11 @@ jest.mock('../notifications', () => ({
 // Mock the transactions api so Confirm/Reject actions don't hit Supabase.
 const mockUpdateTransaction = jest.fn((..._args: unknown[]) => Promise.resolve({}));
 const mockDeleteTransaction = jest.fn((..._args: unknown[]) => Promise.resolve(undefined));
+const mockListTransactions = jest.fn((..._args: unknown[]) => Promise.resolve([]));
 jest.mock('@/src/features/transactions/api', () => ({
   updateTransaction: (...args: unknown[]) => mockUpdateTransaction(...args),
   deleteTransaction: (...args: unknown[]) => mockDeleteTransaction(...args),
+  listTransactions: (...args: unknown[]) => mockListTransactions(...args),
 }));
 
 function makeActionResponse(actionIdentifier: string, txnId: string, identifier = 'n1') {
@@ -106,7 +108,7 @@ describe('useNotifications', () => {
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/pending');
   });
 
-  it('Reject action deletes the transaction and opens Pending', async () => {
+  it('Reject deletes the transaction + refreshes the badge, without opening the app', async () => {
     let cb: ((r: unknown) => void) | null = null;
     (Notifications.addNotificationResponseReceivedListener as jest.Mock).mockImplementation(
       (f: (r: unknown) => void) => { cb = f; return { remove: jest.fn() }; },
@@ -114,10 +116,11 @@ describe('useNotifications', () => {
     renderHook(() => useNotifications());
     await act(async () => { cb?.(makeActionResponse('reject', 't9')); });
     await waitFor(() => expect(mockDeleteTransaction).toHaveBeenCalledWith('t9'));
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/(tabs)/pending'));
+    await waitFor(() => expect(Notifications.setBadgeCountAsync as jest.Mock).toHaveBeenCalled());
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('Confirm action sets status:confirmed and opens Pending', async () => {
+  it('Confirm sets status:confirmed + refreshes the badge, without opening the app', async () => {
     let cb: ((r: unknown) => void) | null = null;
     (Notifications.addNotificationResponseReceivedListener as jest.Mock).mockImplementation(
       (f: (r: unknown) => void) => { cb = f; return { remove: jest.fn() }; },
@@ -127,7 +130,8 @@ describe('useNotifications', () => {
     await waitFor(() =>
       expect(mockUpdateTransaction).toHaveBeenCalledWith('t5', { status: 'confirmed' }),
     );
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/(tabs)/pending'));
+    await waitFor(() => expect(Notifications.setBadgeCountAsync as jest.Mock).toHaveBeenCalled());
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('re-applies a background action on cold-start (getLastNotificationResponseAsync)', async () => {

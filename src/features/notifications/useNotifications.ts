@@ -17,7 +17,7 @@ import { useRouter, useRootNavigationState } from 'expo-router';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { registerForPushNotificationsAsync } from './notifications';
 import { ensureIngestToken } from '@/src/features/ingest/api';
-import { updateTransaction, deleteTransaction } from '@/src/features/transactions/api';
+import { updateTransaction, deleteTransaction, listTransactions } from '@/src/features/transactions/api';
 import { useDataSync } from '@/src/features/sync/dataSync';
 import { t } from '@/src/lib/i18n';
 import type { Locale } from '@/src/types';
@@ -31,6 +31,19 @@ export function useNotifications(): void {
   const { profile } = useSession();
   const locale: Locale = profile?.locale ?? 'en';
   const { notifyTxnsChanged } = useDataSync();
+
+  // Recompute the app-icon badge from the true pending count. Called from the
+  // background Confirm/Reject handlers so the counter updates WITHOUT opening the
+  // app (the React tree / usePendingBadge may not be mounted in a background
+  // wake, so we set the badge directly here).
+  const refreshBadge = useCallback(async () => {
+    try {
+      const rows = await listTransactions({ status: 'pending' });
+      await Notifications.setBadgeCountAsync(rows.length);
+    } catch {
+      /* best-effort */
+    }
+  }, []);
 
   // Handle a notification response: an action-button tap (Confirm/Edit/Reject)
   // or a plain body tap. Confirm/Reject act on the transaction in the background
@@ -48,21 +61,20 @@ export function useNotifications(): void {
         try {
           await updateTransaction(txnId, { status: 'confirmed' });
           notifyTxnsChanged();
+          await refreshBadge();
         } catch {
           /* best-effort */
         }
-        // Open Pending so the user sees the item resolved + the badge update.
-        router.push('/(tabs)/pending' as never);
         return;
       }
       if (action === 'reject' && txnId) {
         try {
           await deleteTransaction(txnId);
           notifyTxnsChanged();
+          await refreshBadge();
         } catch {
           /* best-effort */
         }
-        router.push('/(tabs)/pending' as never);
         return;
       }
       // 'edit' action or a plain tap → open the app at the deep link.
@@ -70,7 +82,7 @@ export function useNotifications(): void {
         router.push(data.url as never);
       }
     },
-    [router, notifyTxnsChanged],
+    [router, notifyTxnsChanged, refreshBadge],
   );
 
   // Re-apply the LAST notification response on cold start and on every
@@ -107,13 +119,11 @@ export function useNotifications(): void {
   // ------------------------------------------------------------------
   useEffect(() => {
     void Notifications.setNotificationCategoryAsync(SMS_PENDING_CATEGORY, [
-      // All three open the app: iOS does NOT reliably run background action
-      // handlers, so a "silent" Confirm/Reject often never executed. Opening the
-      // app guarantees the DB write runs (session ready) and the badge updates.
+      // Confirm/Reject act in the BACKGROUND (no app open); Edit opens the app.
       {
         identifier: 'confirm',
         buttonTitle: t('confirm', locale),
-        options: { opensAppToForeground: true },
+        options: { opensAppToForeground: false },
       },
       {
         identifier: 'edit',
@@ -123,7 +133,7 @@ export function useNotifications(): void {
       {
         identifier: 'reject',
         buttonTitle: t('reject', locale),
-        options: { opensAppToForeground: true, isDestructive: true },
+        options: { opensAppToForeground: false, isDestructive: true },
       },
     ]).catch(() => {
       /* best-effort */
