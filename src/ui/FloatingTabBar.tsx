@@ -27,6 +27,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { usePendingContext } from '@/src/features/transactions/PendingProvider';
 import { useCapture } from '@/src/features/capture/CaptureProvider';
+import { MicHoldHint } from '@/src/ui/MicHoldHint';
 import { FONT } from '@/src/lib/font';
 
 // ── Design tokens ────────────────────────────────────────────────────────────
@@ -532,6 +533,9 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         backgroundColor: 'transparent',
       }}
     >
+      {/* One-time coach-mark teaching press-and-hold on the mic. */}
+      <MicHoldHint bottom={BAR_HEIGHT + FAB_OVERLAP + 20} />
+
       {/* The pill bar */}
       <View
         style={{
