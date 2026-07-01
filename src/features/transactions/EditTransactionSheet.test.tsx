@@ -110,15 +110,11 @@ describe('EditTransactionSheet', () => {
     await waitFor(() => expect(onDone).toHaveBeenCalled());
   });
 
-  it('cancel calls onCancel without touching the api', () => {
-    const onCancel = jest.fn();
+  it('has no Cancel button — dismiss is by tapping outside the sheet', () => {
     render(
-      <EditTransactionSheet transaction={txn} locale="en" onDone={jest.fn()} onCancel={onCancel} />
+      <EditTransactionSheet transaction={txn} locale="en" onDone={jest.fn()} onCancel={jest.fn()} />
     );
-    fireEvent.press(screen.getByTestId('edit-cancel'));
-    expect(onCancel).toHaveBeenCalled();
-    expect(mockUpdate).not.toHaveBeenCalled();
-    expect(mockDelete).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('edit-cancel')).toBeNull();
   });
 
   it('shows error and does NOT call updateTransaction when amount is blank', async () => {
@@ -184,20 +180,19 @@ describe('EditTransactionSheet', () => {
     expect(patch).not.toHaveProperty('status');
   });
 
-  it('with showConfirm: the primary button is Confirm (no plain Save), and confirms', async () => {
-    // Pending items replace Save with a Confirm primary — there is no edit-save.
-    mockUpdate.mockResolvedValueOnce({ ...txn, status: 'confirmed' });
+  it('with showConfirm: Save (left) keeps it pending, and there is no Cancel', async () => {
+    // Pending sheet is [Save][Delete][Confirm]: Save keeps status, Confirm confirms.
+    mockUpdate.mockResolvedValueOnce({ ...txn });
     const onDone = jest.fn();
     render(
       <EditTransactionSheet
         transaction={txn} locale="en" onDone={onDone} onCancel={jest.fn()} showConfirm
       />
     );
-    expect(screen.queryByTestId('edit-save')).toBeNull();
-    fireEvent.press(screen.getByTestId('edit-confirm'));
-    await waitFor(() =>
-      expect(mockUpdate).toHaveBeenCalledWith('t1', expect.objectContaining({ status: 'confirmed' })),
-    );
+    expect(screen.queryByTestId('edit-cancel')).toBeNull();
+    fireEvent.press(screen.getByTestId('edit-save'));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
+    expect(mockUpdate.mock.calls[0][1]).not.toHaveProperty('status');
   });
 
   it('with showConfirm: Confirm saves edits AND sets status:confirmed', async () => {

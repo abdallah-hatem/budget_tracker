@@ -400,29 +400,31 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           paddingTop: 4,
         }}
       >
-        {/* Cancel — always in the first slot. (Pending items use Confirm as the
-            green primary in place of Save; see below.) */}
+        {/* Save — first slot. Saves the edits and keeps the row's current status.
+            (No Cancel button — dismiss by tapping outside the sheet.) It's the
+            green primary on a normal edit, and subdued for a pending item where
+            Confirm is the green primary. */}
         <PressableScale
-          testID="edit-cancel"
-          onPress={onCancel}
+          testID="edit-save"
+          onPress={handleSave}
           disabled={busy}
           style={{
             flex: 1,
             borderRadius: 14,
             paddingVertical: 14,
             alignItems: 'center',
-            backgroundColor: '#14191A',
-            opacity: busy ? 0.5 : 1,
+            backgroundColor: showConfirm ? '#14191A' : '#2BD98E',
+            opacity: busy ? 0.7 : 1,
           }}
         >
           <Text
             style={{
               fontFamily: FONT.jakartaSb,
               fontSize: 14,
-              color: '#A8B2AF',
+              color: showConfirm ? '#A8B2AF' : '#06251A',
             }}
           >
-            {t('cancel', locale)}
+            {t('save', locale)}
           </Text>
         </PressableScale>
 
@@ -453,32 +455,33 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
           </Text>
         </PressableScale>
 
-        {/* Primary (green): for a pending item this is "Confirm" (saves the
-            edits AND confirms it, replacing a plain Save); everywhere else it's
-            the normal "Save". */}
-        <PressableScale
-          testID={showConfirm ? 'edit-confirm' : 'edit-save'}
-          onPress={showConfirm ? handleConfirm : handleSave}
-          disabled={busy}
-          style={{
-            flex: 1,
-            borderRadius: 14,
-            paddingVertical: 14,
-            alignItems: 'center',
-            backgroundColor: '#2BD98E',
-            opacity: busy ? 0.7 : 1,
-          }}
-        >
-          <Text
+        {/* Confirm (pending only) — the green primary; saves the edits AND
+            confirms the item. */}
+        {showConfirm && (
+          <PressableScale
+            testID="edit-confirm"
+            onPress={handleConfirm}
+            disabled={busy}
             style={{
-              fontFamily: FONT.jakartaSb,
-              fontSize: 14,
-              color: '#06251A',
+              flex: 1,
+              borderRadius: 14,
+              paddingVertical: 14,
+              alignItems: 'center',
+              backgroundColor: '#2BD98E',
+              opacity: busy ? 0.7 : 1,
             }}
           >
-            {t(showConfirm ? 'confirm' : 'save', locale)}
-          </Text>
-        </PressableScale>
+            <Text
+              style={{
+                fontFamily: FONT.jakartaSb,
+                fontSize: 14,
+                color: '#06251A',
+              }}
+            >
+              {t('confirm', locale)}
+            </Text>
+          </PressableScale>
+        )}
       </View>
     </Pressable>
   );
