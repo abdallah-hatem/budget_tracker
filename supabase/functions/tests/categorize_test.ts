@@ -107,6 +107,7 @@ Deno.test("maps a well-formed English completion to ParsedTransaction", async ()
     category_slug: "food",
     note: "coffee",
     confidence: 0.94,
+    kind: "transaction",
   });
 
   // Verify the request we sent Groq: model, max_tokens, JSON mode, system+user.
@@ -124,6 +125,48 @@ Deno.test("maps a well-formed English completion to ParsedTransaction", async ()
   for (const slug of ["food", "salary", "transfer_in", "other_expense", "other_income"]) {
     assert(sys.includes(slug), `system prompt should list slug ${slug}`);
   }
+});
+
+Deno.test("classifies a promo/offer via the kind field", async () => {
+  const { create } = stub(
+    fakeCompletion({
+      type: "expense",
+      amount: 1500,
+      currency: "EGP",
+      category_slug: "other_expense",
+      note: "moneyback",
+      confidence: 0.4,
+      kind: "offer",
+    }),
+  );
+
+  const parsed = await categorize(
+    "15% Moneyback on Zara, capped at EGP 1,500. T&Cs apply.",
+    "en",
+    "fake-key",
+    { createCompletion: create },
+  );
+
+  assertEquals(parsed.kind, "offer");
+});
+
+Deno.test("kind defaults to 'transaction' when the model omits it", async () => {
+  const { create } = stub(
+    fakeCompletion({
+      type: "expense",
+      amount: 50,
+      currency: "EGP",
+      category_slug: "food",
+      note: "coffee",
+      confidence: 0.9,
+    }),
+  );
+
+  const parsed = await categorize("spent 50 EGP on coffee", "en", "fake-key", {
+    createCompletion: create,
+  });
+
+  assertEquals(parsed.kind, "transaction");
 });
 
 Deno.test("maps an Arabic utterance and passes occurred_at through", async () => {

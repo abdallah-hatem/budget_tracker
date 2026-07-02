@@ -10,6 +10,7 @@ const SAMPLE: ParsedTransaction = {
   category_slug: "food",
   note: "coffee",
   confidence: 0.94,
+  kind: "transaction",
 };
 
 function deps(over: Partial<HandlerDeps> = {}): HandlerDeps {

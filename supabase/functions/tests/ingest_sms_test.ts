@@ -15,6 +15,7 @@ const SAMPLE_PARSED: ParsedTransaction = {
   category_slug: "food",
   note: "lunch",
   confidence: 0.92,
+  kind: "transaction",
 };
 
 const SAMPLE_PARSED_ZERO: ParsedTransaction = {
@@ -24,6 +25,19 @@ const SAMPLE_PARSED_ZERO: ParsedTransaction = {
   category_slug: "other_expense",
   note: "",
   confidence: 0,
+  kind: "other",
+};
+
+// A promo/offer that DOES carry an amount (e.g. "cashback capped at EGP 1,500").
+// Passes the amount>0 gate but must be skipped because kind is "offer".
+const SAMPLE_PARSED_OFFER: ParsedTransaction = {
+  type: "expense",
+  amount: 1500,
+  currency: "EGP",
+  category_slug: "other_expense",
+  note: "moneyback",
+  confidence: 0.4,
+  kind: "offer",
 };
 
 const VALID_TOKEN = "my-raw-secret-token";
@@ -338,7 +352,30 @@ Deno.test("amount === 0 → insertPending NOT called → 200 {ok:true, skipped:t
 
   assertEquals(res.status, 200);
   const body = await res.json();
-  assertEquals(body, { ok: true, skipped: true });
+  assertEquals(body, { ok: true, skipped: true, reason: "no_amount" });
+  assertEquals(insertCalled, 0);
+});
+
+Deno.test("kind:'offer' with amount > 0 → insertPending NOT called → skipped as offer", async () => {
+  let insertCalled = 0;
+
+  const res = await handleIngest(
+    postReq({
+      token: VALID_TOKEN,
+      text: "Enjoy 15% Moneyback on your Zara purchase, capped at EGP 1,500. T&Cs apply.",
+    }),
+    makeDeps({
+      categorizeFn: () => Promise.resolve(SAMPLE_PARSED_OFFER),
+      insertPending: () => {
+        insertCalled++;
+        return Promise.resolve("txn-id");
+      },
+    }),
+  );
+
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body, { ok: true, skipped: true, reason: "offer" });
   assertEquals(insertCalled, 0);
 });
 

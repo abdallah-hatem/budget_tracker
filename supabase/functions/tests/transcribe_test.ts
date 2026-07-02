@@ -9,6 +9,7 @@ const parsed: ParsedTransaction = {
   category_slug: "food",
   note: "coffee",
   confidence: 0.9,
+  kind: "transaction",
 };
 
 function deps(over: Partial<HandlerDeps> = {}): HandlerDeps {
