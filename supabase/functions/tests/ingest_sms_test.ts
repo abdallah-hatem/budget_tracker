@@ -40,6 +40,18 @@ const SAMPLE_PARSED_OFFER: ParsedTransaction = {
   kind: "offer",
 };
 
+// An unpaid bill / traffic-fine notice that lists an amount but is NOT a real
+// money movement (e.g. a النيابة العامة "pay your fines" SMS) → kind:"other".
+const SAMPLE_PARSED_FINE: ParsedTransaction = {
+  type: "expense",
+  amount: 200,
+  currency: "EGP",
+  category_slug: "other_expense",
+  note: "traffic fine",
+  confidence: 0.3,
+  kind: "other",
+};
+
 const VALID_TOKEN = "my-raw-secret-token";
 const VALID_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 
@@ -376,6 +388,29 @@ Deno.test("kind:'offer' with amount > 0 → insertPending NOT called → skipped
   assertEquals(res.status, 200);
   const body = await res.json();
   assertEquals(body, { ok: true, skipped: true, reason: "offer" });
+  assertEquals(insertCalled, 0);
+});
+
+Deno.test("kind:'other' with amount > 0 (unpaid fine/bill) → NOT inserted → skipped", async () => {
+  let insertCalled = 0;
+
+  const res = await handleIngest(
+    postReq({
+      token: VALID_TOKEN,
+      text: "النيابة العامة: تم تسجيل مخالفة بقيمه 200.00 - ادفع مخالفاتك",
+    }),
+    makeDeps({
+      categorizeFn: () => Promise.resolve(SAMPLE_PARSED_FINE),
+      insertPending: () => {
+        insertCalled++;
+        return Promise.resolve("txn-id");
+      },
+    }),
+  );
+
+  assertEquals(res.status, 200);
+  const body = await res.json();
+  assertEquals(body, { ok: true, skipped: true, reason: "other" });
   assertEquals(insertCalled, 0);
 });
 
