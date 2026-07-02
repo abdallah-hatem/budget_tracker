@@ -10,6 +10,10 @@ import { CATEGORY_SLUGS, FALLBACK_EXPENSE_SLUG, FALLBACK_INCOME_SLUG } from "./c
 export type Locale = "ar" | "en";
 export type TxnType = "expense" | "income";
 
+/** What the message actually is — so promos/offers that merely MENTION an amount
+ *  don't get ingested as real transactions. */
+export type MessageKind = "transaction" | "offer" | "other";
+
 export interface ParsedTransaction {
   type: TxnType;
   amount: number;
@@ -17,6 +21,8 @@ export interface ParsedTransaction {
   category_slug: string;
   note: string;
   confidence: number;
+  /** "transaction" = money moved; "offer" = marketing/promo; "other" = OTP/info. */
+  kind: MessageKind;
   occurred_at?: string;
 }
 
@@ -106,6 +112,13 @@ function systemPrompt(locale: Locale, extra: CustomCategory[] = []): string {
     "  health; clothes, shoes -> clothes; playing a sport (padel/بادل, football/كورة, ping pong, tennis,",
     "  gym/جيم) -> sports; salary or paycheck -> salary; a refund / money back -> refund.",
     '- "note": a very short human label for the item (e.g. "coffee", "قهوة").',
+    '- "kind": what the message IS — "transaction" (money ACTUALLY moved: a debit,',
+    '  credit, purchase, withdrawal, transfer, salary, refund you received), "offer"',
+    '  (marketing / promotion — cashback, "moneyback", discount, "% off", "shop and',
+    '  get", coupon, points, loyalty, "capped at", "T&Cs apply", win/prize), or',
+    '  "other" (OTP/verification code, balance inquiry, generic info). An amount that',
+    '  appears inside an OFFER (e.g. "cashback capped at EGP 1,500") is NOT a real',
+    '  transaction → set kind "offer". When genuinely unsure, prefer "transaction".',
     '- "confidence": a number from 0 to 1.',
     '- "occurred_at": optional ISO-8601 timestamp if the text states a date/time; omit otherwise.',
     "Amounts are in Egyptian Pounds (EGP) by default.",
@@ -152,6 +165,12 @@ function realTransport(apiKey: string): CreateCompletion {
 // --- Field coercion helpers (provider-agnostic; unchanged from before) ---
 function coerceType(v: unknown): TxnType {
   return v === "income" ? "income" : "expense";
+}
+
+// Default to "transaction" when the model omits/garbles it — bias against
+// dropping a real transaction (false negative) over letting a promo through.
+function coerceKind(v: unknown): MessageKind {
+  return v === "offer" ? "offer" : v === "other" ? "other" : "transaction";
 }
 
 function coerceAmount(v: unknown): number {
@@ -249,6 +268,7 @@ export async function categorize(
     category_slug: coerceSlug(input.category_slug, type, extra.map((c) => c.slug)),
     note: coerceNote(input.note),
     confidence,
+    kind: coerceKind(input.kind),
   };
 
   const occurredAt = coerceOccurredAt(input.occurred_at);
@@ -382,6 +402,7 @@ export async function categorizeMany(
       category_slug: coerceSlug(rec.category_slug, type, extraSlugs),
       note: coerceNote(rec.note),
       confidence: coerceConfidence(rec.confidence),
+      kind: coerceKind(rec.kind),
     };
     const occurredAt = coerceOccurredAt(rec.occurred_at);
     if (occurredAt) parsed.occurred_at = occurredAt;

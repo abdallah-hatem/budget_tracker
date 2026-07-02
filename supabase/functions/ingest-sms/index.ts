@@ -174,9 +174,17 @@ export async function handleIngest(
     input_len: text.length, result_count: amount > 0 ? 1 : 0,
   });
 
-  // Non-transaction SMS (OTP, promo, …) — skip without inserting.
-  if (amount <= 0) {
-    return json({ ok: true, skipped: true }, 200);
+  // Non-transaction SMS — skip without inserting. Two cases:
+  //  • no usable amount (OTP / balance / info) → amount <= 0
+  //  • a marketing/promo message that merely MENTIONS an amount (cashback,
+  //    "moneyback", "% off", coupons) → the LLM tags kind:"offer". These pass
+  //    the coarse amount check (e.g. "cashback capped at EGP 1,500") but must
+  //    NOT become a pending transaction.
+  if (amount <= 0 || parsed.kind === "offer") {
+    return json(
+      { ok: true, skipped: true, reason: parsed.kind === "offer" ? "offer" : "no_amount" },
+      200,
+    );
   }
 
   // --- Apply the user's keyword rules (override the AI category + note) ---
