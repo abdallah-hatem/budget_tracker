@@ -46,6 +46,7 @@ targets/*/Info.plist
 
 # Local prod credentials — NEVER commit
 supabase_credentials.md
+credentials.md
 
 
 # FCM service-account private key (push sender) — NEVER commit
