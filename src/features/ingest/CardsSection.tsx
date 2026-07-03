@@ -10,6 +10,7 @@ import {
   setCardEnabled,
   renameCard,
   deleteCard,
+  addManualCard,
   type DetectedCard,
 } from './cards';
 
@@ -30,6 +31,11 @@ export function CardsSection({ locale }: { locale: Locale }) {
   const [cards, setCards] = useState<DetectedCard[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  // Manual "add a card" inline form.
+  const [adding, setAdding] = useState(false);
+  const [newDigits, setNewDigits] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
     listDetectedCards().then(setCards).catch(() => {});
@@ -92,6 +98,26 @@ export function CardsSection({ locale }: { locale: Locale }) {
     },
     [locale, load],
   );
+
+  const commitAdd = useCallback(async () => {
+    const digits = newDigits.replace(/\D/g, '');
+    if (digits.length < 4) {
+      Alert.alert('', t('cards.add_invalid', locale));
+      return;
+    }
+    setSaving(true);
+    try {
+      await addManualCard(digits, newLabel);
+      setAdding(false);
+      setNewDigits('');
+      setNewLabel('');
+      load();
+    } catch {
+      Alert.alert('', t('cards.add_invalid', locale));
+    } finally {
+      setSaving(false);
+    }
+  }, [newDigits, newLabel, locale, load]);
 
   return (
     <CollapsibleCard title={t('cards.title', locale)} rtl={rtl} testID="section-cards">
@@ -181,6 +207,117 @@ export function CardsSection({ locale }: { locale: Locale }) {
             </View>
           ))}
         </View>
+      )}
+
+      {/* Manual add — a card added by its last-4 captures immediately (or can be
+          pre-disabled). Same fingerprint as the parser, so it merges with the
+          auto-detected row for that number. */}
+      {adding ? (
+        <View
+          style={{
+            marginTop: 14,
+            gap: 10,
+            backgroundColor: SURFACE,
+            borderRadius: 12,
+            padding: 12,
+          }}
+        >
+          <TextInput
+            value={newDigits}
+            onChangeText={(s) => setNewDigits(s.replace(/\D/g, '').slice(0, 4))}
+            keyboardType="number-pad"
+            autoFocus
+            maxLength={4}
+            placeholder={t('cards.add_digits', locale)}
+            placeholderTextColor={INK3}
+            style={{
+              fontFamily: FONT.jakartaMd,
+              fontSize: 15,
+              color: INK,
+              backgroundColor: '#0E1213',
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              textAlign: rtl ? 'right' : 'left',
+            }}
+          />
+          <TextInput
+            value={newLabel}
+            onChangeText={setNewLabel}
+            placeholder={t('cards.add_label', locale)}
+            placeholderTextColor={INK3}
+            style={{
+              fontFamily: FONT.jakartaMd,
+              fontSize: 15,
+              color: INK,
+              backgroundColor: '#0E1213',
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              textAlign: rtl ? 'right' : 'left',
+            }}
+          />
+          <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10 }}>
+            <TouchableOpacity
+              onPress={commitAdd}
+              disabled={saving}
+              accessibilityRole="button"
+              style={{
+                flex: 1,
+                backgroundColor: ACCENT,
+                borderRadius: 10,
+                paddingVertical: 11,
+                alignItems: 'center',
+                opacity: saving ? 0.6 : 1,
+              }}
+            >
+              <AppText weight="semibold" style={{ fontSize: 14, color: '#04110B' }}>
+                {t('cards.save', locale)}
+              </AppText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setAdding(false);
+                setNewDigits('');
+                setNewLabel('');
+              }}
+              accessibilityRole="button"
+              style={{
+                flex: 1,
+                backgroundColor: '#0E1213',
+                borderRadius: 10,
+                paddingVertical: 11,
+                alignItems: 'center',
+              }}
+            >
+              <AppText style={{ fontSize: 14, color: INK2 }}>
+                {t('cards.cancel', locale)}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <TouchableOpacity
+          onPress={() => setAdding(true)}
+          accessibilityRole="button"
+          testID="cards-add-button"
+          style={{
+            flexDirection: rtl ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            marginTop: 14,
+            paddingVertical: 11,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#243029',
+          }}
+        >
+          <MaterialCommunityIcons name="plus" size={18} color={ACCENT} />
+          <AppText weight="medium" style={{ fontSize: 14, color: ACCENT }}>
+            {t('cards.add', locale)}
+          </AppText>
+        </TouchableOpacity>
       )}
     </CollapsibleCard>
   );

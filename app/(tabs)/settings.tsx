@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, Switch, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
@@ -43,6 +43,18 @@ export default function Settings() {
     // Persist on the profile row (RLS restricts to the current user).
     await supabase.from('profiles').update({ locale: next }).eq('id', user.id);
     setBusy(false);
+  }
+
+  // ── auto-capture master switch ──────────────────────────────────────────────
+  const captureOn = profile?.auto_capture_enabled ?? true;
+  async function setCaptureEnabled(next: boolean) {
+    if (!user) return;
+    updateProfile({ auto_capture_enabled: next }); // optimistic
+    const { error } = await supabase
+      .from('profiles')
+      .update({ auto_capture_enabled: next })
+      .eq('id', user.id);
+    if (error) updateProfile({ auto_capture_enabled: !next }); // revert on failure
   }
 
   // ── accounts ────────────────────────────────────────────────────────────
@@ -365,6 +377,36 @@ export default function Settings() {
 
       {/* ── START OF MONTH ─────────────────────────────────────────────────── */}
       <MonthStartSection locale={locale} />
+
+      {/* ── AUTO-CAPTURE MASTER SWITCH (server-side gate; both platforms) ────── */}
+      <Card>
+        <View
+          style={{
+            flexDirection: rtl ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <AppText weight="semibold" style={{ fontSize: 15, textAlign: rtl ? 'right' : 'left' }}>
+              {t('capture_toggle.title', locale)}
+            </AppText>
+            <AppText
+              className="text-ink2"
+              style={{ fontSize: 13, lineHeight: 19, marginTop: 4, textAlign: rtl ? 'right' : 'left' }}
+            >
+              {t('capture_toggle.desc', locale)}
+            </AppText>
+          </View>
+          <Switch
+            value={captureOn}
+            onValueChange={setCaptureEnabled}
+            trackColor={{ false: '#2A312F', true: 'rgba(43,217,142,0.5)' }}
+            thumbColor={captureOn ? '#2BD98E' : '#6B7672'}
+            testID="auto-capture-toggle"
+          />
+        </View>
+      </Card>
 
       {/* ── DETECTED CARDS (auto-grouped from bank messages; both platforms) ── */}
       <CardsSection locale={locale} />

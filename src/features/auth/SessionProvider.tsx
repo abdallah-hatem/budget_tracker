@@ -16,6 +16,9 @@ export interface Profile {
   currency: string;
   /** Set when the user soft-deleted their account; gates them out of the app. */
   deleted_at: string | null;
+  /** Master switch for SMS auto-capture. When false, ingest-sms discards all
+   *  forwarded messages server-side. Defaults true. */
+  auto_capture_enabled: boolean;
 }
 
 export interface SessionContextValue {
@@ -39,7 +42,7 @@ const SessionContext = createContext<SessionContextValue>({
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, display_name, locale, currency, deleted_at')
+    .select('id, display_name, locale, currency, deleted_at, auto_capture_enabled')
     .eq('id', userId)
     .maybeSingle();
   if (error) {

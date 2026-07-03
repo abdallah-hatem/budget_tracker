@@ -61,6 +61,12 @@ export interface IngestDeps {
    * the token does not exist or is revoked.
    */
   lookupUserId: (tokenHash: string) => Promise<string | null>;
+  /**
+   * Whether the user has SMS auto-capture enabled (profiles.auto_capture_enabled).
+   * When false, every forwarded message is discarded. Optional so older tests
+   * default to enabled.
+   */
+  isCaptureEnabled?: (userId: string) => Promise<boolean>;
   /** Return the user's keyword rules (override category + note on a match). */
   getRules: (userId: string) => Promise<SmsRule[]>;
   /** Insert a pending transaction row into the DB. Throw on error. */
@@ -156,6 +162,12 @@ export async function handleIngest(
 
   // --- Update last_used_at (best-effort; do not fail the request) ---
   deps.touchToken(tokenHash).catch(() => {/* swallow */});
+
+  // --- Master switch: user paused auto-capture → discard everything (before the
+  // LLM, so a paused user costs no Groq calls). ---
+  if (deps.isCaptureEnabled && !(await deps.isCaptureEnabled(userId))) {
+    return json({ ok: true, skipped: true, reason: "capture_off" }, 200);
+  }
 
   // --- Cheap pre-filter: skip obvious non-transactions BEFORE the LLM ---
   // Keyword-free capture forwards more messages (OTP, promo, …); this avoids
@@ -367,6 +379,17 @@ if (import.meta.main) {
         .maybeSingle();
       if (error || !data) return null;
       return (data as { user_id: string }).user_id;
+    },
+
+    async isCaptureEnabled(userId) {
+      const { data } = await sb
+        .from("profiles")
+        .select("auto_capture_enabled")
+        .eq("id", userId)
+        .maybeSingle();
+      // Fail-open: if the row/column is missing, treat capture as ENABLED so we
+      // never silently drop a real user's messages.
+      return (data as { auto_capture_enabled?: boolean } | null)?.auto_capture_enabled !== false;
     },
 
     async getRules(userId) {

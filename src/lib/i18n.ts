@@ -278,6 +278,22 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   },
   'cards.save': { en: 'Save', ar: 'حفظ' },
   'cards.cancel': { en: 'Cancel', ar: 'إلغاء' },
+  'cards.add': { en: 'Add a card', ar: 'إضافة بطاقة' },
+  'cards.add_digits': { en: 'Last 4 digits', ar: 'آخر ٤ أرقام' },
+  'cards.add_label': { en: 'Name (optional)', ar: 'الاسم (اختياري)' },
+  'cards.add_hint': {
+    en: 'Add a card by its last 4 digits — then its messages capture right away, or turn it off to ignore it.',
+    ar: 'أضف بطاقة بآخر ٤ أرقام — عندها تُلتقط رسائلها فورًا، أو أوقفها لتجاهلها.',
+  },
+  'cards.add_invalid': { en: 'Enter the last 4 digits.', ar: 'أدخل آخر ٤ أرقام.' },
+  'capture_toggle.title': {
+    en: 'Auto-capture from messages',
+    ar: 'الالتقاط التلقائي من الرسائل',
+  },
+  'capture_toggle.desc': {
+    en: 'When off, all forwarded bank messages are ignored. Your cards and setup stay — turn it back on anytime.',
+    ar: 'عند الإيقاف، يتم تجاهل كل الرسائل البنكية المُحوّلة. تبقى بطاقاتك وإعداداتك — أعد تشغيله في أي وقت.',
+  },
 
   // SMS auto-capture onboarding tutorial
   'sms_tut.heading': { en: 'Auto-capture your bank SMS', ar: 'التقاط رسائل بنكك تلقائيًا' },

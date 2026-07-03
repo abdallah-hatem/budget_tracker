@@ -414,6 +414,47 @@ Deno.test("kind:'other' with amount > 0 (unpaid fine/bill) → NOT inserted → 
   assertEquals(insertCalled, 0);
 });
 
+Deno.test("auto-capture OFF → discarded before the LLM (no categorize, no insert)", async () => {
+  let categorizeCalled = 0;
+  let insertCalled = 0;
+
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+    makeDeps({
+      isCaptureEnabled: () => Promise.resolve(false),
+      categorizeFn: () => {
+        categorizeCalled++;
+        return Promise.resolve(SAMPLE_PARSED);
+      },
+      insertPending: () => {
+        insertCalled++;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  assertEquals(res.status, 200);
+  assertEquals(await res.json(), { ok: true, skipped: true, reason: "capture_off" });
+  assertEquals(categorizeCalled, 0); // gated before the Groq call
+  assertEquals(insertCalled, 0);
+});
+
+Deno.test("auto-capture ON (default dep) → proceeds normally", async () => {
+  let insertCalled = 0;
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Paid 250 EGP for lunch" }),
+    makeDeps({
+      isCaptureEnabled: () => Promise.resolve(true),
+      insertPending: () => {
+        insertCalled++;
+        return Promise.resolve();
+      },
+    }),
+  );
+  assertEquals(res.status, 200);
+  assertEquals(insertCalled, 1);
+});
+
 Deno.test("very small positive amount that rounds to 0 → skipped", async () => {
   let insertCalled = 0;
 
