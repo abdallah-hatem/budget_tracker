@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
 import { t, isRTL } from '@/src/lib/i18n';
@@ -181,6 +182,27 @@ export default function Settings() {
 
   const selected = locale;
 
+  // ── OTA diagnostics (temporary) ─────────────────────────────────────────────
+  const [checking, setChecking] = useState(false);
+  async function checkForUpdate() {
+    setChecking(true);
+    try {
+      const r = await Updates.checkForUpdateAsync();
+      if (r.isAvailable) {
+        await Updates.fetchUpdateAsync();
+        Alert.alert('Update downloaded', 'Reloading into the new version…', [
+          { text: 'Reload', onPress: () => void Updates.reloadAsync() },
+        ]);
+      } else {
+        Alert.alert('Already up to date', 'This device already has the latest update on its channel.');
+      }
+    } catch (e) {
+      Alert.alert('Update check failed', e instanceof Error ? e.message : String(e));
+    } finally {
+      setChecking(false);
+    }
+  }
+
   const ingestUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL ?? '<SUPABASE_URL>'}/functions/v1/ingest-sms`;
 
   return (
@@ -193,6 +215,27 @@ export default function Settings() {
       >
         {t('settings.title', locale)}
       </AppText>
+
+      {/* ── OTA DIAGNOSTICS (temporary — remove after debugging) ────────────── */}
+      <Card className="mb-4">
+        <SectionLabel>Diagnostics · build DIAG-1</SectionLabel>
+        <AppText style={{ fontSize: 12, color: '#A8B2AF', marginTop: 8, lineHeight: 18 }}>
+          {`bundle: ${Updates.isEmbeddedLaunch ? 'EMBEDDED (no OTA applied)' : (Updates.updateId?.slice(0, 8) ?? 'unknown')}\n` +
+            `channel: ${Updates.channel ?? '—'}\n` +
+            `runtime: ${Updates.runtimeVersion ?? '—'}\n` +
+            `created: ${Updates.createdAt ? Updates.createdAt.toISOString() : '—'}`}
+        </AppText>
+        <TouchableOpacity
+          onPress={checkForUpdate}
+          disabled={checking}
+          accessibilityRole="button"
+          style={{ marginTop: 12, backgroundColor: '#2BD98E', borderRadius: 10, paddingVertical: 11, alignItems: 'center', opacity: checking ? 0.6 : 1 }}
+        >
+          <AppText weight="semibold" style={{ fontSize: 14, color: '#04110B' }}>
+            {checking ? 'Checking…' : 'Check for updates now'}
+          </AppText>
+        </TouchableOpacity>
+      </Card>
 
       {/* ── ACCOUNT ────────────────────────────────────────────────────────── */}
       <Card className="mb-4">
