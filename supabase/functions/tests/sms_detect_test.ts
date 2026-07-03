@@ -93,3 +93,38 @@ Deno.test("extractCard: nothing identifiable → unknown bucket", () => {
   const c = extractCard("تم استلام مبلغ 100 جم");
   assertEquals(c.fingerprint, "unknown");
 });
+
+// --- Hardened tail extraction: every masking style collapses to one card ---
+
+Deno.test("extractCard: leading-zero tail is preserved (0328, not 328)", () => {
+  const c = extractCard("Purchase EGP 50 on card ****0328");
+  assertEquals(c.fingerprint, "acct:0328");
+  assertEquals(c.label, "•••• 0328");
+});
+
+Deno.test("extractCard: mask variants all map to the same fingerprint", () => {
+  const variants = [
+    "خصم من بطاقتك xxxx0328 بمبلغ 50",
+    "خصم من بطاقتك ****0328 بمبلغ 50",
+    "خصم من بطاقتك ••••0328 بمبلغ 50",
+    "purchase on card ...0328",
+    "purchase on card ----0328",
+    "بطاقة ٭٭٭٭0328",
+    "**** **** **** 0328 charged",
+  ];
+  for (const v of variants) {
+    assertEquals(extractCard(v).fingerprint, "acct:0328", v);
+  }
+});
+
+Deno.test("extractCard: keyword tail with NO mask glyph (ending / رقم)", () => {
+  assertEquals(extractCard("Your card ending 4321 was charged EGP 90").fingerprint, "acct:4321");
+  assertEquals(extractCard("card ending in 4321").fingerprint, "acct:4321");
+  assertEquals(extractCard("تم إضافة مبلغ 100 إلى حساب رقم 8889").fingerprint, "acct:8889");
+});
+
+Deno.test("extractCard: a date/decimal is NOT mistaken for a card tail", () => {
+  // Single dash date + a decimal amount, no mask run, no card keyword+4-digits.
+  const c = extractCard("قسط مستحق بتاريخ 2026-07-10 بقيمة 3200.00");
+  assert(!c.fingerprint.startsWith("acct:"));
+});

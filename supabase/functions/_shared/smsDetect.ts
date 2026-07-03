@@ -72,16 +72,43 @@ export interface CardInfo {
 }
 
 const PREPAID = /مسبقة الدفع|prepaid/i;
-// A MASKED account/card number: a run of mask chars (x/*/•/·) then the visible
-// tail digits — e.g. "xxx8889", "****8889". A masked prefix is what
-// distinguishes a card/account number from a plain reference number (which
-// banks print in full, e.g. "رقم مرجعي 887829149444").
-const MASKED_TAIL = /[x*•·]{2,}\s?(\d{2,6})\b/i;
+
+// Mask glyphs banks use to redact the leading digits of a card/account number:
+// latin x, asterisk, bullets, middle dot, Arabic star (٭), bullet operator (∙).
+const MASK_GLYPH = "xX*•·٭∙";
+
+// A MASKED tail: a run of >=2 mask glyphs (optionally space-separated) then the
+// 2-6 visible tail digits — "xxx8889", "**** 8889", "•••• 0328". The masked
+// prefix is what distinguishes a card number from a full reference number (which
+// banks print unmasked, e.g. "رقم مرجعي 887829149444").
+const MASKED_RUN = new RegExp(`(?:[${MASK_GLYPH}]\\s?){2,}(\\d{2,6})\\b`);
+// A run of dots/dashes (or a single ellipsis char) then the tail — "…0328",
+// "----0328". 2+ dots/dashes, so a decimal ("200.00") or a date ("2026-07-10")
+// with single separators never matches.
+const DOTDASH_RUN = /(?:\.{2,}|…|[-–—]{2,})\s?(\d{2,6})\b/;
+// Keyword-anchored tail: an account/card word then optional separator/mask then
+// exactly 4 visible digits, even with NO mask glyph — "card ending 4321",
+// "رقم 8889". Only separators/mask chars may sit between the keyword and the
+// digits, so a following WORD ("رقم مرجعي 8878…") blocks the match — reference
+// numbers are not mistaken for cards.
+const KEYWORD_TAIL =
+  /(?:ending(?:\s+in)?|acct\.?|account|card|رقم|بطاقة|حساب)\s*(?:no\.?|#|:)?\s*[xX*•·٭∙.\-–—]*\s?(\d{4})\b/i;
 // Account/card context words (used only as a weak fallback signal).
 const ACCOUNT_CTX = /حساب|بطاقة|\baccount\b|\bcard\b/i;
 
 function isArabic(text: string): boolean {
   return /[؀-ۿ]/.test(text);
+}
+
+/** Canonical per-card key from a card's visible tail digits: the LAST 4, zero-
+ *  padded. So "xxx0328", "****0328", "…0328" and a manually-typed "0328" all
+ *  collapse to the SAME fingerprint `acct:0328`. Shared by extractCard and the
+ *  manual "add card" form, so a typed card matches its future messages. */
+export function fingerprintFromDigits(
+  digits: string,
+): { fingerprint: string; last4: string } {
+  const last4 = digits.replace(/\D/g, "").slice(-4).padStart(4, "0");
+  return { fingerprint: `acct:${last4}`, last4 };
 }
 
 /**
@@ -98,11 +125,12 @@ export function extractCard(text: string): CardInfo {
     return { fingerprint: "prepaid", label: ar ? "بطاقة مسبقة الدفع" : "Prepaid card" };
   }
 
-  // 2. Masked account/card number → group by its visible tail.
-  const masked = t.match(MASKED_TAIL);
-  if (masked) {
-    const tail = masked[1].replace(/^0+(?=\d)/, "");
-    return { fingerprint: `acct:${tail}`, label: `•••• ${tail}` };
+  // 2. Masked / keyworded account or card number → group by its visible tail,
+  //    normalized to the last 4 digits so every masking style maps to one card.
+  const tail = t.match(MASKED_RUN) ?? t.match(DOTDASH_RUN) ?? t.match(KEYWORD_TAIL);
+  if (tail) {
+    const { fingerprint, last4 } = fingerprintFromDigits(tail[1]);
+    return { fingerprint, label: `•••• ${last4}` };
   }
 
   // 3. Weak fallback: an account/card word with no parseable number.
