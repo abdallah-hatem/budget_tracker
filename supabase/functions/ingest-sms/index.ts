@@ -20,6 +20,32 @@ import { withSentry } from "../_shared/sentry.ts";
 
 const MAX_TEXT_LENGTH = 2000;
 
+/**
+ * Collapse a bank notification that repeats its own body. Android's
+ * NotificationListener exposes the message in BOTH `EXTRA_TEXT` (a collapsed /
+ * truncated line) and `EXTRA_BIG_TEXT` (the expanded line); the Android capture
+ * forwards both, so the text reaching us can contain the amount TWICE — and the
+ * categorizer then SUMS it (a 250 charge is logged as 500). Fix: drop any line
+ * that is contained within another line, and drop exact-duplicate lines, keeping
+ * order. A single-line body (iOS SMS, or a normal notification) is returned
+ * unchanged, so this is a safe no-op everywhere else.
+ */
+export function collapseRepeatedBody(text: string): string {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+  const kept: string[] = [];
+  for (const line of lines) {
+    // Already covered by a longer kept line (this is the truncated duplicate).
+    if (kept.some((k) => k.includes(line))) continue;
+    // This longer line supersedes any shorter kept line it contains.
+    for (let i = kept.length - 1; i >= 0; i--) {
+      if (line.includes(kept[i])) kept.splice(i, 1);
+    }
+    kept.push(line);
+  }
+  const out = kept.join("\n");
+  return out.length > 0 ? out : text;
+}
+
 // ---------------------------------------------------------------------------
 // Injectable dependency interface (enables unit tests with no network or DB).
 // ---------------------------------------------------------------------------
@@ -149,11 +175,13 @@ export async function handleIngest(
   deps.touchToken(tokenHash).catch(() => {/* swallow */});
 
   // --- Categorize the SMS ---
+  // Collapse a doubled notification body first, so the amount isn't summed twice.
+  const cleanText = collapseRepeatedBody(text);
   const extra = deps.fetchCategoriesFn ? await deps.fetchCategoriesFn(userId) : [];
   const t0 = Date.now();
   let parsed: ParsedTransaction;
   try {
-    parsed = await deps.categorizeFn(text, "en", deps.groqKey, extra);
+    parsed = await deps.categorizeFn(cleanText, "en", deps.groqKey, extra);
   } catch (e) {
     deps.logEvent?.({
       user_id: userId, fn: "ingest-sms", source: "sms", ok: false,
