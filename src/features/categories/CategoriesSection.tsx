@@ -207,21 +207,18 @@ function CategoryForm(p: FormProps) {
         <Pill testID="cat-kind-income" label={t('income', locale)} active={p.kind === 'income'} onPress={() => p.setKind('income')} />
       </View>
 
-      {/* Icon grid */}
+      {/* Icon grid — an INLINE wrapped grid, deliberately NOT its own ScrollView.
+          A vertical scroll nested inside the Settings page's vertical scroll never
+          reliably wins the touch gesture on Android; `nestedScrollEnabled` was
+          shipped twice and still failed on real devices. So the grid now flows in
+          the page and you scroll the PAGE to reach any icon — a scroll that can't
+          conflict with anything. */}
       <AppText className="text-ink3" style={{ fontSize: 11, textAlign: align }}>{t('cat.icon', locale)}</AppText>
-      <ScrollView
-        style={{ maxHeight: 168 }}
-        contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
-        showsVerticalScrollIndicator={false}
-        // Android: without this, the parent Settings scroll swallows the gesture
-        // and the icon grid won't scroll on its own.
-        nestedScrollEnabled
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {CATEGORY_ICONS.map((g) => (
           <IconTile key={g} icon={g} color={p.color} size={40} selected={p.icon === g} onPress={() => p.setIcon(g)} />
         ))}
-      </ScrollView>
+      </View>
 
       {/* Color row */}
       <AppText className="text-ink3" style={{ fontSize: 11, textAlign: align }}>{t('cat.color', locale)}</AppText>
