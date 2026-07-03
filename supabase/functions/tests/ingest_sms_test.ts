@@ -1,7 +1,12 @@
 // Tests for ingest-sms Edge Function handler.
 // All deps are injected fakes — no network, no database.
 import { assert, assertEquals } from "@std/assert";
-import { handleIngest, type ExpoPushMessage, type IngestDeps } from "../ingest-sms/index.ts";
+import {
+  handleIngest,
+  collapseRepeatedBody,
+  type ExpoPushMessage,
+  type IngestDeps,
+} from "../ingest-sms/index.ts";
 import type { ParsedTransaction } from "../_shared/categorize.ts";
 
 // ---------------------------------------------------------------------------
@@ -659,3 +664,38 @@ Deno.test(
     await Promise.resolve();
   },
 );
+
+// ---------------------------------------------------------------------------
+// Tests: doubled-notification-body collapse (Android BIG_TEXT + TEXT dedup)
+// ---------------------------------------------------------------------------
+
+Deno.test("collapseRepeatedBody: drops a truncated line contained in the full one", () => {
+  const t = "تم خصم 250 من حسابك\nتم خصم 250 من حسابك رقم xxxx1234 لدى كارفور";
+  assertEquals(collapseRepeatedBody(t), "تم خصم 250 من حسابك رقم xxxx1234 لدى كارفور");
+});
+
+Deno.test("collapseRepeatedBody: drops an exact-duplicate line", () => {
+  assertEquals(collapseRepeatedBody("Purchase EGP 250\nPurchase EGP 250"), "Purchase EGP 250");
+});
+
+Deno.test("collapseRepeatedBody: single-line body is returned unchanged (iOS no-op)", () => {
+  const t = "Purchase EGP 250 at Carrefour on card ending 1234";
+  assertEquals(collapseRepeatedBody(t), t);
+});
+
+Deno.test("ingest: a doubled notification body is collapsed BEFORE categorize", async () => {
+  let seenByLlm = "";
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "خصم 250\nخصم 250 من حسابك رقم xxxx1234" }),
+    makeDeps({
+      categorizeFn: (txt) => {
+        seenByLlm = txt;
+        return Promise.resolve(SAMPLE_PARSED);
+      },
+    }),
+  );
+  assertEquals(res.status, 200);
+  // The LLM must see the amount only ONCE (the truncated first line is dropped),
+  // so it can't sum 250 + 250 into 500.
+  assertEquals(seenByLlm, "خصم 250 من حسابك رقم xxxx1234");
+});
