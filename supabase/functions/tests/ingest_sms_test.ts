@@ -380,7 +380,7 @@ Deno.test("kind:'offer' with amount > 0 → insertPending NOT called → skipped
       categorizeFn: () => Promise.resolve(SAMPLE_PARSED_OFFER),
       insertPending: () => {
         insertCalled++;
-        return Promise.resolve("txn-id");
+        return Promise.resolve();
       },
     }),
   );
@@ -403,7 +403,7 @@ Deno.test("kind:'other' with amount > 0 (unpaid fine/bill) → NOT inserted → 
       categorizeFn: () => Promise.resolve(SAMPLE_PARSED_FINE),
       insertPending: () => {
         insertCalled++;
-        return Promise.resolve("txn-id");
+        return Promise.resolve();
       },
     }),
   );
