@@ -79,29 +79,59 @@ export function SmsTutorialAnimated({ locale }: { locale: Locale }) {
         getItemLayout={(_, i) => ({ length: pageW, offset: pageW * i, index: i })}
         onScrollBeginDrag={() => setAuto(false)}
         onMomentumScrollEnd={onMomentumEnd}
-        renderItem={({ item, index: i }) => (
-          <View style={{ width: pageW }}>
-            <View
-              style={{
-                width: '100%',
-                height: imageH,
-                borderRadius: 22,
-                overflow: 'hidden',
-                backgroundColor: '#000',
-                borderWidth: 0.5,
-                borderColor: '#1F2725',
-              }}
-            >
-              <Image source={item.image} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+        renderItem={({ item, index: i }) => {
+          // If this frame has a highlight arrow, place it over the ACTUAL displayed
+          // image. The screenshot is `contain`-fit (portrait → height fills the box,
+          // letterboxed left/right), so map the arrow's image-fraction onto that box.
+          let arrowLeft = 0;
+          let arrowTop = 0;
+          if (item.arrow) {
+            const src = Image.resolveAssetSource(item.image);
+            const aspect = src && src.height ? src.width / src.height : 0.462;
+            const dispW = Math.min(pageW, imageH * aspect);
+            const boxLeft = (pageW - dispW) / 2;
+            arrowLeft = boxLeft + item.arrow.xPct * dispW;
+            arrowTop = item.arrow.yPct * imageH;
+          }
+          return (
+            <View style={{ width: pageW }}>
+              <View
+                style={{
+                  width: '100%',
+                  height: imageH,
+                  borderRadius: 22,
+                  overflow: 'hidden',
+                  backgroundColor: '#000',
+                  borderWidth: 0.5,
+                  borderColor: '#1F2725',
+                }}
+              >
+                <Image source={item.image} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+                {item.arrow ? (
+                  <MaterialCommunityIcons
+                    name="arrow-down-bold"
+                    size={40}
+                    color={ACCENT}
+                    style={{
+                      position: 'absolute',
+                      left: arrowLeft - 20,
+                      top: arrowTop - 46,
+                      textShadowColor: 'rgba(0,0,0,0.9)',
+                      textShadowOffset: { width: 0, height: 1 },
+                      textShadowRadius: 5,
+                    }}
+                  />
+                ) : null}
+              </View>
+              <View style={{ minHeight: 48, justifyContent: 'center', marginTop: 12, paddingHorizontal: 4 }}>
+                <AppText style={{ fontSize: 14, lineHeight: 20, textAlign: 'center' }}>
+                  <AppText weight="bold" className="text-accent">{i + 1}. </AppText>
+                  {locale === 'ar' ? item.capAr : item.capEn}
+                </AppText>
+              </View>
             </View>
-            <View style={{ minHeight: 48, justifyContent: 'center', marginTop: 12, paddingHorizontal: 4 }}>
-              <AppText style={{ fontSize: 14, lineHeight: 20, textAlign: 'center' }}>
-                <AppText weight="bold" className="text-accent">{i + 1}. </AppText>
-                {locale === 'ar' ? item.capAr : item.capEn}
-              </AppText>
-            </View>
-          </View>
-        )}
+          );
+        }}
       />
 
       {/* Dots + play/pause */}

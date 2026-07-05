@@ -6,6 +6,12 @@ export interface SmsFrame {
   capEn: string;
   /** Arabic caption. */
   capAr: string;
+  /**
+   * Optional highlight arrow drawn over the frame, pointing at a UI element the
+   * user must tap. Coordinates are a FRACTION (0–1) of the screenshot itself
+   * (not the container), so it stays correct under the image's `contain` fit.
+   */
+  arrow?: { xPct: number; yPct: number };
 }
 
 /**
@@ -51,8 +57,16 @@ export const SMS_FRAMES: SmsFrame[] = [
     capAr: 'ابحث عن «Masareef» ← اختر «Log SMS to Masareef».',
   },
   {
-    image: require('@/assets/onboarding/sms/08-shortcut-input.png'),
-    capEn: 'Set Message to Shortcut Input, then tap ✓ to save. Done!',
-    capAr: 'اضبط Message على «مدخلات الاختصار»، ثم اضغط ✓ للحفظ. تم!',
+    image: require('@/assets/onboarding/sms/08-tap-shortcut-input.png'),
+    capEn: 'Tap the “Message” field, then choose “Shortcut Input” from the bar.',
+    capAr: 'اضغط على حقل «Message»، ثم اختر «Shortcut Input» من الشريط.',
+    // A down-arrow in the empty gap above the bar, tip landing on the "Shortcut
+    // Input" button (~62% across, ~57% down the screenshot).
+    arrow: { xPct: 0.62, yPct: 0.57 },
+  },
+  {
+    image: require('@/assets/onboarding/sms/09-shortcut-input.png'),
+    capEn: 'Message now reads “Shortcut Input” — tap ✓ (top-right) to save. Done!',
+    capAr: 'الآن يظهر «Shortcut Input» في الرسالة — اضغط ✓ (أعلى اليمين) للحفظ. تم!',
   },
 ];
