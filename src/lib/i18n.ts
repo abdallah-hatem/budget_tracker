@@ -164,6 +164,19 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   recent: { en: 'Recent', ar: 'الأخيرة' },
   no_transactions: { en: 'No transactions yet', ar: 'لا توجد معاملات بعد' },
 
+  // Statistics screen
+  'stats.title': { en: 'Statistics', ar: 'الإحصائيات' },
+  'stats.settings_hint': { en: 'Charts and category breakdowns', ar: 'رسوم بيانية وتوزيع حسب الفئة' },
+  'stats.net': { en: 'Net', ar: 'الصافي' },
+  'stats.trend': { en: 'Monthly trend', ar: 'الاتجاه الشهري' },
+  'stats.earned': { en: 'EARNED', ar: 'الدخل' },
+  'stats.empty': { en: 'No transactions in this period', ar: 'لا توجد معاملات في هذه الفترة' },
+  'stats.range.1m': { en: 'Month', ar: 'شهر' },
+  'stats.range.3m': { en: '3 months', ar: '٣ شهور' },
+  'stats.range.6m': { en: '6 months', ar: '٦ شهور' },
+  'stats.range.1y': { en: 'Year', ar: 'سنة' },
+  'stats.range.all': { en: 'All time', ar: 'كل الوقت' },
+
   // Transactions screen
   transactions_title: { en: 'Transactions', ar: 'المعاملات' },
   all_categories: { en: 'All categories', ar: 'جميع الفئات' },

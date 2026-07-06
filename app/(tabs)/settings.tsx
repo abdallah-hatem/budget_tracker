@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, TextInput, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
 import { t, isRTL } from '@/src/lib/i18n';
@@ -204,6 +204,45 @@ export default function Settings() {
           {user?.email ?? '—'}
         </AppText>
       </Card>
+
+      {/* ── STATISTICS (opens the charts screen) ───────────────────────────── */}
+      <TouchableOpacity
+        testID="settings-statistics"
+        onPress={() => router.push('/statistics' as Href)}
+        accessibilityRole="button"
+        activeOpacity={0.7}
+        style={{
+          marginBottom: 16,
+          backgroundColor: '#14191A',
+          borderRadius: 20,
+          padding: 16,
+          flexDirection: rtl ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          gap: 14,
+        }}
+      >
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            backgroundColor: 'rgba(43,217,142,0.16)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <MaterialCommunityIcons name="chart-box-outline" size={22} color="#2BD98E" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <AppText weight="semibold" className="text-ink" style={{ fontSize: 15.5, textAlign: rtl ? 'right' : 'left' }}>
+            {t('stats.title', locale)}
+          </AppText>
+          <AppText className="text-ink3" style={{ fontSize: 12.5, marginTop: 2, textAlign: rtl ? 'right' : 'left' }}>
+            {t('stats.settings_hint', locale)}
+          </AppText>
+        </View>
+        <MaterialCommunityIcons name={rtl ? 'chevron-left' : 'chevron-right'} size={22} color="#6B7672" />
+      </TouchableOpacity>
 
       {/* ── ACCOUNTS ───────────────────────────────────────────────────────── */}
       <CollapsibleCard title={t('settings.accounts', locale)} rtl={rtl} testID="section-accounts">
