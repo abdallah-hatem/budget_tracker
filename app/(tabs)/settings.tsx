@@ -195,7 +195,21 @@ export default function Settings() {
 
       {/* ── ACCOUNT ────────────────────────────────────────────────────────── */}
       <Card className="mb-4">
-        <SectionLabel>{t('settings.account', locale)}</SectionLabel>
+        <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 11 }}>
+          <View
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 9,
+              backgroundColor: 'rgba(43,217,142,0.16)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MaterialCommunityIcons name="account-outline" size={17} color="#2BD98E" />
+          </View>
+          <SectionLabel>{t('settings.account', locale)}</SectionLabel>
+        </View>
         <AppText
           testID="settings-email"
           className="text-ink"
@@ -245,7 +259,7 @@ export default function Settings() {
       </TouchableOpacity>
 
       {/* ── ACCOUNTS ───────────────────────────────────────────────────────── */}
-      <CollapsibleCard title={t('settings.accounts', locale)} rtl={rtl} testID="section-accounts">
+      <CollapsibleCard title={t('settings.accounts', locale)} icon="wallet-outline" rtl={rtl} testID="section-accounts">
         <View style={{ gap: 14 }}>
           {accounts.map((a) => (
             <View key={a.id} testID={`account-row-${a.id}`} style={{ gap: 8 }}>
@@ -379,7 +393,7 @@ export default function Settings() {
       </CollapsibleCard>
 
       {/* ── LANGUAGE ───────────────────────────────────────────────────────── */}
-      <CollapsibleCard title={t('settings.language', locale)} rtl={rtl} testID="section-language">
+      <CollapsibleCard title={t('settings.language', locale)} icon="translate" rtl={rtl} testID="section-language">
         <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10 }}>
           <Pill
             testID="locale-en"
@@ -406,7 +420,7 @@ export default function Settings() {
       <MonthStartSection locale={locale} />
 
       {/* ── SMS AUTO-CAPTURE ───────────────────────────────────────────────── */}
-      <CollapsibleCard title={t('sms_capture', locale)} rtl={rtl} testID="section-sms">
+      <CollapsibleCard title={t('sms_capture', locale)} icon="message-text-outline" rtl={rtl} testID="section-sms">
         <AppText
           className="text-ink2"
           style={{ fontSize: 14, marginTop: 10, marginBottom: 12, lineHeight: 20, textAlign: rtl ? 'right' : 'left' }}

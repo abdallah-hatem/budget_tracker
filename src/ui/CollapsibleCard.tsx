@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, LayoutAnimation, Platform, UIManager } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Card } from './Card';
 import { FONT } from '@/src/lib/font';
 
@@ -19,12 +19,15 @@ export function CollapsibleCard({
   rtl = false,
   defaultExpanded = false,
   testID,
+  icon,
 }: {
   title: string;
   children: React.ReactNode;
   rtl?: boolean;
   defaultExpanded?: boolean;
   testID?: string;
+  /** Optional leading MaterialCommunityIcons glyph shown in an accent badge. */
+  icon?: string;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -54,17 +57,37 @@ export function CollapsibleCard({
           paddingVertical: 4,
         }}
       >
-        <Text
-          style={{
-            fontFamily: FONT.jakartaMd,
-            fontSize: 12,
-            color: '#6B7672',
-            letterSpacing: 1.2,
-            textTransform: 'uppercase',
-          }}
-        >
-          {title}
-        </Text>
+        <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 11 }}>
+          {icon ? (
+            <View
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 9,
+                backgroundColor: 'rgba(43,217,142,0.16)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MaterialCommunityIcons
+                name={icon as keyof typeof MaterialCommunityIcons.glyphMap}
+                size={17}
+                color="#2BD98E"
+              />
+            </View>
+          ) : null}
+          <Text
+            style={{
+              fontFamily: FONT.jakartaMd,
+              fontSize: 12,
+              color: '#6B7672',
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+            }}
+          >
+            {title}
+          </Text>
+        </View>
         <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color="#6B7672" />
       </Pressable>
       {expanded ? <View style={{ marginTop: 14 }}>{children}</View> : null}

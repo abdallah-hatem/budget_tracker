@@ -57,11 +57,13 @@ export function monthlyBuckets(
   startDay: number,
   type: TxnType,
   maxMonths = 12,
+  categorySlug?: string,
 ): MonthBucket[] {
   const totals = new Map<string, number>();
   const keys = new Map<string, MonthKey>();
   for (const tx of txns) {
     if (tx.status !== 'confirmed' || tx.type !== type) continue;
+    if (categorySlug && tx.category_slug !== categorySlug) continue;
     const k = currentMonthKey(new Date(tx.occurred_at), startDay);
     const s = keyStr(k);
     keys.set(s, k);

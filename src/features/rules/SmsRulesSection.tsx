@@ -260,7 +260,7 @@ export function SmsRulesSection({
   );
 
   return collapsible ? (
-    <CollapsibleCard title={t('rules.title', locale)} rtl={rtl} testID="section-rules">
+    <CollapsibleCard title={t('rules.title', locale)} icon="filter-variant" rtl={rtl} testID="section-rules">
       {body}
     </CollapsibleCard>
   ) : (

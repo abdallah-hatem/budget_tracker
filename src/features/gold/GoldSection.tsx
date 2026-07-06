@@ -64,7 +64,7 @@ export function GoldSection({ locale, accountsTotal }: { locale: Locale; account
   const align = rtl ? 'right' : 'left';
 
   return (
-    <CollapsibleCard title={t('gold.section', locale)} rtl={rtl} testID="section-gold">
+    <CollapsibleCard title={t('gold.section', locale)} icon="gold" rtl={rtl} testID="section-gold">
       <View style={{ gap: 14 }}>
         {/* Net worth + gold value */}
         <View style={{ gap: 2 }}>

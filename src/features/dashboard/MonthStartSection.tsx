@@ -14,7 +14,7 @@ export function MonthStartSection({ locale }: { locale: Locale }) {
   const { startDay, setStartDay } = useMonthStart();
 
   return (
-    <CollapsibleCard title={t('settings.month_start', locale)} rtl={rtl} testID="section-month-start">
+    <CollapsibleCard title={t('settings.month_start', locale)} icon="calendar-start" rtl={rtl} testID="section-month-start">
       <AppText
         className="text-ink2"
         style={{ fontSize: 13, lineHeight: 19, marginBottom: 14, textAlign: rtl ? 'right' : 'left' }}

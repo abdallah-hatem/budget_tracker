@@ -176,6 +176,15 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'stats.range.6m': { en: '6 months', ar: '٦ شهور' },
   'stats.range.1y': { en: 'Year', ar: 'سنة' },
   'stats.range.all': { en: 'All time', ar: 'كل الوقت' },
+  'stats.all_categories': { en: 'All', ar: 'الكل' },
+  'stats.highlights': { en: 'Highlights', ar: 'أبرز الإحصائيات' },
+  'stats.top_category': { en: 'Top category', ar: 'أعلى فئة' },
+  'stats.lowest_category': { en: 'Lowest', ar: 'أقل فئة' },
+  'stats.avg_txn': { en: 'Avg / transaction', ar: 'متوسط المعاملة' },
+  'stats.count': { en: 'Transactions', ar: 'عدد المعاملات' },
+  'stats.biggest': { en: 'Biggest', ar: 'أكبر معاملة' },
+  'stats.avg_month': { en: 'Avg / month', ar: 'المتوسط الشهري' },
+  'stats.total': { en: 'Total', ar: 'الإجمالي' },
 
   // Transactions screen
   transactions_title: { en: 'Transactions', ar: 'المعاملات' },

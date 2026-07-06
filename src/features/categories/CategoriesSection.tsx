@@ -83,7 +83,7 @@ export function CategoriesSection({ locale }: { locale: Locale }) {
   const builtIns: Category[] = [...expenseCategories(), ...incomeCategories()].filter((c) => !c.user_id);
 
   return (
-    <CollapsibleCard title={t('cat.section', locale)} rtl={rtl} testID="section-categories">
+    <CollapsibleCard title={t('cat.section', locale)} icon="shape-outline" rtl={rtl} testID="section-categories">
       <View style={{ gap: 14 }}>
         {/* ── Your categories ── */}
         <AppText className="text-ink3" style={{ fontSize: 12, textAlign: align }}>
