@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { usePendingContext } from '../../src/features/transactions/PendingProvider';
 import { updateTransaction, deleteTransaction } from '../../src/features/transactions/api';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
@@ -31,6 +31,20 @@ export default function PendingScreen() {
   const [editing, setEditing] = useState<Transaction | null>(null);
 
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+
+  // Deep link from the notification "Edit" action (masareef → /(tabs)/pending?edit=<id>):
+  // open the edit sheet for that transaction once it's in the loaded list, then
+  // clear the param so re-focusing the tab doesn't reopen it.
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
+  const router = useRouter();
+  useEffect(() => {
+    if (!edit) return;
+    const txn = data?.find((t) => t.id === edit);
+    if (txn) {
+      setEditing(txn);
+      router.setParams({ edit: undefined } as never);
+    }
+  }, [edit, data, router]);
 
   async function handleConfirm(id: string) {
     await updateTransaction(id, { status: 'confirmed' });

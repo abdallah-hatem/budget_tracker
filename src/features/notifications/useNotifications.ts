@@ -80,7 +80,13 @@ export function useNotifications(): void {
         }
         return;
       }
-      // 'edit' action or a plain tap → open the app at the deep link.
+      // 'edit' action → open the app on the Pending tab AND open the edit sheet
+      // for this specific transaction (via the `edit` param the screen reads).
+      if (action === 'edit' && txnId) {
+        router.push({ pathname: '/(tabs)/pending', params: { edit: txnId } } as never);
+        return;
+      }
+      // A plain body tap → open the app at the deep link (the Pending list).
       if (typeof data.url === 'string') {
         router.push(data.url as never);
       }
