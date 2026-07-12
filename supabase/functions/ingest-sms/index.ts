@@ -177,6 +177,15 @@ export async function handleIngest(
   // --- Categorize the SMS ---
   // Collapse a doubled notification body first, so the amount isn't summed twice.
   const cleanText = collapseRepeatedBody(text);
+
+  // Cheap pre-Groq gate: a message with NO digit at all (Western 0-9 or
+  // Arabic-Indic ٠-٩) cannot carry an amount, so it would be dropped as
+  // "no_amount" AFTER a wasted LLM call. Skip Groq entirely — this is safe
+  // (it can never drop a real transaction) and conserves the daily token quota.
+  if (!/[0-9٠-٩]/.test(cleanText)) {
+    return json({ ok: true, skipped: true, reason: "no_amount" }, 200);
+  }
+
   const extra = deps.fetchCategoriesFn ? await deps.fetchCategoriesFn(userId) : [];
   const t0 = Date.now();
   let parsed: ParsedTransaction;

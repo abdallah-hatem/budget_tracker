@@ -558,7 +558,7 @@ Deno.test("amount is rounded to 2 decimal places before insert", async () => {
   let insertedRow: Record<string, unknown> | null = null;
 
   await handleIngest(
-    postReq({ token: VALID_TOKEN, text: "Paid some amount" }),
+    postReq({ token: VALID_TOKEN, text: "POS purchase EGP 99.999" }),
     makeDeps({
       categorizeFn: () => Promise.resolve({ ...SAMPLE_PARSED, amount: 99.999 }),
       insertPending: (row) => {
@@ -570,6 +570,22 @@ Deno.test("amount is rounded to 2 decimal places before insert", async () => {
 
   // 99.999 rounded to 2dp = 100.00
   assertEquals((insertedRow as unknown as Record<string, unknown>).amount, 100);
+});
+
+Deno.test("no-digit text is skipped BEFORE Groq (saves a token quota call)", async () => {
+  let categorizeCalled = false;
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: "Your verification code has been sent" }),
+    makeDeps({
+      categorizeFn: () => {
+        categorizeCalled = true;
+        return Promise.resolve(SAMPLE_PARSED);
+      },
+    }),
+  );
+  assertEquals(res.status, 200);
+  assertEquals(await res.json(), { ok: true, skipped: true, reason: "no_amount" });
+  assertEquals(categorizeCalled, false); // never hit Groq
 });
 
 // ---------------------------------------------------------------------------
