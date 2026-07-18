@@ -71,16 +71,16 @@ function customCatalogBlock(extra: CustomCategory[]): string[] {
   ];
 }
 
-// Groq model + endpoint. llama-3.3-70b handles Arabic/English well and is on
-// Groq's free tier. Swap the model here if Groq deprecates it.
-// llama-3.3-70b-versatile is decommissioned 2026-08-16. Migrated to Llama 4 Scout
-// after benchmarking the real prompts against the live Groq catalog (see
-// bench/model_bench.ts): Scout scored perfect on amount (incl. comma/space/Arabic
-// colloquial thousands), expense/income direction, kind (transaction/offer/other),
-// category, and multi-item splitting — fastest of the finalists, and the only one
-// that produced valid JSON on every case under response_format:json_object. The
-// qwen3 / gpt-oss reasoning models failed that JSON mode intermittently or always.
-export const GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+// Groq model + endpoint. Swap the model here if Groq deprecates it.
+// HISTORY: migrated to Llama 4 Scout after benchmarking — but on 2026-07-18 Groq
+// REMOVED scout from the catalog entirely (404 "model does not exist"), which
+// broke SMS ingest. Reverted to llama-3.3-70b-versatile, which is still served,
+// handles Arabic/English well, and is the model these prompts were originally
+// tuned for (valid JSON under response_format:json_object; qwen3 / gpt-oss failed
+// that JSON mode in the earlier benchmark). NOTE: Groq lists 3.3-70b as slated
+// for decommission ~2026-08-16 — re-evaluate the catalog and migrate again before
+// then (or if it 404s sooner, as scout did).
+export const GROQ_MODEL = "llama-3.3-70b-versatile";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function systemPrompt(locale: Locale, extra: CustomCategory[] = []): string {
