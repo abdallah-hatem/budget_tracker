@@ -23,6 +23,10 @@ export interface MoneyProps {
   className?: string;
   style?: TextStyle;
   testID?: string;
+  /** Clamp the amount to N lines (e.g. 1 to prevent wrapping in narrow cards). */
+  numberOfLines?: number;
+  /** Shrink the font to fit `numberOfLines` instead of wrapping/truncating. */
+  adjustsFontSizeToFit?: boolean;
 }
 
 const TONE_COLORS: Record<Exclude<MoneyTone, 'auto'>, string> = {
@@ -42,6 +46,8 @@ export function Money({
   className = '',
   style,
   testID,
+  numberOfLines,
+  adjustsFontSizeToFit,
 }: MoneyProps) {
   const resolvedTone: Exclude<MoneyTone, 'auto'> =
     tone === 'auto' ? (amount > 0 ? 'accent' : 'ink') : tone;
@@ -80,6 +86,9 @@ export function Money({
     <Text
       testID={testID}
       className={className}
+      numberOfLines={numberOfLines}
+      adjustsFontSizeToFit={adjustsFontSizeToFit}
+      minimumFontScale={adjustsFontSizeToFit ? 0.6 : undefined}
       style={[
         {
           fontFamily: FONT.soraSb,

@@ -160,16 +160,21 @@ function StatisticsContent() {
           })}
         </ScrollView>
 
-        {/* Summary cards: income / expense / net */}
-        <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10, marginTop: 16 }}>
-          <SummaryCard label={t('income', locale)} amount={summary.income} tone="accent" />
-          <SummaryCard label={t('expense', locale)} amount={summary.expense} tone="ink" />
-          <SummaryCard
-            label={t('stats.net', locale)}
-            amount={summary.net}
-            tone={summary.net < 0 ? 'danger' : 'accent'}
-            signed
-          />
+        {/* Summary cards: income / expense on one row, net full-width below —
+            two-per-row keeps each amount on a single line (no wrapping). */}
+        <View style={{ gap: 10, marginTop: 16 }}>
+          <View style={{ flexDirection: rtl ? 'row-reverse' : 'row', gap: 10 }}>
+            <SummaryCard label={t('income', locale)} amount={summary.income} tone="accent" />
+            <SummaryCard label={t('expense', locale)} amount={summary.expense} tone="ink" />
+          </View>
+          <View style={{ flexDirection: rtl ? 'row-reverse' : 'row' }}>
+            <SummaryCard
+              label={t('stats.net', locale)}
+              amount={summary.net}
+              tone={summary.net < 0 ? 'danger' : 'accent'}
+              signed
+            />
+          </View>
         </View>
 
         {showLoader ? (
@@ -297,7 +302,15 @@ function SummaryCard({
       <AppText style={{ fontSize: 11.5, color: INK3, letterSpacing: 0.3 }} numberOfLines={1}>
         {label}
       </AppText>
-      <Money amount={amount} tone={tone === 'ink' ? 'ink' : 'accent'} sign={signed ? 'auto' : 'none'} size={16} style={{ color }} />
+      <Money
+        amount={amount}
+        tone={tone === 'ink' ? 'ink' : 'accent'}
+        sign={signed ? 'auto' : 'none'}
+        size={18}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        style={{ color }}
+      />
     </View>
   );
 }
@@ -348,6 +361,10 @@ function TrendBars({ buckets, rtl }: { buckets: { key: { year: number; month: nu
   const spacing = Math.max(6, Math.min(16, Math.round(perBar * 0.36)));
   const barWidth = Math.max(10, Math.round(perBar - spacing));
   const showTopLabels = n <= 7 && !hidden;
+  // Headroom above the tallest bar so its top value label isn't clipped at the
+  // chart's top edge (full-height bars otherwise cut off the number).
+  const dataMax = Math.max(1, ...buckets.map((b) => b.total));
+  const maxValue = dataMax * (showTopLabels ? 1.28 : 1.08);
 
   const barData = buckets.map((b) => ({
     value: b.total,
@@ -380,6 +397,7 @@ function TrendBars({ buckets, rtl }: { buckets: { key: { year: number; month: nu
         hideYAxisText
         xAxisLabelTextStyle={{ color: INK3, fontSize: 10, fontFamily: FONT.jakartaMd }}
         noOfSections={3}
+        maxValue={maxValue}
         isAnimated
         disableScroll
       />
