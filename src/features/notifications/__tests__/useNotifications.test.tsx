@@ -49,6 +49,15 @@ jest.mock('@/src/features/transactions/api', () => ({
   listTransactions: (...args: unknown[]) => mockListTransactions(...args),
 }));
 
+// A single known quick-action preset for the quick:<id> action test.
+const mockPreset = { id: 'p1', categorySlug: 'food', type: 'expense', note: 'coffee' };
+jest.mock('../quickActions', () => ({
+  getQuickActions: jest.fn(async () => [mockPreset]),
+  subscribeQuickActions: jest.fn(() => () => {}),
+  peekQuickActions: jest.fn(() => [mockPreset]),
+  MAX_QUICK_ACTIONS: 3,
+}));
+
 function makeActionResponse(actionIdentifier: string, txnId: string, identifier = 'n1') {
   return {
     actionIdentifier,
@@ -132,6 +141,57 @@ describe('useNotifications', () => {
     );
     await waitFor(() => expect(Notifications.setBadgeCountAsync as jest.Mock).toHaveBeenCalled());
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('a quick-action files the txn into the preset category/type/note + confirms, no app open', async () => {
+    let cb: ((r: unknown) => void) | null = null;
+    (Notifications.addNotificationResponseReceivedListener as jest.Mock).mockImplementation(
+      (f: (r: unknown) => void) => { cb = f; return { remove: jest.fn() }; },
+    );
+    renderHook(() => useNotifications());
+    await act(async () => { cb?.(makeActionResponse('quick:p1', 't7')); });
+    await waitFor(() =>
+      expect(mockUpdateTransaction).toHaveBeenCalledWith('t7', {
+        category_slug: 'food', type: 'expense', note: 'coffee', status: 'confirmed',
+      }),
+    );
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('the note action attaches the typed userText + confirms', async () => {
+    let cb: ((r: unknown) => void) | null = null;
+    (Notifications.addNotificationResponseReceivedListener as jest.Mock).mockImplementation(
+      (f: (r: unknown) => void) => { cb = f; return { remove: jest.fn() }; },
+    );
+    renderHook(() => useNotifications());
+    await act(async () => {
+      cb?.({
+        actionIdentifier: 'note',
+        userText: '  lunch  ',
+        notification: { request: { identifier: 'n1', content: { data: { txnId: 't8' } } } },
+      });
+    });
+    await waitFor(() =>
+      expect(mockUpdateTransaction).toHaveBeenCalledWith('t8', { note: 'lunch', status: 'confirmed' }),
+    );
+  });
+
+  it('the note action with empty text just confirms (keeps the AI note)', async () => {
+    let cb: ((r: unknown) => void) | null = null;
+    (Notifications.addNotificationResponseReceivedListener as jest.Mock).mockImplementation(
+      (f: (r: unknown) => void) => { cb = f; return { remove: jest.fn() }; },
+    );
+    renderHook(() => useNotifications());
+    await act(async () => {
+      cb?.({
+        actionIdentifier: 'note',
+        userText: '   ',
+        notification: { request: { identifier: 'n1', content: { data: { txnId: 't8' } } } },
+      });
+    });
+    await waitFor(() =>
+      expect(mockUpdateTransaction).toHaveBeenCalledWith('t8', { status: 'confirmed' }),
+    );
   });
 
   it('re-applies a background action on cold-start (getLastNotificationResponseAsync)', async () => {

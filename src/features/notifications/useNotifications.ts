@@ -10,7 +10,7 @@
  *     navigate to the embedded `data.url` on first mount.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useRouter, useRootNavigationState } from 'expo-router';
@@ -19,8 +19,18 @@ import { registerForPushNotificationsAsync } from './notifications';
 import { ensureIngestToken } from '@/src/features/ingest/api';
 import { updateTransaction, deleteTransaction } from '@/src/features/transactions/api';
 import { useDataSync } from '@/src/features/sync/dataSync';
+import { categoryLabel } from '@/src/features/transactions/display';
+import {
+  getQuickActions,
+  subscribeQuickActions,
+  peekQuickActions,
+  type QuickAction,
+} from './quickActions';
 import { t } from '@/src/lib/i18n';
 import type { Locale } from '@/src/types';
+
+/** Notification action identifier prefix for a user-defined quick action. */
+const QUICK_PREFIX = 'quick:';
 
 /** Category id set on the SMS-pending push (see ingest-sms). Long-pressing such
  *  a notification surfaces Confirm / Edit / Reject action buttons. */
@@ -31,6 +41,28 @@ export function useNotifications(): void {
   const { profile } = useSession();
   const locale: Locale = profile?.locale ?? 'en';
   const { notifyTxnsChanged } = useDataSync();
+
+  // User-defined notification quick actions. Kept in state (drives the category
+  // registration) AND in a ref (so the response handler reads the latest without
+  // re-subscribing). Loaded once + refreshed on every change from Settings.
+  const [quickActions, setQuickActionsState] = useState<QuickAction[]>([]);
+  const quickActionsRef = useRef<QuickAction[]>(peekQuickActions());
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      void getQuickActions().then((list) => {
+        if (!alive) return;
+        quickActionsRef.current = list;
+        setQuickActionsState(list);
+      });
+    };
+    load();
+    const unsub = subscribeQuickActions(load);
+    return () => {
+      alive = false;
+      unsub();
+    };
+  }, []);
 
   // Drop the app-icon badge by one, LOCALLY (no network). A notification action
   // runs in a very short iOS background window; a network round-trip (fetching
@@ -80,6 +112,42 @@ export function useNotifications(): void {
         }
         return;
       }
+      // A user-defined quick action → file the txn into the preset's category /
+      // type / note and confirm it, in the background (like Confirm).
+      if (typeof action === 'string' && action.startsWith(QUICK_PREFIX) && txnId) {
+        await decrementBadge();
+        try {
+          const id = action.slice(QUICK_PREFIX.length);
+          const preset = quickActionsRef.current.find((q) => q.id === id);
+          if (preset) {
+            await updateTransaction(txnId, {
+              category_slug: preset.categorySlug,
+              type: preset.type,
+              note: preset.note,
+              status: 'confirmed',
+            });
+            notifyTxnsChanged();
+          }
+        } catch {
+          /* best-effort */
+        }
+        return;
+      }
+      // 'note' text-input action → attach the typed note (if any) and confirm.
+      if (action === 'note' && txnId) {
+        await decrementBadge();
+        try {
+          const typed = typeof response.userText === 'string' ? response.userText.trim() : '';
+          await updateTransaction(
+            txnId,
+            typed ? { note: typed, status: 'confirmed' } : { status: 'confirmed' },
+          );
+          notifyTxnsChanged();
+        } catch {
+          /* best-effort */
+        }
+        return;
+      }
       // 'edit' action → open the app on the Pending tab AND open the edit sheet
       // for this specific transaction (via the `edit` param the screen reads).
       if (action === 'edit' && txnId) {
@@ -122,16 +190,36 @@ export function useNotifications(): void {
   const registeredUserIdRef = useRef<string | null>(null);
 
   // ------------------------------------------------------------------
-  // Register the SMS-pending action category (Confirm / Edit / Reject) shown on
-  // long-press. Pure JS via expo-notifications → OTA-able. Re-registered when
-  // the locale changes so the button titles are localized.
+  // Register the SMS-pending action category shown on long-press:
+  // Confirm · <user quick actions> · Add note · Edit · Reject. Pure JS via
+  // expo-notifications → OTA-able. Re-registered when the locale OR the user's
+  // quick-action presets change so the buttons stay current.
   // ------------------------------------------------------------------
   useEffect(() => {
     void Notifications.setNotificationCategoryAsync(SMS_PENDING_CATEGORY, [
-      // Confirm/Reject act in the BACKGROUND (no app open); Edit opens the app.
+      // Confirm / quick actions / note / Reject act in the BACKGROUND (no app
+      // open); Edit opens the app.
       {
         identifier: 'confirm',
         buttonTitle: t('confirm', locale),
+        options: { opensAppToForeground: false },
+      },
+      // One button per user preset: files the txn into its category/type/note.
+      ...quickActions.map((q) => ({
+        identifier: `${QUICK_PREFIX}${q.id}`,
+        buttonTitle: q.note.trim().length > 0
+          ? `${categoryLabel(q.categorySlug, locale)} · ${q.note.trim()}`
+          : categoryLabel(q.categorySlug, locale),
+        options: { opensAppToForeground: false },
+      })),
+      // Type a note right on the notification, then confirm.
+      {
+        identifier: 'note',
+        buttonTitle: t('notifActions.addNote', locale),
+        textInput: {
+          submitButtonTitle: t('save', locale),
+          placeholder: t('notifActions.notePlaceholder', locale),
+        },
         options: { opensAppToForeground: false },
       },
       {
@@ -147,7 +235,7 @@ export function useNotifications(): void {
     ]).catch(() => {
       /* best-effort */
     });
-  }, [locale]);
+  }, [locale, quickActions]);
 
   // ------------------------------------------------------------------
   // Taps / action buttons while the app is RUNNING (foreground / background):

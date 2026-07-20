@@ -224,6 +224,22 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
 
   // SMS auto-capture / ingest token (P2.5)
   sms_capture: { en: 'SMS Auto-Capture', ar: 'التقاط الرسائل تلقائياً' },
+  // ── Notification quick actions ──────────────────────────────────────────────
+  'notifActions.section': {
+    en: 'Notification quick actions',
+    ar: 'إجراءات سريعة للإشعارات',
+  },
+  'notifActions.subtitle': {
+    en: 'One-tap buttons on the SMS notification to file a transaction into a category. iOS shows a few at a time.',
+    ar: 'أزرار بضغطة واحدة على إشعار الرسالة لتسجيل العملية في فئة. iOS يعرض عددًا محدودًا.',
+  },
+  'notifActions.add': { en: '+ Add quick action', ar: '+ إضافة إجراء سريع' },
+  'notifActions.empty': { en: 'No quick actions yet.', ar: 'لا توجد إجراءات سريعة بعد.' },
+  'notifActions.max': { en: 'Up to 3 (iOS limit).', ar: 'حتى ٣ (حد iOS).' },
+  'notifActions.category': { en: 'Category', ar: 'الفئة' },
+  'notifActions.note': { en: 'Default note (optional)', ar: 'ملاحظة افتراضية (اختياري)' },
+  'notifActions.notePlaceholder': { en: 'e.g. coffee', ar: 'مثلاً: قهوة' },
+  'notifActions.addNote': { en: 'Add note', ar: 'إضافة ملاحظة' },
   'rules.title': { en: 'SMS rules', ar: 'قواعد الرسائل' },
   'rules.subtitle': {
     en: 'When a bank SMS contains a keyword, force its category and note.',

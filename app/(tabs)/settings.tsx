@@ -20,6 +20,7 @@ import { SmsRulesSection } from '@/src/features/rules/SmsRulesSection';
 import { MonthStartSection } from '@/src/features/dashboard/MonthStartSection';
 import { GoldSection } from '@/src/features/gold/GoldSection';
 import { CategoriesSection } from '@/src/features/categories/CategoriesSection';
+import { NotificationActionsSection } from '@/src/features/notifications/NotificationActionsSection';
 import { FONT } from '@/src/lib/font';
 
 export default function Settings() {
@@ -487,6 +488,9 @@ export default function Settings() {
 
       {/* ── SMS rules (keyword → category/note) ─────────────────────────────── */}
       <SmsRulesSection locale={locale} collapsible />
+
+      {/* ── Notification quick actions ──────────────────────────────────────── */}
+      <NotificationActionsSection locale={locale} />
 
       {/* ── Sign out ───────────────────────────────────────────────────────── */}
       <TouchableOpacity
