@@ -335,7 +335,7 @@ if (import.meta.main) {
   }
 
   const deps: BudgetCheckDeps = {
-    serviceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    serviceRoleKey: Deno.env.get("BUDGET_CHECK_SECRET") ?? "",
     now: () => new Date(),
 
     async listActiveUsers() {

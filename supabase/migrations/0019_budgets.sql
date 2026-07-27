@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- 0017_budgets — spending caps + the alert dedup ledger.
+-- 0019_budgets — spending caps + the alert dedup ledger.
 --
 -- budgets:       one row per (user, scope, category, period) cap.
 -- budget_alerts: append-only ledger of what we have already notified about, so
