@@ -199,27 +199,65 @@ if (import.meta.main) {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
+  // Fetch every row of a query in pages of 1000 (PostgREST's default row cap),
+  // looping until a page comes back short. Avoids silently truncating a heavy
+  // user's transactions to the first page.
+  async function fetchAllPages<T>(
+    build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  ): Promise<T[]> {
+    const pageSize = 1000;
+    const all: T[] = [];
+    let offset = 0;
+    for (;;) {
+      const { data, error } = await build(offset, offset + pageSize - 1);
+      if (error) throw new Error(error.message);
+      const page = data ?? [];
+      all.push(...page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    return all;
+  }
+
   const deps: BudgetCheckDeps = {
     now: () => new Date(),
 
     async listActiveUsers() {
       // Users holding at least one budget. Insight-only users are out of scope
       // for v1 delivery: without a budget there is no opt-in signal to notify.
-      const { data } = await supabase
+      //
+      // There is no FK between budgets and profiles (both independently
+      // reference auth.users), so PostgREST cannot embed profiles!inner off
+      // budgets — that previously failed with PGRST200 and (since the error
+      // was discarded) silently produced zero active users. Do it as two
+      // plain queries instead, joined in JS.
+      const { data: budgetRows, error: budgetsError } = await supabase
         .from("budgets")
-        .select("user_id, profiles!inner(month_start_day, locale)");
-      const seen = new Map<string, ActiveUser>();
-      for (const row of (data ?? []) as Array<Record<string, unknown>>) {
-        const id = row.user_id as string;
-        if (seen.has(id)) continue;
-        const p = row.profiles as { month_start_day?: number; locale?: string } | null;
-        seen.set(id, {
+        .select("user_id");
+      if (budgetsError) throw new Error(budgetsError.message);
+      const ids = [...new Set((budgetRows ?? []).map((r) => r.user_id as string))];
+      if (ids.length === 0) return [];
+
+      const { data: profileRows, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, month_start_day, locale")
+        .in("id", ids);
+      if (profilesError) throw new Error(profilesError.message);
+
+      const profiles = new Map(
+        (profileRows ?? []).map((p) => [
+          p.id as string,
+          p as { month_start_day?: number; locale?: string },
+        ]),
+      );
+      return ids.map((id) => {
+        const p = profiles.get(id);
+        return {
           userId: id,
           monthStartDay: p?.month_start_day ?? 1,
           locale: p?.locale ?? "en",
-        });
-      }
-      return [...seen.values()];
+        };
+      });
     },
 
     async listBudgets(userId) {
@@ -231,17 +269,20 @@ if (import.meta.main) {
     },
 
     async getCycleSpend(userId, start, end) {
-      const { data } = await supabase
-        .from("transactions")
-        .select("amount, category_slug")
-        .eq("user_id", userId)
-        .eq("status", "confirmed")
-        .eq("type", "expense")
-        .gte("occurred_at", start.toISOString())
-        .lt("occurred_at", end.toISOString());
+      const rows = await fetchAllPages<{ amount: number; category_slug: string }>((from, to) =>
+        supabase
+          .from("transactions")
+          .select("amount, category_slug")
+          .eq("user_id", userId)
+          .eq("status", "confirmed")
+          .eq("type", "expense")
+          .gte("occurred_at", start.toISOString())
+          .lt("occurred_at", end.toISOString())
+          .range(from, to)
+      );
       let overall = 0;
       const byCategory: Record<string, number> = {};
-      for (const t of (data ?? []) as Array<{ amount: number; category_slug: string }>) {
+      for (const t of rows) {
         const amt = Number(t.amount) || 0;
         overall += amt;
         byCategory[t.category_slug] = (byCategory[t.category_slug] ?? 0) + amt;
@@ -253,17 +294,26 @@ if (import.meta.main) {
       // Trailing 3 months before this cycle started, for the baseline average.
       const histStart = new Date(cycle.start);
       histStart.setUTCMonth(histStart.getUTCMonth() - 3);
-      const { data } = await supabase
-        .from("transactions")
-        .select("amount, category_slug, occurred_at")
-        .eq("user_id", userId)
-        .eq("status", "confirmed")
-        .eq("type", "expense")
-        .gte("occurred_at", histStart.toISOString())
-        .lt("occurred_at", cycle.end.toISOString());
+      const rows = await fetchAllPages<{ amount: number; category_slug: string; occurred_at: string }>(
+        (from, to) =>
+          supabase
+            .from("transactions")
+            .select("amount, category_slug, occurred_at")
+            .eq("user_id", userId)
+            .eq("status", "confirmed")
+            .eq("type", "expense")
+            .gte("occurred_at", histStart.toISOString())
+            .lt("occurred_at", cycle.end.toISOString())
+            .range(from, to),
+      );
 
-      const rows = (data ?? []) as Array<{ amount: number; category_slug: string; occurred_at: string }>;
-      const weekStart = new Date(cycle.end.getTime() - 7 * 86_400_000);
+      // Anchor the trailing-7-day "frequency" window to NOW, not cycle.end:
+      // for a monthly cycle, cycle.end is the EXCLUSIVE end (start of next
+      // month) — a future date — which put weekStart in the last week of the
+      // month instead of the trailing week from today, leaving weekCount at 0
+      // for most of the month.
+      const now = new Date();
+      const weekStart = new Date(now.getTime() - 7 * 86_400_000);
       const acc = new Map<string, { cycleSpend: number; histSpend: number; weekCount: number; histCount: number }>();
       for (const t of rows) {
         const at = new Date(t.occurred_at);
@@ -271,11 +321,11 @@ if (import.meta.main) {
         const e = acc.get(t.category_slug) ?? { cycleSpend: 0, histSpend: 0, weekCount: 0, histCount: 0 };
         if (at >= cycle.start) {
           e.cycleSpend += amt;
-          if (at >= weekStart) e.weekCount++;
         } else {
           e.histSpend += amt;
           e.histCount++;
         }
+        if (at >= weekStart) e.weekCount++;
         acc.set(t.category_slug, e);
       }
       return [...acc.entries()].map(([categorySlug, e]) => ({
@@ -297,9 +347,16 @@ if (import.meta.main) {
     },
 
     async recordAlerts(_userId, rows) {
-      // Ignore conflicts: the unique index is the real dedup guarantee if two
-      // runs ever overlap.
-      await supabase.from("budget_alerts").upsert(rows, { ignoreDuplicates: true });
+      // Plain insert, not upsert: budget_alerts_dedup_idx is an EXPRESSION
+      // index (coalesce(...) on budget_id/category_slug), and PostgREST's
+      // onConflict only accepts column names, so it can't target it — an
+      // upsert here silently targets the PRIMARY KEY (a fresh uuid per row)
+      // instead and never actually collides. With a plain insert, a genuine
+      // duplicate raises 23505 against the real dedup index; since the push
+      // was already sent by the time we get here, that IS the desired
+      // outcome (already recorded for this cycle), so treat it as success.
+      const { error } = await supabase.from("budget_alerts").insert(rows);
+      if (error && error.code !== "23505") throw new Error(error.message);
     },
 
     async getPushTokens(userId) {
