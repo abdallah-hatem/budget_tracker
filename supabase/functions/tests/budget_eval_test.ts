@@ -42,6 +42,13 @@ Deno.test("at the warning line -> approaching", () => {
   assertEquals(a?.meta.pct, 80);
 });
 
+Deno.test("795/1000 rounds to 80% but is exactly below warn_pct 80 -> no alert", () => {
+  // Matches the client's exact integer-cents comparison in
+  // src/features/budgets/progress.ts: 795 * 100 (79500) < 1000 * 80 (80000),
+  // so this must NOT fire "approaching" even though Math.round(79.5) is 80.
+  assertEquals(evaluateBudget(budget(), 795, cycle(0.9)), null);
+});
+
 Deno.test("exactly at the cap -> reached, not exceeded", () => {
   assertEquals(evaluateBudget(budget(), 1000, cycle(0.9))?.kind, "reached");
 });

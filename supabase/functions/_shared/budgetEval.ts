@@ -54,7 +54,12 @@ export function evaluateBudget(
   // Genuinely under the cap from here on — never report 100% for an
   // under-cap budget (rounding of e.g. 996/1000 would otherwise say "100%").
   const pctUnderCap = Math.min(pct, 99);
-  if (pctUnderCap >= b.warn_pct) {
+  // Compare EXACT integer money against the warn threshold — not the rounded
+  // percentage — so the server always agrees with the client's
+  // computeProgress() (src/features/budgets/progress.ts). Otherwise a spend
+  // like 795/1000 with warn_pct 80 rounds pct to 80 and would fire "approaching"
+  // here while the on-screen bar (which uses exact math) still reads 79% green.
+  if (spendC * 100 >= amountC * b.warn_pct) {
     return { ...base, kind: "approaching", meta: { pct: pctUnderCap, spend: round2(spend), amount: b.amount, remaining: round2(b.amount - spend) } };
   }
   if (cycle.elapsedFraction >= PACE_MIN_ELAPSED) {

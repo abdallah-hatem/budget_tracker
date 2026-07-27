@@ -50,6 +50,14 @@ export interface AlertRow {
 }
 
 export interface BudgetCheckDeps {
+  /**
+   * The service-role key this invocation must present as its bearer token.
+   * This is a service-role-only endpoint (see the auth check in
+   * `handleBudgetCheck`) — the scheduled pg_cron job (see
+   * supabase/migrations/0018_budget_check_cron.sql) sends the real
+   * service-role key from Vault as its Authorization header.
+   */
+  serviceRoleKey: string;
   now: () => Date;
   listActiveUsers: () => Promise<ActiveUser[]>;
   listBudgets: (userId: string) => Promise<BudgetRow[]>;
@@ -103,6 +111,18 @@ export async function handleBudgetCheck(
   }
   if (req.method !== "POST") {
     return json({ error: "Method not allowed. Use POST." }, 405);
+  }
+
+  // Service-role-only endpoint: this scans EVERY user's full transaction
+  // history, so the app's public anon key (a valid JWT — verify_jwt alone
+  // does not exclude it) must not be sufficient to invoke it. Only the
+  // scheduled pg_cron job (supabase/migrations/0018_budget_check_cron.sql),
+  // which sends the service-role key from Vault as its bearer, may proceed.
+  // Never log the token, matched or not.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const expected = deps.serviceRoleKey ? `Bearer ${deps.serviceRoleKey}` : "";
+  if (!expected || authHeader !== expected) {
+    return json({ error: "Unauthorized." }, 401);
   }
 
   const now = deps.now();
@@ -253,6 +273,8 @@ export async function handleBudgetCheck(
 
 // --- Production wiring (skipped under test, which imports the handler only) ---
 if (import.meta.main) {
+  const DAY_MS = 86_400_000;
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -279,6 +301,7 @@ if (import.meta.main) {
   }
 
   const deps: BudgetCheckDeps = {
+    serviceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     now: () => new Date(),
 
     async listActiveUsers() {
@@ -366,34 +389,72 @@ if (import.meta.main) {
             .range(from, to),
       );
 
-      // Anchor the trailing-7-day "frequency" window to NOW, not cycle.end:
-      // for a monthly cycle, cycle.end is the EXCLUSIVE end (start of next
-      // month) — a future date — which put weekStart in the last week of the
-      // month instead of the trailing week from today, leaving weekCount at 0
-      // for most of the month.
-      const now = new Date();
-      const weekStart = new Date(now.getTime() - 7 * 86_400_000);
-      const acc = new Map<string, { cycleSpend: number; histSpend: number; weekCount: number; histCount: number }>();
+      // Anchor the trailing-7-day "frequency" window to NOW (the injected
+      // clock, not the real one — keeps this testable/consistent with the
+      // rest of the handler), not cycle.end: for a monthly cycle, cycle.end
+      // is the EXCLUSIVE end (start of next month) — a future date — which
+      // put weekStart in the last week of the month instead of the trailing
+      // week from today, leaving weekCount at 0 for most of the month.
+      const now = deps.now();
+      const weekStart = new Date(now.getTime() - 7 * DAY_MS);
+      const acc = new Map<string, {
+        cycleSpend: number;
+        histSpend: number;
+        weekCount: number;
+        histCount: number;
+        /** Earliest occurred_at seen for this category BEFORE cycle.start. */
+        earliestHistAt: Date | null;
+      }>();
       for (const t of rows) {
         const at = new Date(t.occurred_at);
         const amt = Number(t.amount) || 0;
-        const e = acc.get(t.category_slug) ?? { cycleSpend: 0, histSpend: 0, weekCount: 0, histCount: 0 };
+        const e = acc.get(t.category_slug) ??
+          { cycleSpend: 0, histSpend: 0, weekCount: 0, histCount: 0, earliestHistAt: null as Date | null };
         if (at >= cycle.start) {
           e.cycleSpend += amt;
         } else {
           e.histSpend += amt;
           e.histCount++;
+          if (e.earliestHistAt === null || at < e.earliestHistAt) e.earliestHistAt = at;
         }
         if (at >= weekStart) e.weekCount++;
         acc.set(t.category_slug, e);
       }
-      return [...acc.entries()].map(([categorySlug, e]) => ({
-        categorySlug,
-        cycleSpend: e.cycleSpend,
-        avg3mMonthly: e.histSpend / 3,
-        weekCount: e.weekCount,
-        avgWeekCount: e.histCount / 13, // ~13 weeks in 3 months
-      }));
+
+      // A fixed /3 (months) and /13 (weeks) divisor assumes 3 months of
+      // history for every category. A user (or category) only a few weeks
+      // old gets a diluted baseline 2-3x too small, so ordinary spending
+      // reads as a huge spike/frequency anomaly. Instead, derive the divisor
+      // from the REAL observed span for that category (earliest history row
+      // seen -> cycle.start), clamped to a sane 1-3 month / 1-13 week range.
+      const MIN_MONTHS = 1;
+      const MAX_MONTHS = 3;
+      const MIN_WEEKS = 1;
+      const MAX_WEEKS = 13;
+      // Below ~2 observed months there simply isn't enough signal for a
+      // trustworthy baseline at all — omit the category entirely rather than
+      // publish a shaky one that can still trip a false spike.
+      const MIN_OBSERVED_MONTHS = 2;
+      const APPROX_DAYS_PER_MONTH = 30;
+
+      const out: CategoryHistory[] = [];
+      for (const [categorySlug, e] of acc.entries()) {
+        // No history before this cycle at all -> brand-new category, skip.
+        if (e.earliestHistAt === null) continue;
+        const spanDays = (cycle.start.getTime() - e.earliestHistAt.getTime()) / DAY_MS;
+        const observedMonths = spanDays / APPROX_DAYS_PER_MONTH;
+        if (observedMonths < MIN_OBSERVED_MONTHS) continue;
+        const months = Math.min(MAX_MONTHS, Math.max(MIN_MONTHS, observedMonths));
+        const weeks = Math.min(MAX_WEEKS, Math.max(MIN_WEEKS, spanDays / 7));
+        out.push({
+          categorySlug,
+          cycleSpend: e.cycleSpend,
+          avg3mMonthly: e.histSpend / months,
+          weekCount: e.weekCount,
+          avgWeekCount: e.histCount / weeks,
+        });
+      }
+      return out;
     },
 
     async listSentAlerts(userId, cycleKeys) {
@@ -414,8 +475,16 @@ if (import.meta.main) {
       // duplicate raises 23505 against the real dedup index; since the push
       // was already sent by the time we get here, that IS the desired
       // outcome (already recorded for this cycle), so treat it as success.
-      const { error } = await supabase.from("budget_alerts").insert(rows);
-      if (error && error.code !== "23505") throw new Error(error.message);
+      //
+      // Row-by-row, not one batched insert: a single-statement multi-row
+      // insert aborts the WHOLE batch on one 23505, so one already-recorded
+      // alert would silently drop every OTHER fresh alert too, and those
+      // would re-fire tomorrow. Insert individually so each row's outcome is
+      // independent.
+      for (const row of rows) {
+        const { error } = await supabase.from("budget_alerts").insert(row);
+        if (error && error.code !== "23505") throw new Error(error.message);
+      }
     },
 
     async getPushTokens(userId) {

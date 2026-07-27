@@ -2,9 +2,11 @@ import { assertEquals, assert } from "@std/assert";
 import { handleBudgetCheck, type BudgetCheckDeps } from "../budget-check/index.ts";
 
 const NOW = new Date("2026-07-20T03:00:00Z");
+const SERVICE_ROLE_KEY = "test-service-role-key";
 
 function makeDeps(over: Partial<BudgetCheckDeps> = {}): BudgetCheckDeps {
   return {
+    serviceRoleKey: SERVICE_ROLE_KEY,
     now: () => NOW,
     listActiveUsers: () => Promise.resolve([{ userId: "u1", monthStartDay: 1, locale: "en" }]),
     listBudgets: () => Promise.resolve([
@@ -20,7 +22,11 @@ function makeDeps(over: Partial<BudgetCheckDeps> = {}): BudgetCheckDeps {
   };
 }
 
-const post = () => new Request("http://localhost", { method: "POST" });
+const post = () =>
+  new Request("http://localhost", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
 
 Deno.test("sends ONE push summarizing the day's alerts", async () => {
   const sent: unknown[][] = [];
@@ -151,6 +157,32 @@ Deno.test("GET is rejected", async () => {
     new Request("http://localhost", { method: "GET" }), makeDeps(),
   );
   assertEquals(res.status, 405);
+});
+
+Deno.test("POST with no Authorization header -> 401, nothing runs", async () => {
+  let pushed = false;
+  const res = await handleBudgetCheck(
+    new Request("http://localhost", { method: "POST" }),
+    makeDeps({ sendPush: () => { pushed = true; return Promise.resolve(); } }),
+  );
+  assertEquals(res.status, 401);
+  assertEquals(pushed, false);
+});
+
+Deno.test("POST with the wrong bearer token -> 401", async () => {
+  const res = await handleBudgetCheck(
+    new Request("http://localhost", {
+      method: "POST",
+      headers: { Authorization: "Bearer not-the-service-role-key" },
+    }),
+    makeDeps(),
+  );
+  assertEquals(res.status, 401);
+});
+
+Deno.test("POST with the correct service-role bearer proceeds as before", async () => {
+  const res = await handleBudgetCheck(post(), makeDeps());
+  assertEquals(res.status, 200);
 });
 
 // 2026-07-11 is a Saturday — the first run of a new weekly cycle.
