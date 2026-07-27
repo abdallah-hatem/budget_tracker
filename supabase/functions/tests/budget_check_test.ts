@@ -102,6 +102,50 @@ Deno.test("one user failing does not abort the others", async () => {
   assertEquals(recordedUsers, ["good"]);
 });
 
+Deno.test("a failed push is swallowed and does NOT record the alert (retry next run)", async () => {
+  let recordCalled = false;
+  const res = await handleBudgetCheck(post(), makeDeps({
+    sendPush: () => Promise.reject(new Error("network blew up")),
+    recordAlerts: () => { recordCalled = true; return Promise.resolve(); },
+  }));
+  assertEquals(res.status, 200);
+  assertEquals(recordCalled, false);
+});
+
+Deno.test("a successful push still records the alert", async () => {
+  let recordCalled = false;
+  let sendCalled = false;
+  const res = await handleBudgetCheck(post(), makeDeps({
+    sendPush: () => { sendCalled = true; return Promise.resolve(); },
+    recordAlerts: () => { recordCalled = true; return Promise.resolve(); },
+  }));
+  assertEquals(res.status, 200);
+  assertEquals(sendCalled, true);
+  assertEquals(recordCalled, true);
+});
+
+Deno.test("more than 3 fresh alerts: body shows +N more, but ALL alerts are recorded", async () => {
+  let sentBody = "";
+  let recorded: unknown[] = [];
+  await handleBudgetCheck(post(), makeDeps({
+    listBudgets: () => Promise.resolve([
+      { id: "b1", scope: "category", category_slug: "food", period: "monthly", amount: 1000, warn_pct: 80 },
+      { id: "b2", scope: "category", category_slug: "transport", period: "monthly", amount: 500, warn_pct: 80 },
+      { id: "b3", scope: "category", category_slug: "bills", period: "monthly", amount: 200, warn_pct: 80 },
+      { id: "b4", scope: "category", category_slug: "shopping", period: "monthly", amount: 300, warn_pct: 80 },
+      { id: "b5", scope: "category", category_slug: "fun", period: "monthly", amount: 100, warn_pct: 80 },
+    ]),
+    getCycleSpend: () => Promise.resolve({
+      overall: 2000,
+      byCategory: { food: 900, transport: 480, bills: 200, shopping: 290, fun: 95 },
+    }),
+    sendPush: (msgs) => { sentBody = msgs[0].body; return Promise.resolve(); },
+    recordAlerts: (_u, rows) => { recorded = rows; return Promise.resolve(); },
+  }));
+  assert(sentBody.includes("+2 more"), `expected "+2 more" in body, got: ${sentBody}`);
+  assertEquals(recorded.length, 5);
+});
+
 Deno.test("GET is rejected", async () => {
   const res = await handleBudgetCheck(
     new Request("http://localhost", { method: "GET" }), makeDeps(),

@@ -146,26 +146,33 @@ export async function handleBudgetCheck(
       const fresh = descriptors.filter((d) => !seen.has(dedupKey(d)));
       if (fresh.length === 0) continue;
 
-      await deps.recordAlerts(
-        user.userId,
-        fresh.map((d) => ({
-          user_id: user.userId,
-          budget_id: d.budgetId,
-          kind: d.kind,
-          cycle_key: d.cycleKey,
-          category_slug: d.categorySlug,
-          meta: d.meta,
-        })),
-      );
+      const alertRows: AlertRow[] = fresh.map((d) => ({
+        user_id: user.userId,
+        budget_id: d.budgetId,
+        kind: d.kind,
+        cycle_key: d.cycleKey,
+        category_slug: d.categorySlug,
+        meta: d.meta,
+      }));
 
       const tokens = await deps.getPushTokens(user.userId);
-      if (tokens.length === 0) continue;
+      if (tokens.length === 0) {
+        // Nothing can be delivered — record so the dedup filter still applies.
+        await deps.recordAlerts(user.userId, alertRows);
+        continue;
+      }
 
-      // ONE push per user: join the top few lines.
-      const body = fresh
-        .slice(0, 3)
+      // ONE push per user: join the top few lines, noting any hidden overflow.
+      const shown = fresh.slice(0, 3);
+      const hidden = fresh.length - shown.length;
+      const body = shown
         .map((d) => alertLine(d, d.categorySlug ?? "Overall"))
-        .join(" · ");
+        .join(" · ") + (hidden > 0 ? ` +${hidden} more` : "");
+
+      // Send BEFORE recording: for a once-daily job, a duplicate notification
+      // (if recording fails after a successful send) is far less harmful than
+      // an alert that silently never gets delivered because it was already
+      // marked as sent before the push actually went out.
       await deps.sendPush(
         tokens.map((to) => ({
           to,
@@ -174,6 +181,7 @@ export async function handleBudgetCheck(
           data: { url: "/budgets" },
         })),
       );
+      await deps.recordAlerts(user.userId, alertRows);
       notified++;
     } catch (_e) {
       continue;
