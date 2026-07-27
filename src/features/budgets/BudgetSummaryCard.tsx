@@ -171,13 +171,25 @@ function SummaryRow({
           />
         </View>
 
-        <View style={{ flexDirection: rowDir, alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Stacked, not side-by-side: four money elements collide and overflow
+            once EGP amounts reach thousands. */}
+        <View style={{ gap: 2 }}>
           <View style={{ flexDirection: rowDir, alignItems: 'center', gap: 4 }}>
-            <Money amount={spent} tone="ink" sign="none" size={12.5} />
-            <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 11.5, color: INK3 }}>
+            <Money amount={spent} tone="ink" sign="none" size={12.5} numberOfLines={1} />
+            <Text
+              style={{ fontFamily: FONT.jakartaMd, fontSize: 11.5, color: INK3 }}
+              numberOfLines={1}
+            >
               {t('budgets.spentOf', locale)}
             </Text>
-            <Money amount={budget.amount} tone="ink2" sign="none" size={12.5} />
+            <Money
+              amount={budget.amount}
+              tone="ink2"
+              sign="none"
+              size={12.5}
+              numberOfLines={1}
+              style={{ flexShrink: 1 }}
+            />
           </View>
           <View style={{ flexDirection: rowDir, alignItems: 'center', gap: 4 }}>
             <Money
@@ -185,8 +197,12 @@ function SummaryRow({
               tone="ink2"
               sign="none"
               size={11.5}
+              numberOfLines={1}
             />
-            <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 11.5, color: tone === 'over' ? DANGER : INK3 }}>
+            <Text
+              style={{ fontFamily: FONT.jakartaMd, fontSize: 11.5, color: tone === 'over' ? DANGER : INK3 }}
+              numberOfLines={1}
+            >
               {t(tone === 'over' ? 'budgets.over' : 'budgets.remaining', locale)}
             </Text>
           </View>

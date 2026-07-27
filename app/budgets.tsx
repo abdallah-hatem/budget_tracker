@@ -554,17 +554,38 @@ function BudgetRow({
           />
         </View>
 
-        <View style={{ flexDirection: rowDir, alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Two stacked lines: four money elements never fit one phone line once
+            EGP amounts reach thousands (they used to collide and run off-screen). */}
+        <View style={{ gap: 2 }}>
           <View style={{ flexDirection: rowDir, alignItems: 'center', gap: 4 }}>
-            <Money amount={spent} tone="ink" sign="none" size={13} />
-            <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 12, color: INK3 }}>
+            <Money amount={spent} tone="ink" sign="none" size={13} numberOfLines={1} />
+            <Text
+              style={{ fontFamily: FONT.jakartaMd, fontSize: 12, color: INK3 }}
+              numberOfLines={1}
+            >
               {t('budgets.spentOf', locale)}
             </Text>
-            <Money amount={budget.amount} tone="ink2" sign="none" size={13} />
+            <Money
+              amount={budget.amount}
+              tone="ink2"
+              sign="none"
+              size={13}
+              numberOfLines={1}
+              style={{ flexShrink: 1 }}
+            />
           </View>
           <View style={{ flexDirection: rowDir, alignItems: 'center', gap: 4 }}>
-            <Money amount={tone === 'over' ? Math.max(0, spent - budget.amount) : remaining} tone="ink2" sign="none" size={12} />
-            <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 12, color: tone === 'over' ? DANGER : INK3 }}>
+            <Money
+              amount={tone === 'over' ? Math.max(0, spent - budget.amount) : remaining}
+              tone="ink2"
+              sign="none"
+              size={12}
+              numberOfLines={1}
+            />
+            <Text
+              style={{ fontFamily: FONT.jakartaMd, fontSize: 12, color: tone === 'over' ? DANGER : INK3 }}
+              numberOfLines={1}
+            >
               {t(tone === 'over' ? 'budgets.over' : 'budgets.remaining', locale)}
             </Text>
           </View>
