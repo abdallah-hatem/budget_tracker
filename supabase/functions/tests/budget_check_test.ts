@@ -193,3 +193,56 @@ Deno.test("recap: skipped when already sent for this week", async () => {
   }));
   assertEquals(pushed, 0);
 });
+
+Deno.test("recap: more than 4 budgets -> body shows +N more, meta records ALL lines", async () => {
+  let sentBody = "";
+  let recordedMeta: { lines: string[] } | undefined;
+  await handleBudgetCheck(post(), makeDeps({
+    now: () => SATURDAY,
+    listBudgets: () => Promise.resolve([
+      { id: "b1", scope: "category", category_slug: "food", period: "monthly", amount: 1000, warn_pct: 80 },
+      { id: "b2", scope: "category", category_slug: "transport", period: "monthly", amount: 500, warn_pct: 80 },
+      { id: "b3", scope: "category", category_slug: "bills", period: "monthly", amount: 200, warn_pct: 80 },
+      { id: "b4", scope: "category", category_slug: "shopping", period: "monthly", amount: 300, warn_pct: 80 },
+      { id: "b5", scope: "category", category_slug: "fun", period: "monthly", amount: 100, warn_pct: 80 },
+      { id: "b6", scope: "category", category_slug: "health", period: "monthly", amount: 100, warn_pct: 80 },
+    ]),
+    getCycleSpend: () => Promise.resolve({
+      overall: 0,
+      // Kept low so no threshold alert fires — the recap push is the ONLY push.
+      byCategory: { food: 10, transport: 10, bills: 10, shopping: 10, fun: 10, health: 10 },
+    }),
+    sendPush: (msgs) => { sentBody = msgs[0].body; return Promise.resolve(); },
+    recordAlerts: (_u, rows) => {
+      recordedMeta = (rows[0].meta as unknown as { lines: string[] });
+      return Promise.resolve();
+    },
+  }));
+  assert(sentBody.includes("+2 more"), `expected "+2 more" in body, got: ${sentBody}`);
+  assertEquals(recordedMeta?.lines.length, 6);
+});
+
+Deno.test("recap: lines are ordered highest-percentage-first", async () => {
+  let recordedMeta: { lines: string[] } | undefined;
+  await handleBudgetCheck(post(), makeDeps({
+    now: () => SATURDAY,
+    listBudgets: () => Promise.resolve([
+      // warn_pct 95 (above the highest spend below) so no threshold alert
+      // fires — the recap push must be the ONLY push here.
+      { id: "b1", scope: "category", category_slug: "food", period: "monthly", amount: 1000, warn_pct: 95 },
+      { id: "b2", scope: "category", category_slug: "transport", period: "monthly", amount: 1000, warn_pct: 95 },
+      { id: "b3", scope: "category", category_slug: "bills", period: "monthly", amount: 1000, warn_pct: 95 },
+    ]),
+    getCycleSpend: () => Promise.resolve({
+      overall: 0,
+      // Deliberately out of category-definition order: bills highest, transport
+      // mid, food lowest, so a correct sort must reorder them.
+      byCategory: { food: 50, transport: 300, bills: 900 },
+    }),
+    recordAlerts: (_u, rows) => {
+      recordedMeta = (rows[0].meta as unknown as { lines: string[] });
+      return Promise.resolve();
+    },
+  }));
+  assertEquals(recordedMeta?.lines, ["bills 90%", "transport 30%", "food 5%"]);
+});

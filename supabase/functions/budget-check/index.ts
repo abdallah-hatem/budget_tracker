@@ -192,26 +192,44 @@ export async function handleBudgetCheck(
       // alarm) as a SEPARATE push from the one above, and deduped by the
       // weekly cycle key via the same `budget_alerts` ledger (kind: "recap",
       // budget_id/category_slug: null), so it fires at most once per week.
+      //
+      // Gated to the first 24h of the weekly cycle (normally Saturday) so it
+      // reads as a start-of-week digest rather than firing whenever a user
+      // happens to first run the check that week. Accepted tradeoff: if the
+      // daily job is down through that whole window, the recap is skipped
+      // for that week entirely (the dedup ledger prevents it firing late).
       const isWeekStart = now.getTime() - weekly.start.getTime() < 86_400_000;
       if (isWeekStart && budgets.length > 0) {
         const recapKey = dedupKey({ budgetId: null, kind: "recap", cycleKey: weekly.key, categorySlug: null });
         const alreadySent = seen.has(recapKey);
         if (!alreadySent) {
-          const lines = budgets.map((b) => {
-            const set = b.period === "weekly" ? weeklySpend : monthlySpend;
-            const spend = b.scope === "overall"
-              ? set.overall
-              : set.byCategory[b.category_slug ?? ""] ?? 0;
-            const pct = b.amount > 0 ? Math.round((spend / b.amount) * 100) : 0;
-            return `${b.category_slug ?? "Overall"} ${pct}%`;
-          });
+          // Full set of lines, highest percentage-of-cap first (most relevant
+          // to the user) — this complete list is what gets RECORDED below.
+          const lines = budgets
+            .map((b) => {
+              const set = b.period === "weekly" ? weeklySpend : monthlySpend;
+              const spend = b.scope === "overall"
+                ? set.overall
+                : set.byCategory[b.category_slug ?? ""] ?? 0;
+              const pct = b.amount > 0 ? Math.round((spend / b.amount) * 100) : 0;
+              return { label: b.category_slug ?? "Overall", pct };
+            })
+            .sort((a, b) => b.pct - a.pct)
+            .map((s) => `${s.label} ${s.pct}%`);
+
+          // Cap the PUSH BODY only (same rationale as the alert path above: a
+          // user with many budgets would otherwise get a push body the OS
+          // truncates unreadably). The recorded meta below keeps every line.
+          const shown = lines.slice(0, 4);
+          const hidden = lines.length - shown.length;
+          const body = shown.join(" · ") + (hidden > 0 ? ` +${hidden} more` : "");
 
           // Send BEFORE recording, same rationale as the alert push above.
           if (tokensForRecap.length > 0) {
             await deps.sendPush(tokensForRecap.map((to) => ({
               to,
               title: "Weekly recap",
-              body: lines.join(" · "),
+              body,
               data: { url: "/budgets" },
             })));
           }
