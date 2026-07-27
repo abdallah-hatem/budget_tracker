@@ -28,9 +28,13 @@ const TONE_COLOR: Record<BudgetProgress['tone'], string> = {
  *
  * Shows the overall budget's bar (if one exists) plus `atRisk(progress, 2)`
  * rows — the same tone colors and clamped-width bar markup as the Budgets
- * screen (Task 9). Renders NOTHING when the user has no budgets, and nothing
- * while still loading, so it never flashes an empty card for someone who has
- * never set a budget. The whole card is tappable through to `/budgets`.
+ * screen (Task 9). If that leaves nothing to show (no overall budget and
+ * nothing at risk), falls back to the user's most-used budgets — highest
+ * `pct` first, up to 2 — so a healthy user still sees their bars sitting
+ * comfortably in green instead of the card vanishing. Renders NOTHING only
+ * when the user has no budgets at all, and nothing while still loading, so it
+ * never flashes an empty card for someone who has never set a budget.
+ * The whole card is tappable through to `/budgets`.
  */
 export function BudgetSummaryCard({ locale }: { locale: Locale }) {
   const router = useRouter();
@@ -44,12 +48,18 @@ export function BudgetSummaryCard({ locale }: { locale: Locale }) {
   if (loading || progress.length === 0) return null;
 
   const overall = progress.find((p) => p.budget.scope === 'overall');
-  // Exclude the overall budget from the at-risk slice so it's never shown twice
-  // (once as the pinned overall row, again inside the worst-first list).
-  const risk = atRisk(progress, 2).filter((p) => p.budget.id !== overall?.budget.id);
-  const rows = overall ? [overall, ...risk] : risk;
+  // Exclude the overall budget from the non-overall pool so it's never shown
+  // twice (once as the pinned overall row, again inside the worst-first list
+  // or the most-used fallback below).
+  const others = progress.filter((p) => p.budget.id !== overall?.budget.id);
+  const risk = atRisk(others, 2);
+  let rows = overall ? [overall, ...risk] : risk;
 
-  if (rows.length === 0) return null;
+  // Nothing at risk and no overall budget: the user is doing fine, don't
+  // vanish the card — show their most-used budgets instead, tone and all.
+  if (rows.length === 0) {
+    rows = [...others].sort((a, b) => b.pct - a.pct).slice(0, 2);
+  }
 
   return (
     <PressableScale
