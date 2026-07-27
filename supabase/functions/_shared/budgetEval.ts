@@ -86,6 +86,17 @@ export const FREQ_MIN_COUNT = 4;
 export const FREQ_RATIO = 1.5;
 
 /**
+ * Below this elapsed fraction, spike detection is meaningless: the expected
+ * spend is prorated from so little of the cycle that a single ordinary
+ * purchase can look like a multi-hundred-percent spike (day 1 of the month,
+ * avg3mMonthly = 1000 -> expected ~= 10, so a plain 200 EGP purchase reads as
+ * a 1900% spike). Mirrors PACE_MIN_ELAPSED's guard on pace projections.
+ * Frequency detection is NOT gated on this — it compares whole-week counts,
+ * not a prorated extrapolation, so it stays valid early in the cycle.
+ */
+export const INSIGHT_MIN_ELAPSED = 0.25;
+
+/**
  * Detect notable shifts across ALL categories, budgeted or not. Returns the
  * strongest `limit` insights so the daily push stays short.
  */
@@ -98,8 +109,13 @@ export function detectInsights(
 
   for (const h of hist) {
     // --- Spike: cycle spend vs the average PRORATED to how far we are in. ---
-    if (h.avg3mMonthly > 0 && h.cycleSpend >= SPIKE_MIN_EGP) {
-      const expected = h.avg3mMonthly * Math.max(cycle.elapsedFraction, 0.01);
+    // Skipped early in the cycle (see INSIGHT_MIN_ELAPSED) since the prorated
+    // expectation is too small to compare against meaningfully.
+    if (
+      cycle.elapsedFraction >= INSIGHT_MIN_ELAPSED &&
+      h.avg3mMonthly > 0 && h.cycleSpend >= SPIKE_MIN_EGP
+    ) {
+      const expected = h.avg3mMonthly * cycle.elapsedFraction;
       const ratio = h.cycleSpend / expected;
       if (ratio >= SPIKE_RATIO) {
         found.push({
@@ -131,7 +147,18 @@ export function detectInsights(
     }
   }
 
-  return found
+  // At most one insight per category — keep the stronger of spike/frequency
+  // so a single noisy category can't crowd out every other category's
+  // anomaly within `limit`.
+  const strongestPerCategory = new Map<string, AlertDescriptor & { strength: number }>();
+  for (const insight of found) {
+    const existing = strongestPerCategory.get(insight.categorySlug ?? "");
+    if (!existing || insight.strength > existing.strength) {
+      strongestPerCategory.set(insight.categorySlug ?? "", insight);
+    }
+  }
+
+  return [...strongestPerCategory.values()]
     .sort((a, b) => b.strength - a.strength)
     .slice(0, limit)
     .map(({ strength: _strength, ...rest }) => rest);

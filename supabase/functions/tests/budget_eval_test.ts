@@ -2,8 +2,12 @@ import { assertEquals, assert } from "@std/assert";
 import {
   detectInsights,
   evaluateBudget,
+  FREQ_MIN_COUNT,
+  FREQ_RATIO,
+  INSIGHT_MIN_ELAPSED,
   PACE_MIN_ELAPSED,
   SPIKE_MIN_EGP,
+  SPIKE_RATIO,
   type BudgetRow,
   type CategoryHistory,
 } from "../_shared/budgetEval.ts";
@@ -169,4 +173,88 @@ Deno.test("insights are capped at the limit, strongest first", () => {
   );
   assertEquals(out.length, 2);
   assertEquals(out[0].categorySlug, "b");
+});
+
+Deno.test("spike: suppressed early in the cycle even for a huge would-be ratio", () => {
+  // Same input that fires at cycle(0.5) (ratio 1.6, well above SPIKE_RATIO)
+  // must NOT fire at cycle(0.1), which is below INSIGHT_MIN_ELAPSED.
+  assert(INSIGHT_MIN_ELAPSED > 0.1);
+  const early = detectInsights([hist({ cycleSpend: 800 })], cycle(0.1));
+  assertEquals(early.filter((o) => o.kind === "insight_spike").length, 0);
+
+  const mid = detectInsights([hist({ cycleSpend: 800 })], cycle(0.5));
+  assertEquals(mid.filter((o) => o.kind === "insight_spike").length, 1);
+});
+
+Deno.test("frequency still fires early in the cycle (unaffected by the elapsed guard)", () => {
+  const out = detectInsights(
+    [hist({ weekCount: 6, avgWeekCount: 2 })],
+    cycle(0.1),
+  );
+  assertEquals(out.some((o) => o.kind === "insight_frequency"), true);
+});
+
+Deno.test("spike is evaluated exactly at INSIGHT_MIN_ELAPSED", () => {
+  // expected = 1000 * 0.25 = 250; 400/250 = 1.6 >= SPIKE_RATIO.
+  const out = detectInsights(
+    [hist({ cycleSpend: 400 })],
+    cycle(INSIGHT_MIN_ELAPSED),
+  );
+  assertEquals(out.some((o) => o.kind === "insight_spike"), true);
+});
+
+Deno.test("spike: ratio exactly at SPIKE_RATIO fires (inclusive boundary)", () => {
+  // Half the month elapsed -> expected 500; 700/500 = 1.4 exactly.
+  assertEquals(700 / 500, SPIKE_RATIO);
+  const out = detectInsights([hist({ cycleSpend: 700 })], cycle(0.5));
+  assertEquals(out.some((o) => o.kind === "insight_spike"), true);
+});
+
+Deno.test("frequency: ratio exactly at FREQ_RATIO with weekCount exactly FREQ_MIN_COUNT fires", () => {
+  const avgWeekCount = FREQ_MIN_COUNT / FREQ_RATIO;
+  assertEquals(FREQ_MIN_COUNT / avgWeekCount, FREQ_RATIO);
+  const out = detectInsights(
+    [hist({ weekCount: FREQ_MIN_COUNT, avgWeekCount })],
+    cycle(0.5),
+  );
+  assertEquals(out.some((o) => o.kind === "insight_frequency"), true);
+});
+
+Deno.test("spike: SPIKE_MIN_EGP boundary is inclusive", () => {
+  // avg3mMonthly 100 at 50% elapsed -> expected 50, well under any cycleSpend
+  // here, so ratio alone never blocks; only the EGP floor decides.
+  const atFloor = detectInsights(
+    [hist({ avg3mMonthly: 100, cycleSpend: SPIKE_MIN_EGP })],
+    cycle(0.5),
+  );
+  assertEquals(atFloor.some((o) => o.kind === "insight_spike"), true);
+
+  const belowFloor = detectInsights(
+    [hist({ avg3mMonthly: 100, cycleSpend: SPIKE_MIN_EGP - 1 })],
+    cycle(0.5),
+  );
+  assertEquals(belowFloor.some((o) => o.kind === "insight_spike"), false);
+});
+
+Deno.test("dedupe: one insight per category, keeping the stronger; other categories still surface", () => {
+  const out = detectInsights(
+    [
+      // Category "a" trips both detectors: spike ratio 1.6, frequency ratio 4 (stronger).
+      hist({ categorySlug: "a", cycleSpend: 800, weekCount: 8, avgWeekCount: 2 }),
+      // Category "b" trips only the spike detector, ratio 1.4.
+      hist({ categorySlug: "b", cycleSpend: 700, weekCount: 0 }),
+    ],
+    cycle(0.5),
+    2,
+  );
+
+  const aInsights = out.filter((o) => o.categorySlug === "a");
+  assertEquals(aInsights.length, 1);
+  assertEquals(aInsights[0].kind, "insight_frequency"); // the stronger of the two.
+
+  const bInsights = out.filter((o) => o.categorySlug === "b");
+  assertEquals(bInsights.length, 1);
+  assertEquals(bInsights[0].kind, "insight_spike");
+
+  assertEquals(out.length, 2);
 });
