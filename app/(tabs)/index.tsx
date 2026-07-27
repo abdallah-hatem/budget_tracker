@@ -20,6 +20,7 @@ import { MonthPicker } from '../../src/ui/MonthPicker';
 import { useMonthSummary } from '../../src/features/dashboard/useMonthSummary';
 import { useTabPreload } from '../../src/hooks/useTabPreload';
 import { useAccountBalances } from '../../src/features/accounts/useAccountBalances';
+import { BudgetSummaryCard } from '../../src/features/budgets/BudgetSummaryCard';
 import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { useSession } from '../../src/features/auth/SessionProvider';
 import { categoryLabel } from '../../src/features/transactions/display';
@@ -267,6 +268,11 @@ export default function Dashboard() {
               />
             )}
           </View>
+        </Reveal>
+
+        {/* ── Budgets: overall + at-risk summary, taps through to /budgets ─ */}
+        <Reveal index={revealIndex++}>
+          <BudgetSummaryCard locale={locale} />
         </Reveal>
 
         {/* ── Accounts: live balances (all-time, not month-filtered) ──── */}
