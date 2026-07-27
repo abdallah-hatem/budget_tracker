@@ -1,5 +1,12 @@
 import { assertEquals, assert } from "@std/assert";
-import { evaluateBudget, PACE_MIN_ELAPSED, type BudgetRow } from "../_shared/budgetEval.ts";
+import {
+  detectInsights,
+  evaluateBudget,
+  PACE_MIN_ELAPSED,
+  SPIKE_MIN_EGP,
+  type BudgetRow,
+  type CategoryHistory,
+} from "../_shared/budgetEval.ts";
 import type { Cycle } from "../_shared/budgetCycles.ts";
 
 const budget = (over: Partial<BudgetRow> = {}): BudgetRow => ({
@@ -103,4 +110,63 @@ Deno.test("pace is evaluated exactly at PACE_MIN_ELAPSED", () => {
 
 Deno.test("pace is suppressed just below PACE_MIN_ELAPSED", () => {
   assertEquals(evaluateBudget(budget(), 300, cycle(PACE_MIN_ELAPSED - 0.01)), null);
+});
+
+const hist = (over: Partial<CategoryHistory> = {}): CategoryHistory => ({
+  categorySlug: "food",
+  cycleSpend: 0,
+  avg3mMonthly: 1000,
+  weekCount: 0,
+  avgWeekCount: 2,
+  ...over,
+});
+
+Deno.test("spike: 40%+ above the prorated 3-month average", () => {
+  // Half the month elapsed, average pace would be 500; 800 is +60%.
+  const out = detectInsights([hist({ cycleSpend: 800 })], cycle(0.5));
+  assertEquals(out.length, 1);
+  assertEquals(out[0].kind, "insight_spike");
+  assertEquals(out[0].categorySlug, "food");
+});
+
+Deno.test("spike: normal spending produces no insight", () => {
+  assertEquals(detectInsights([hist({ cycleSpend: 520 })], cycle(0.5)).length, 0);
+});
+
+Deno.test("spike: suppressed below the EGP floor even at a big ratio", () => {
+  // 10x the average, but the absolute amount is trivial.
+  const out = detectInsights(
+    [hist({ cycleSpend: SPIKE_MIN_EGP - 50, avg3mMonthly: 20 })], cycle(0.5),
+  );
+  assertEquals(out.filter((o) => o.kind === "insight_spike").length, 0);
+});
+
+Deno.test("spike: no history (avg 0) produces no insight", () => {
+  assertEquals(
+    detectInsights([hist({ cycleSpend: 5000, avg3mMonthly: 0 })], cycle(0.5)).length, 0,
+  );
+});
+
+Deno.test("frequency: unusual transaction count fires", () => {
+  const out = detectInsights([hist({ weekCount: 6, avgWeekCount: 2 })], cycle(0.5));
+  assertEquals(out.some((o) => o.kind === "insight_frequency"), true);
+});
+
+Deno.test("frequency: below the minimum count never fires", () => {
+  const out = detectInsights([hist({ weekCount: 3, avgWeekCount: 1 })], cycle(0.5));
+  assertEquals(out.some((o) => o.kind === "insight_frequency"), false);
+});
+
+Deno.test("insights are capped at the limit, strongest first", () => {
+  const out = detectInsights(
+    [
+      hist({ categorySlug: "a", cycleSpend: 700 }),   // +40%
+      hist({ categorySlug: "b", cycleSpend: 2000 }),  // +300%
+      hist({ categorySlug: "c", cycleSpend: 1200 }),  // +140%
+    ],
+    cycle(0.5),
+    2,
+  );
+  assertEquals(out.length, 2);
+  assertEquals(out[0].categorySlug, "b");
 });

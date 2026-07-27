@@ -65,3 +65,74 @@ export function evaluateBudget(
   }
   return null;
 }
+
+/** Per-category history used for anomaly detection (budgeted or not). */
+export interface CategoryHistory {
+  categorySlug: string;
+  /** Spend so far in the current monthly cycle. */
+  cycleSpend: number;
+  /** Trailing 3-month average monthly spend for this category. */
+  avg3mMonthly: number;
+  /** Transactions in the current week. */
+  weekCount: number;
+  /** Typical transactions per week for this category. */
+  avgWeekCount: number;
+}
+
+/** Absolute floor so trivial categories can't produce a "300% spike". */
+export const SPIKE_MIN_EGP = 200;
+export const SPIKE_RATIO = 1.4;
+export const FREQ_MIN_COUNT = 4;
+export const FREQ_RATIO = 1.5;
+
+/**
+ * Detect notable shifts across ALL categories, budgeted or not. Returns the
+ * strongest `limit` insights so the daily push stays short.
+ */
+export function detectInsights(
+  hist: CategoryHistory[],
+  cycle: Cycle,
+  limit = 2,
+): AlertDescriptor[] {
+  const found: Array<AlertDescriptor & { strength: number }> = [];
+
+  for (const h of hist) {
+    // --- Spike: cycle spend vs the average PRORATED to how far we are in. ---
+    if (h.avg3mMonthly > 0 && h.cycleSpend >= SPIKE_MIN_EGP) {
+      const expected = h.avg3mMonthly * Math.max(cycle.elapsedFraction, 0.01);
+      const ratio = h.cycleSpend / expected;
+      if (ratio >= SPIKE_RATIO) {
+        found.push({
+          budgetId: null,
+          kind: "insight_spike",
+          categorySlug: h.categorySlug,
+          meta: {
+            spend: round2(h.cycleSpend),
+            expected: round2(expected),
+            pctAbove: Math.round((ratio - 1) * 100),
+          },
+          strength: ratio,
+        });
+      }
+    }
+
+    // --- Frequency: this week's count vs the usual weekly count. ---
+    if (h.avgWeekCount > 0 && h.weekCount >= FREQ_MIN_COUNT) {
+      const ratio = h.weekCount / h.avgWeekCount;
+      if (ratio >= FREQ_RATIO) {
+        found.push({
+          budgetId: null,
+          kind: "insight_frequency",
+          categorySlug: h.categorySlug,
+          meta: { count: h.weekCount, usual: round2(h.avgWeekCount) },
+          strength: ratio,
+        });
+      }
+    }
+  }
+
+  return found
+    .sort((a, b) => b.strength - a.strength)
+    .slice(0, limit)
+    .map(({ strength: _strength, ...rest }) => rest);
+}
