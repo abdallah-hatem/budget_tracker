@@ -22,4 +22,12 @@ describe('syncMonthStartDay', () => {
     mockEq.mockResolvedValueOnce({ error: { message: 'offline' } } as never);
     await expect(syncMonthStartDay(3)).resolves.toBeUndefined();
   });
+
+  it('never throws when the underlying call rejects', async () => {
+    const { supabase } = jest.requireMock('@/src/lib/supabase') as {
+      supabase: { auth: { getUser: jest.Mock } };
+    };
+    supabase.auth.getUser.mockRejectedValueOnce(new Error('network down'));
+    await expect(syncMonthStartDay(5)).resolves.toBeUndefined();
+  });
 });

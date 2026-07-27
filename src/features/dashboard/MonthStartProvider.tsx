@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,6 +50,7 @@ export async function syncMonthStartDay(day: number): Promise<void> {
 export function MonthStartProvider({ children }: { children: React.ReactNode }) {
   const [startDay, setDay] = useState(DEFAULT_MONTH_START_DAY);
   const [ready, setReady] = useState(false);
+  const didBackfill = useRef(false);
 
   useEffect(() => {
     AsyncStorage.getItem(KEY)
@@ -60,10 +62,12 @@ export function MonthStartProvider({ children }: { children: React.ReactNode }) 
       .finally(() => setReady(true));
   }, []);
 
-  // Backfill once the stored value is read, so existing users get their real
-  // day synced onto the profile without having to touch the setting.
+  // Backfill exactly once, the first time the stored value has been read, so
+  // existing users get their real day synced onto the profile without having
+  // to touch the setting. setStartDay is the sole writer for later changes.
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || didBackfill.current) return;
+    didBackfill.current = true;
     void syncMonthStartDay(startDay);
   }, [ready, startDay]);
 
