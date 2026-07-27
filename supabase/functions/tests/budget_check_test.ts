@@ -1,0 +1,110 @@
+import { assertEquals, assert } from "@std/assert";
+import { handleBudgetCheck, type BudgetCheckDeps } from "../budget-check/index.ts";
+
+const NOW = new Date("2026-07-20T03:00:00Z");
+
+function makeDeps(over: Partial<BudgetCheckDeps> = {}): BudgetCheckDeps {
+  return {
+    now: () => NOW,
+    listActiveUsers: () => Promise.resolve([{ userId: "u1", monthStartDay: 1, locale: "en" }]),
+    listBudgets: () => Promise.resolve([
+      { id: "b1", scope: "category", category_slug: "food", period: "monthly", amount: 1000, warn_pct: 80 },
+    ]),
+    getCycleSpend: () => Promise.resolve({ overall: 900, byCategory: { food: 900 } }),
+    getCategoryHistory: () => Promise.resolve([]),
+    listSentAlerts: () => Promise.resolve([]),
+    recordAlerts: () => Promise.resolve(),
+    getPushTokens: () => Promise.resolve(["ExponentPushToken[x]"]),
+    sendPush: () => Promise.resolve(),
+    ...over,
+  };
+}
+
+const post = () => new Request("http://localhost", { method: "POST" });
+
+Deno.test("sends ONE push summarizing the day's alerts", async () => {
+  const sent: unknown[][] = [];
+  const res = await handleBudgetCheck(post(), makeDeps({
+    sendPush: (msgs) => { sent.push(msgs); return Promise.resolve(); },
+  }));
+  assertEquals(res.status, 200);
+  assertEquals(sent.length, 1);
+  assertEquals(sent[0].length, 1); // one token -> one message
+});
+
+Deno.test("records the alert so it is not repeated", async () => {
+  let recorded: unknown[] = [];
+  await handleBudgetCheck(post(), makeDeps({
+    recordAlerts: (_u, rows) => { recorded = rows; return Promise.resolve(); },
+  }));
+  assertEquals(recorded.length, 1);
+  assertEquals((recorded[0] as { kind: string }).kind, "approaching");
+  assertEquals((recorded[0] as { cycle_key: string }).cycle_key, "2026-07");
+});
+
+Deno.test("an already-sent alert is skipped and no push goes out", async () => {
+  let pushed = false;
+  await handleBudgetCheck(post(), makeDeps({
+    listSentAlerts: () => Promise.resolve([
+      { budget_id: "b1", kind: "approaching", cycle_key: "2026-07", category_slug: "food" },
+    ]),
+    sendPush: () => { pushed = true; return Promise.resolve(); },
+  }));
+  assertEquals(pushed, false);
+});
+
+Deno.test("no budgets and no insights -> no push, still 200", async () => {
+  let pushed = false;
+  const res = await handleBudgetCheck(post(), makeDeps({
+    listBudgets: () => Promise.resolve([]),
+    sendPush: () => { pushed = true; return Promise.resolve(); },
+  }));
+  assertEquals(res.status, 200);
+  assertEquals(pushed, false);
+});
+
+Deno.test("a user with no push token records alerts but sends nothing", async () => {
+  let pushed = false;
+  let recorded = 0;
+  await handleBudgetCheck(post(), makeDeps({
+    getPushTokens: () => Promise.resolve([]),
+    sendPush: () => { pushed = true; return Promise.resolve(); },
+    recordAlerts: (_u, rows) => { recorded = rows.length; return Promise.resolve(); },
+  }));
+  assertEquals(pushed, false);
+  assertEquals(recorded, 1);
+});
+
+Deno.test("insights are included alongside budget alerts", async () => {
+  let recorded: Array<{ kind: string }> = [];
+  await handleBudgetCheck(post(), makeDeps({
+    getCategoryHistory: () => Promise.resolve([
+      { categorySlug: "shopping", cycleSpend: 3000, avg3mMonthly: 1000, weekCount: 0, avgWeekCount: 0 },
+    ]),
+    recordAlerts: (_u, rows) => { recorded = rows as Array<{ kind: string }>; return Promise.resolve(); },
+  }));
+  assert(recorded.some((r) => r.kind === "insight_spike"));
+});
+
+Deno.test("one user failing does not abort the others", async () => {
+  let recordedUsers: string[] = [];
+  await handleBudgetCheck(post(), makeDeps({
+    listActiveUsers: () => Promise.resolve([
+      { userId: "bad", monthStartDay: 1, locale: "en" },
+      { userId: "good", monthStartDay: 1, locale: "en" },
+    ]),
+    getCycleSpend: (userId) => {
+      if (userId === "bad") throw new Error("db blew up");
+      return Promise.resolve({ overall: 900, byCategory: { food: 900 } });
+    },
+    recordAlerts: (u) => { recordedUsers.push(u); return Promise.resolve(); },
+  }));
+  assertEquals(recordedUsers, ["good"]);
+});
+
+Deno.test("GET is rejected", async () => {
+  const res = await handleBudgetCheck(
+    new Request("http://localhost", { method: "GET" }), makeDeps(),
+  );
+  assertEquals(res.status, 405);
+});
