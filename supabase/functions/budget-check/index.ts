@@ -139,51 +139,92 @@ export async function handleBudgetCheck(
         descriptors.push({ ...d, cycleKey: monthly.key });
       }
 
-      if (descriptors.length === 0) continue;
-
-      // Drop anything already sent for this cycle.
+      // Drop anything already sent for this cycle. Fetched even when there
+      // are no fresh descriptors, and tokens fetched once up front, because
+      // the weekly recap below must still run (and still needs both) when
+      // no threshold alert fired this cycle.
       const sent = await deps.listSentAlerts(user.userId, [monthly.key, weekly.key]);
       const seen = new Set(sent.map(dedupKey));
       const fresh = descriptors.filter((d) => !seen.has(dedupKey(d)));
-      if (fresh.length === 0) continue;
+      const tokensForRecap = await deps.getPushTokens(user.userId);
 
-      const alertRows: AlertRow[] = fresh.map((d) => ({
-        user_id: user.userId,
-        budget_id: d.budgetId,
-        kind: d.kind,
-        cycle_key: d.cycleKey,
-        category_slug: d.categorySlug,
-        meta: d.meta,
-      }));
+      if (fresh.length > 0) {
+        const alertRows: AlertRow[] = fresh.map((d) => ({
+          user_id: user.userId,
+          budget_id: d.budgetId,
+          kind: d.kind,
+          cycle_key: d.cycleKey,
+          category_slug: d.categorySlug,
+          meta: d.meta,
+        }));
 
-      const tokens = await deps.getPushTokens(user.userId);
-      if (tokens.length === 0) {
-        // Nothing can be delivered — record so the dedup filter still applies.
-        await deps.recordAlerts(user.userId, alertRows);
-        continue;
+        if (tokensForRecap.length === 0) {
+          // Nothing can be delivered — record so the dedup filter still applies.
+          await deps.recordAlerts(user.userId, alertRows);
+        } else {
+          // ONE push per user: join the top few lines, noting any hidden overflow.
+          const shown = fresh.slice(0, 3);
+          const hidden = fresh.length - shown.length;
+          const body = shown
+            .map((d) => alertLine(d, d.categorySlug ?? "Overall"))
+            .join(" · ") + (hidden > 0 ? ` +${hidden} more` : "");
+
+          // Send BEFORE recording: for a once-daily job, a duplicate
+          // notification (if recording fails after a successful send) is far
+          // less harmful than an alert that silently never gets delivered
+          // because it was already marked as sent before the push actually
+          // went out.
+          await deps.sendPush(
+            tokensForRecap.map((to) => ({
+              to,
+              title: "Budget check",
+              body,
+              data: { url: "/budgets" },
+            })),
+          );
+          await deps.recordAlerts(user.userId, alertRows);
+          notified++;
+        }
       }
 
-      // ONE push per user: join the top few lines, noting any hidden overflow.
-      const shown = fresh.slice(0, 3);
-      const hidden = fresh.length - shown.length;
-      const body = shown
-        .map((d) => alertLine(d, d.categorySlug ?? "Overall"))
-        .join(" · ") + (hidden > 0 ? ` +${hidden} more` : "");
+      // --- Weekly recap: a standing digest on the first run of a new week. ---
+      // Sent independently of thresholds (it is a status report, not an
+      // alarm) as a SEPARATE push from the one above, and deduped by the
+      // weekly cycle key via the same `budget_alerts` ledger (kind: "recap",
+      // budget_id/category_slug: null), so it fires at most once per week.
+      const isWeekStart = now.getTime() - weekly.start.getTime() < 86_400_000;
+      if (isWeekStart && budgets.length > 0) {
+        const recapKey = dedupKey({ budgetId: null, kind: "recap", cycleKey: weekly.key, categorySlug: null });
+        const alreadySent = seen.has(recapKey);
+        if (!alreadySent) {
+          const lines = budgets.map((b) => {
+            const set = b.period === "weekly" ? weeklySpend : monthlySpend;
+            const spend = b.scope === "overall"
+              ? set.overall
+              : set.byCategory[b.category_slug ?? ""] ?? 0;
+            const pct = b.amount > 0 ? Math.round((spend / b.amount) * 100) : 0;
+            return `${b.category_slug ?? "Overall"} ${pct}%`;
+          });
 
-      // Send BEFORE recording: for a once-daily job, a duplicate notification
-      // (if recording fails after a successful send) is far less harmful than
-      // an alert that silently never gets delivered because it was already
-      // marked as sent before the push actually went out.
-      await deps.sendPush(
-        tokens.map((to) => ({
-          to,
-          title: "Budget check",
-          body,
-          data: { url: "/budgets" },
-        })),
-      );
-      await deps.recordAlerts(user.userId, alertRows);
-      notified++;
+          // Send BEFORE recording, same rationale as the alert push above.
+          if (tokensForRecap.length > 0) {
+            await deps.sendPush(tokensForRecap.map((to) => ({
+              to,
+              title: "Weekly recap",
+              body: lines.join(" · "),
+              data: { url: "/budgets" },
+            })));
+          }
+          await deps.recordAlerts(user.userId, [{
+            user_id: user.userId,
+            budget_id: null,
+            kind: "recap",
+            cycle_key: weekly.key,
+            category_slug: null,
+            meta: { lines },
+          }]);
+        }
+      }
     } catch (_e) {
       continue;
     }

@@ -152,3 +152,44 @@ Deno.test("GET is rejected", async () => {
   );
   assertEquals(res.status, 405);
 });
+
+// 2026-07-11 is a Saturday — the first run of a new weekly cycle.
+const SATURDAY = new Date("2026-07-11T03:00:00Z");
+
+Deno.test("recap: sends a separate digest push on Saturday", async () => {
+  const bodies: string[] = [];
+  await handleBudgetCheck(post(), makeDeps({
+    now: () => SATURDAY,
+    getCycleSpend: () => Promise.resolve({ overall: 300, byCategory: { food: 300 } }),
+    sendPush: (msgs) => {
+      for (const m of msgs) bodies.push(m.body);
+      return Promise.resolve();
+    },
+  }));
+  // 300/1000 triggers no threshold alert, so the ONLY push is the recap.
+  assertEquals(bodies.length, 1);
+  assert(bodies[0].includes("food"));
+});
+
+Deno.test("recap: not sent midweek", async () => {
+  let pushed = 0;
+  await handleBudgetCheck(post(), makeDeps({
+    now: () => new Date("2026-07-14T03:00:00Z"), // Tuesday
+    getCycleSpend: () => Promise.resolve({ overall: 300, byCategory: { food: 300 } }),
+    sendPush: () => { pushed++; return Promise.resolve(); },
+  }));
+  assertEquals(pushed, 0);
+});
+
+Deno.test("recap: skipped when already sent for this week", async () => {
+  let pushed = 0;
+  await handleBudgetCheck(post(), makeDeps({
+    now: () => SATURDAY,
+    getCycleSpend: () => Promise.resolve({ overall: 300, byCategory: { food: 300 } }),
+    listSentAlerts: () => Promise.resolve([
+      { budget_id: null, kind: "recap", cycle_key: "2026-W28", category_slug: null },
+    ]),
+    sendPush: () => { pushed++; return Promise.resolve(); },
+  }));
+  assertEquals(pushed, 0);
+});
