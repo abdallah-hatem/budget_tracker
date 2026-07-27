@@ -50,7 +50,11 @@ export function weeklyCycle(now: Date): Cycle {
   const back = (now.getUTCDay() + 1) % 7;
   const start = utc(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - back);
   const end = new Date(start.getTime() + 7 * DAY_MS);
-  // Week number = whole weeks since Jan 1 of the start's year, 1-based.
+  // Week number = whole weeks since Jan 1 of the start's year, 1-based. This is
+  // NOT ISO-8601 week numbering (no Thursday-majority / "week containing the
+  // year's first Thursday" rule) — it's just an offset from Jan 1, so it will
+  // disagree with ISO week numbers near year boundaries. That's fine here: the
+  // key only needs to be stable within a week and unique across weeks, which it is.
   const jan1 = utc(start.getUTCFullYear(), 0, 1);
   const week = Math.floor((start.getTime() - jan1.getTime()) / (7 * DAY_MS)) + 1;
   const key = `${start.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
