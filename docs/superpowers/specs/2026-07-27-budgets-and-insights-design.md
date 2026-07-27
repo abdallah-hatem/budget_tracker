@@ -58,7 +58,13 @@ cycle. Deleting a budget cascades its alert rows.
 ## 3. Cycles
 
 - **Monthly** — the user's configured custom month-start day → the next
-  month-start (the app already stores and applies this; reuse that logic).
+  month-start.
+  **Required change:** that day is currently stored *device-local* in
+  AsyncStorage (`month_start_day`, `MonthStartProvider.tsx`), so the server job
+  cannot read it. Add `profiles.month_start_day int not null default 1` and have
+  the client write through to it whenever the user changes the setting (and once
+  on mount, to backfill existing users). The server reads the profile value and
+  falls back to `1`.
 - **Weekly** — calendar week starting **Saturday** (Egypt norm). Not configurable
   in v1.
 - **Spend** = `confirmed` transactions of type `expense` whose `occurred_at`
