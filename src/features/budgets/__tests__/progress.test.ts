@@ -42,6 +42,39 @@ describe('computeProgress', () => {
     expect(p.pct).toBe(0);
     expect(p.tone).toBe('ok');
   });
+
+  it('does not warn early just because the rounded pct hits the threshold (799/1000, warn at 80)', () => {
+    expect(computeProgress(b(), 799).tone).toBe('ok');
+  });
+
+  it('still warns exactly at the threshold (800/1000, warn at 80)', () => {
+    expect(computeProgress(b(), 800).tone).toBe('warn');
+  });
+
+  it('clamps pct to 99 while under the cap, even though it warns (999/1000)', () => {
+    const p = computeProgress(b(), 999);
+    expect(p.tone).toBe('warn');
+    expect(p.pct).toBe(99);
+  });
+
+  it('treats a floating-point artifact of the cap as over, matching the server\'s cent comparison', () => {
+    // 999.9999999999998 is what a float sum of numeric(12,2) rows lands on
+    // for a "true" 1000 spend against a 1000 cap.
+    expect(computeProgress(b(), 999.9999999999998).tone).toBe('over');
+  });
+
+  it('reports over and pct 100 exactly at the cap', () => {
+    const p = computeProgress(b(), 1000);
+    expect(p.tone).toBe('over');
+    expect(p.pct).toBe(100);
+  });
+
+  it('reports over, pct 150, and remaining 0 well past the cap', () => {
+    const p = computeProgress(b(), 1500);
+    expect(p.tone).toBe('over');
+    expect(p.pct).toBe(150);
+    expect(p.remaining).toBe(0);
+  });
 });
 
 describe('atRisk', () => {
