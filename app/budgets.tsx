@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Screen, Card, AppText, Money, CategoryAvatar, PressableScale, EmptyState } from '@/src/ui';
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { MonthStartProvider } from '@/src/features/dashboard/MonthStartProvider';
 import { useBudgets } from '@/src/features/budgets/useBudgets';
+import { useShowOnHome, setShowOnHome } from '@/src/features/budgets/showOnHome';
 import { createBudget, deleteBudget, updateBudget } from '@/src/features/budgets/api';
 import { expenseCategories } from '@/src/lib/categories';
 import { categoryLabel } from '@/src/features/transactions/display';
@@ -47,6 +48,7 @@ function BudgetsContent() {
   const align: 'left' | 'right' = rtl ? 'right' : 'left';
 
   const { progress, loading, refresh } = useBudgets();
+  const showOnHome = useShowOnHome();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -186,6 +188,38 @@ function BudgetsContent() {
         >
           {t('budgets.subtitle', locale)}
         </AppText>
+
+        {/* Show-on-home switch. The dashboard card is opt-in (hidden by
+            default) so the home screen stays uncluttered for users who don't
+            want it. */}
+        <View
+          style={{
+            flexDirection: rowDir,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            backgroundColor: SURFACE,
+            borderRadius: 14,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            marginBottom: 18,
+          }}
+        >
+          <AppText
+            style={{ flex: 1, fontSize: 14, color: INK, textAlign: align }}
+            numberOfLines={2}
+          >
+            {t('budgets.showOnHome', locale)}
+          </AppText>
+          <Switch
+            testID="budgets-show-on-home"
+            value={showOnHome}
+            onValueChange={(v) => void setShowOnHome(v)}
+            trackColor={{ false: OVERLAY, true: 'rgba(43,217,142,0.5)' }}
+            thumbColor={showOnHome ? ACCENT : '#6B7672'}
+            ios_backgroundColor={OVERLAY}
+          />
+        </View>
 
         {/* Budget list */}
         {showLoader ? (

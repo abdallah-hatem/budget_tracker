@@ -17,6 +17,13 @@ jest.mock('expo-router', () => {
   };
 });
 
+// The card is opt-in; default these tests to "shown" so they exercise the
+// rendering logic. A dedicated test below covers the hidden case.
+let mockShowOnHome = true;
+jest.mock('../showOnHome', () => ({
+  useShowOnHome: () => mockShowOnHome,
+}));
+
 jest.mock('../useBudgets', () => ({
   useBudgets: jest.fn(),
 }));
@@ -118,5 +125,16 @@ describe('BudgetSummaryCard', () => {
     render(<BudgetSummaryCard locale="en" />);
     fireEvent.press(screen.getByTestId('budget-summary-card'));
     expect(mockPush).toHaveBeenCalledWith('/budgets');
+  });
+
+  it('renders nothing when the home-screen switch is off (default)', () => {
+    mockShowOnHome = false;
+    mockUseBudgets.mockReturnValue({
+      progress: [prog({ budget: { id: 'b1', category_slug: 'food' }, tone: 'ok', pct: 20 })],
+      loading: false,
+      refresh: jest.fn(),
+    });
+    const { queryByTestId } = render(<BudgetSummaryCard locale="en" />);
+    expect(queryByTestId('budget-summary-card')).toBeNull();
   });
 });

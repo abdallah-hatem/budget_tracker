@@ -306,6 +306,10 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
     en: 'Set a spending cap per category or overall. You get a daily nudge as you approach it.',
     ar: 'حدد سقفًا للإنفاق لكل فئة أو إجمالاً. ستصلك تنبيهات يومية عند الاقتراب منه.',
   },
+  'budgets.showOnHome': {
+    en: 'Show budgets on the home screen',
+    ar: 'إظهار الميزانيات في الشاشة الرئيسية',
+  },
   'budgets.empty': { en: 'No budgets yet.', ar: 'لا توجد ميزانيات بعد.' },
   'budgets.add': { en: '+ Add budget', ar: '+ إضافة ميزانية' },
   'budgets.overall': { en: 'Overall', ar: 'الإجمالي' },
