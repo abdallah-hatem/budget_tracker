@@ -1,26 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listBudgets } from './api';
 import { computeProgress } from './progress';
+import { monthlyCycleStart, weeklyCycleStart } from './cycles';
 import type { Budget, BudgetProgress } from './types';
 import { useTransactions } from '@/src/features/transactions/useTransactions';
 import { useMonthStart } from '@/src/features/dashboard/MonthStartProvider';
-
-/** Start of the current monthly cycle, honoring the custom month-start day. */
-export function monthlyCycleStart(now: Date, startDay: number): Date {
-  const day = Math.min(28, Math.max(1, startDay || 1));
-  const d = new Date(now.getFullYear(), now.getMonth(), day);
-  if (now.getDate() < day) d.setMonth(d.getMonth() - 1);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-/** Start of the current week (Saturday). */
-export function weeklyCycleStart(now: Date): Date {
-  const d = new Date(now);
-  d.setDate(d.getDate() - ((d.getDay() + 1) % 7));
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
 /**
  * Loads budgets and pairs each with its cycle-to-date spend. Spend counts only
