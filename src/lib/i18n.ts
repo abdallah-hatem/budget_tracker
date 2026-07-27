@@ -320,6 +320,7 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'budgets.scope': { en: 'Applies to', ar: 'ينطبق على' },
   'budgets.period': { en: 'Period', ar: 'الفترة' },
   'budgets.save': { en: 'Save', ar: 'حفظ' },
+  'budgets.saveChanges': { en: 'Save changes', ar: 'حفظ التغييرات' },
   'budgets.cancel': { en: 'Cancel', ar: 'إلغاء' },
   'budgets.settings_hint': { en: 'Spending caps and progress', ar: 'سقوف الإنفاق ونسبة الاستهلاك' },
   'budgets.error.duplicate': {

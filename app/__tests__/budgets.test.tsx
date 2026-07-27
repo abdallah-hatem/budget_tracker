@@ -24,16 +24,18 @@ jest.mock('@/src/features/budgets/useBudgets', () => ({
 jest.mock('@/src/features/budgets/api', () => ({
   createBudget: jest.fn(),
   deleteBudget: jest.fn(),
+  updateBudget: jest.fn(),
 }));
 
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { useBudgets } from '@/src/features/budgets/useBudgets';
-import { createBudget, deleteBudget } from '@/src/features/budgets/api';
+import { createBudget, deleteBudget, updateBudget } from '@/src/features/budgets/api';
 
 const mockUseSession = useSession as jest.Mock;
 const mockUseBudgets = useBudgets as jest.Mock;
 const mockCreateBudget = createBudget as jest.Mock;
 const mockDeleteBudget = deleteBudget as jest.Mock;
+const mockUpdateBudget = updateBudget as jest.Mock;
 
 const noopRefresh = jest.fn().mockResolvedValue(undefined);
 
@@ -58,6 +60,7 @@ function existingRow(id: string): BudgetProgress {
 beforeEach(() => {
   mockCreateBudget.mockReset();
   mockDeleteBudget.mockReset();
+  mockUpdateBudget.mockReset();
   noopRefresh.mockClear().mockResolvedValue(undefined);
   mockUseSession.mockReturnValue({
     session: { user: { id: 'u1' } },
@@ -136,5 +139,80 @@ describe('BudgetsScreen — save/delete error surfacing (C2)', () => {
         t('budgets.error.delete_failed', 'en'),
       ),
     );
+  });
+});
+
+describe('BudgetsScreen — edit an existing budget', () => {
+  it('pre-fills the form with the budget being edited and switches the save label', async () => {
+    render(<BudgetsScreen />);
+    fireEvent.press(screen.getByTestId('budget-edit-b1'));
+
+    // Form opened in edit mode, pre-filled from existingRow('b1'): category
+    // scope, 'food' category, monthly period, amount 1000, warn 80.
+    expect(screen.getByTestId('budget-amount-input').props.value).toBe('1000');
+    expect(screen.getByTestId('budget-warn-input').props.value).toBe('80');
+    expect(screen.getByTestId('budget-save')).toHaveTextContent(t('budgets.saveChanges', 'en'));
+  });
+
+  it('saves in edit mode by calling updateBudget with the id and changed fields, not createBudget', async () => {
+    mockUpdateBudget.mockResolvedValueOnce({});
+
+    render(<BudgetsScreen />);
+    fireEvent.press(screen.getByTestId('budget-edit-b1'));
+    fireEvent.changeText(screen.getByTestId('budget-amount-input'), '1500');
+    fireEvent.press(screen.getByTestId('budget-save'));
+
+    await waitFor(() => expect(mockUpdateBudget).toHaveBeenCalledTimes(1));
+    expect(mockUpdateBudget).toHaveBeenCalledWith('b1', {
+      scope: 'category',
+      category_slug: 'food',
+      period: 'monthly',
+      amount: 1500,
+      warn_pct: 80,
+    });
+    expect(mockCreateBudget).not.toHaveBeenCalled();
+    await waitFor(() => expect(noopRefresh).toHaveBeenCalled());
+  });
+
+  it('cancel exits edit mode without calling createBudget or updateBudget', async () => {
+    render(<BudgetsScreen />);
+    fireEvent.press(screen.getByTestId('budget-edit-b1'));
+    fireEvent.changeText(screen.getByTestId('budget-amount-input'), '1500');
+    fireEvent.press(screen.getByTestId('budget-cancel'));
+
+    // Form closed — the add-budget toggle button is back.
+    expect(screen.getByTestId('budgets-add')).toBeTruthy();
+    expect(mockCreateBudget).not.toHaveBeenCalled();
+    expect(mockUpdateBudget).not.toHaveBeenCalled();
+  });
+
+  it('still calls createBudget (not updateBudget) for a normal add, guarding against the edit path leaking in', async () => {
+    mockCreateBudget.mockResolvedValueOnce({});
+
+    render(<BudgetsScreen />);
+    await openFormAndFillAmount();
+    fireEvent.press(screen.getByTestId('budget-save'));
+
+    await waitFor(() => expect(mockCreateBudget).toHaveBeenCalledTimes(1));
+    expect(mockUpdateBudget).not.toHaveBeenCalled();
+  });
+
+  it('shows the friendly duplicate-budget message when updateBudget rejects with a 23505 unique violation', async () => {
+    mockUpdateBudget.mockRejectedValueOnce(
+      new Error(
+        'duplicate key value violates unique constraint "budgets_unique_target_idx" (23505)',
+      ),
+    );
+
+    render(<BudgetsScreen />);
+    fireEvent.press(screen.getByTestId('budget-edit-b1'));
+    fireEvent.press(screen.getByTestId('budget-save'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('budget-form-error')).toHaveTextContent(
+        t('budgets.error.duplicate', 'en'),
+      ),
+    );
+    expect(noopRefresh).not.toHaveBeenCalled();
   });
 });

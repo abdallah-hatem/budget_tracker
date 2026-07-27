@@ -6,13 +6,13 @@ import { Screen, Card, AppText, Money, CategoryAvatar, PressableScale, EmptyStat
 import { useSession } from '@/src/features/auth/SessionProvider';
 import { MonthStartProvider } from '@/src/features/dashboard/MonthStartProvider';
 import { useBudgets } from '@/src/features/budgets/useBudgets';
-import { createBudget, deleteBudget } from '@/src/features/budgets/api';
+import { createBudget, deleteBudget, updateBudget } from '@/src/features/budgets/api';
 import { expenseCategories } from '@/src/lib/categories';
 import { categoryLabel } from '@/src/features/transactions/display';
 import { t, isRTL } from '@/src/lib/i18n';
 import { FONT } from '@/src/lib/font';
 import type { Locale } from '@/src/types';
-import type { BudgetPeriod, BudgetProgress, BudgetScope } from '@/src/features/budgets/types';
+import type { Budget, BudgetPeriod, BudgetProgress, BudgetScope } from '@/src/features/budgets/types';
 
 const SURFACE = '#14191A';
 const OVERLAY = '#1C2322';
@@ -49,6 +49,7 @@ function BudgetsContent() {
   const { progress, loading, refresh } = useBudgets();
 
   const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [scope, setScope] = useState<BudgetScope>('overall');
   const allExpenseCategories = expenseCategories();
   const [categorySlug, setCategorySlug] = useState(allExpenseCategories[0]?.slug ?? 'food');
@@ -74,6 +75,7 @@ function BudgetsContent() {
   }
 
   function openForm() {
+    setEditingId(null);
     setScope('overall');
     setCategorySlug(allExpenseCategories[0]?.slug ?? 'food');
     setPeriod('monthly');
@@ -82,8 +84,24 @@ function BudgetsContent() {
     setFormError(null);
     setFormOpen(true);
   }
+  function openEdit(budget: Budget) {
+    setEditingId(budget.id);
+    setScope(budget.scope);
+    setCategorySlug(budget.category_slug ?? allExpenseCategories[0]?.slug ?? 'food');
+    setPeriod(budget.period);
+    setAmount(String(budget.amount));
+    setWarnPct(String(budget.warn_pct));
+    setFormError(null);
+    setFormOpen(true);
+  }
   function closeForm() {
     setFormOpen(false);
+    setEditingId(null);
+    setScope('overall');
+    setCategorySlug(allExpenseCategories[0]?.slug ?? 'food');
+    setPeriod('monthly');
+    setAmount('');
+    setWarnPct('80');
     setFormError(null);
   }
 
@@ -93,13 +111,18 @@ function BudgetsContent() {
     setSaving(true);
     try {
       const warn = Math.min(99, Math.max(1, parseInt(warnPct, 10) || 80));
-      await createBudget({
+      const patch = {
         scope,
         category_slug: scope === 'category' ? categorySlug : null,
         period,
         amount: amountValue,
         warn_pct: warn,
-      });
+      };
+      if (editingId) {
+        await updateBudget(editingId, patch);
+      } else {
+        await createBudget(patch);
+      }
       closeForm();
       await refresh();
     } catch (e) {
@@ -184,6 +207,7 @@ function BudgetsContent() {
                   rtl={rtl}
                   deleting={deletingId === p.budget.id}
                   onDelete={() => onDelete(p.budget.id)}
+                  onEdit={() => openEdit(p.budget)}
                 />
               ))}
             </View>
@@ -358,7 +382,7 @@ function BudgetsContent() {
                     }}
                   >
                     <AppText weight="semibold" style={{ fontSize: 14, color: '#06251A' }}>
-                      {t('budgets.save', locale)}
+                      {t(editingId ? 'budgets.saveChanges' : 'budgets.save', locale)}
                     </AppText>
                   </PressableScale>
                   <PressableScale
@@ -467,12 +491,14 @@ function BudgetRow({
   rtl,
   deleting,
   onDelete,
+  onEdit,
 }: {
   progress: BudgetProgress;
   locale: Locale;
   rtl: boolean;
   deleting: boolean;
   onDelete: () => void;
+  onEdit: () => void;
 }) {
   const rowDir = rtl ? 'row-reverse' : 'row';
   const align: 'left' | 'right' = rtl ? 'right' : 'left';
@@ -494,15 +520,25 @@ function BudgetRow({
               <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 10.5, color: INK3 }}>{periodLabel}</Text>
             </View>
           </View>
-          <PressableScale
-            testID={`budget-delete-${budget.id}`}
-            onPress={onDelete}
-            disabled={deleting}
-            hitSlop={10}
-            style={{ padding: 4 }}
-          >
-            <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 12.5, color: DANGER }}>{t('delete', locale)}</Text>
-          </PressableScale>
+          <View style={{ flexDirection: rowDir, alignItems: 'center', gap: 14 }}>
+            <PressableScale
+              testID={`budget-edit-${budget.id}`}
+              onPress={onEdit}
+              hitSlop={10}
+              style={{ padding: 4 }}
+            >
+              <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 12.5, color: INK2 }}>{t('edit', locale)}</Text>
+            </PressableScale>
+            <PressableScale
+              testID={`budget-delete-${budget.id}`}
+              onPress={onDelete}
+              disabled={deleting}
+              hitSlop={10}
+              style={{ padding: 4 }}
+            >
+              <Text style={{ fontFamily: FONT.jakartaMd, fontSize: 12.5, color: DANGER }}>{t('delete', locale)}</Text>
+            </PressableScale>
+          </View>
         </View>
 
         {/* Progress track — filled width is clamped so an overspent bar never overflows */}
