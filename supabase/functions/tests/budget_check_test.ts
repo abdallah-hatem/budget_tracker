@@ -18,6 +18,7 @@ function makeDeps(over: Partial<BudgetCheckDeps> = {}): BudgetCheckDeps {
     recordAlerts: () => Promise.resolve(),
     getPushTokens: () => Promise.resolve(["ExponentPushToken[x]"]),
     sendPush: () => Promise.resolve(),
+    getCategoryLabels: () => Promise.resolve({}),
     ...over,
   };
 }
@@ -252,6 +253,76 @@ Deno.test("recap: more than 4 budgets -> body shows +N more, meta records ALL li
   }));
   assert(sentBody.includes("+2 more"), `expected "+2 more" in body, got: ${sentBody}`);
   assertEquals(recordedMeta?.lines.length, 6);
+});
+
+// --- i18n: locale-aware copy + category labels -----------------------------
+
+Deno.test("ar locale: push title and body use Arabic copy", async () => {
+  let title = "";
+  let body = "";
+  await handleBudgetCheck(post(), makeDeps({
+    listActiveUsers: () => Promise.resolve([{ userId: "u1", monthStartDay: 1, locale: "ar" }]),
+    getCycleSpend: () => Promise.resolve({ overall: 1200, byCategory: { food: 1200 } }),
+    sendPush: (msgs) => { title = msgs[0].title; body = msgs[0].body; return Promise.resolve(); },
+  }));
+  assertEquals(title, "متابعة الميزانية");
+  assert(body.includes("تجاوز بمقدار"), `expected Arabic "over by" fragment, got: ${body}`);
+});
+
+Deno.test("en locale: push title and body use English copy exactly as before", async () => {
+  let title = "";
+  let body = "";
+  await handleBudgetCheck(post(), makeDeps({
+    getCycleSpend: () => Promise.resolve({ overall: 1200, byCategory: { food: 1200 } }),
+    sendPush: (msgs) => { title = msgs[0].title; body = msgs[0].body; return Promise.resolve(); },
+  }));
+  assertEquals(title, "Budget check");
+  assertEquals(body, "food over by E£200");
+});
+
+Deno.test("category label: slug renders as the localized label, not the slug, in both locales", async () => {
+  const labelsByLocale: Record<string, Record<string, string>> = {
+    en: { food: "Food & Dining" },
+    ar: { food: "الطعام" },
+  };
+
+  let bodyEn = "";
+  await handleBudgetCheck(post(), makeDeps({
+    getCycleSpend: () => Promise.resolve({ overall: 1200, byCategory: { food: 1200 } }),
+    getCategoryLabels: (_u, locale) => Promise.resolve(labelsByLocale[locale] ?? {}),
+    sendPush: (msgs) => { bodyEn = msgs[0].body; return Promise.resolve(); },
+  }));
+  assert(bodyEn.includes("Food & Dining"), `expected label not slug, got: ${bodyEn}`);
+  assert(!bodyEn.includes("food over"), `raw slug leaked into body: ${bodyEn}`);
+
+  let bodyAr = "";
+  await handleBudgetCheck(post(), makeDeps({
+    listActiveUsers: () => Promise.resolve([{ userId: "u1", monthStartDay: 1, locale: "ar" }]),
+    getCycleSpend: () => Promise.resolve({ overall: 1200, byCategory: { food: 1200 } }),
+    getCategoryLabels: (_u, locale) => Promise.resolve(labelsByLocale[locale] ?? {}),
+    sendPush: (msgs) => { bodyAr = msgs[0].body; return Promise.resolve(); },
+  }));
+  assert(bodyAr.includes("الطعام"), `expected Arabic label, got: ${bodyAr}`);
+});
+
+Deno.test("unknown/missing locale falls back to English copy", async () => {
+  let title = "";
+  await handleBudgetCheck(post(), makeDeps({
+    listActiveUsers: () => Promise.resolve([{ userId: "u1", monthStartDay: 1, locale: "fr" }]),
+    sendPush: (msgs) => { title = msgs[0].title; return Promise.resolve(); },
+  }));
+  assertEquals(title, "Budget check");
+});
+
+Deno.test("category label: slug with no entry in the label map falls back to the raw slug, no crash", async () => {
+  let body = "";
+  await handleBudgetCheck(post(), makeDeps({
+    getCycleSpend: () => Promise.resolve({ overall: 1200, byCategory: { food: 1200 } }),
+    getCategoryLabels: () => Promise.resolve({ transport: "Transport" }), // no "food" entry
+    sendPush: (msgs) => { body = msgs[0].body; return Promise.resolve(); },
+  }));
+  assert(body.includes("food"), `expected fallback to raw slug, got: ${body}`);
+  assert(!body.includes("undefined"), `body contained "undefined": ${body}`);
 });
 
 Deno.test("recap: lines are ordered highest-percentage-first", async () => {

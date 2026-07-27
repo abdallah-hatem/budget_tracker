@@ -71,6 +71,37 @@ export interface BudgetCheckDeps {
   recordAlerts: (userId: string, rows: AlertRow[]) => Promise<void>;
   getPushTokens: (userId: string) => Promise<string[]>;
   sendPush: (messages: ExpoPushMessage[]) => Promise<void>;
+  /**
+   * slug -> localized display label (name_en/name_ar) for every category
+   * visible to this user: the global built-ins (categories.user_id is null)
+   * PLUS this user's own custom categories. Missing/unknown slugs are handled
+   * by the caller (falls back to the raw slug), not by this dep.
+   */
+  getCategoryLabels: (userId: string, locale: string) => Promise<Record<string, string>>;
+}
+
+// --- Bilingual copy table -----------------------------------------------
+// Edge Functions can't import src/lib/i18n.ts (React Native client code), so
+// the small set of strings this job produces is duplicated here.
+const COPY = {
+  budgetCheck: { en: "Budget check", ar: "متابعة الميزانية" },
+  weeklyRecap: { en: "Weekly recap", ar: "ملخص الأسبوع" },
+  overall: { en: "Overall", ar: "الإجمالي" },
+  overBy: { en: "over by", ar: "تجاوز بمقدار" },
+  at100: { en: "at 100%", ar: "وصلت ١٠٠٪" },
+  onPacePlus: { en: "on pace +", ar: "متوقع تجاوز +" },
+  up: { en: "up", ar: "أعلى بـ" },
+  // Glued directly after the count (no separating space) to match the
+  // original English "6x this week" phrasing; the Arabic form needs its own
+  // leading space since "مرة" is a separate word, not a suffix on the digit.
+  xThisWeek: { en: "x this week", ar: " مرة هذا الأسبوع" },
+  more: { en: "more", ar: "أخرى" },
+} satisfies Record<string, { en: string; ar: string }>;
+
+/** Selects the localized string for `key`, defaulting to `en` for any unknown locale. */
+function t(key: keyof typeof COPY, locale: string): string {
+  const entry = COPY[key];
+  return locale === "ar" ? entry.ar : entry.en;
 }
 
 function json(body: unknown, status: number): Response {
@@ -89,15 +120,15 @@ function dedupKey(a: { budget_id?: string | null; budgetId?: string | null; kind
 }
 
 /** Short human line per alert; the push body joins these with " · ". */
-export function alertLine(a: AlertDescriptor, label: string): string {
+export function alertLine(a: AlertDescriptor, label: string, locale: string): string {
   const m = a.meta as Record<string, number>;
   switch (a.kind) {
-    case "exceeded": return `${label} over by E£${m.over}`;
-    case "reached": return `${label} at 100%`;
+    case "exceeded": return `${label} ${t("overBy", locale)} E£${m.over}`;
+    case "reached": return `${label} ${t("at100", locale)}`;
     case "approaching": return `${label} ${m.pct}%`;
-    case "pace": return `${label} on pace +E£${m.over}`;
-    case "insight_spike": return `${label} up ${m.pctAbove}%`;
-    case "insight_frequency": return `${label} ${m.count}x this week`;
+    case "pace": return `${label} ${t("onPacePlus", locale)}E£${m.over}`;
+    case "insight_spike": return `${label} ${t("up", locale)} ${m.pctAbove}%`;
+    case "insight_frequency": return `${label} ${m.count}${t("xThisWeek", locale)}`;
     default: return label;
   }
 }
@@ -133,6 +164,9 @@ export async function handleBudgetCheck(
     // One user's failure must never abort the whole run.
     try {
       const budgets = await deps.listBudgets(user.userId);
+      const labels = await deps.getCategoryLabels(user.userId, user.locale);
+      const categoryLabel = (slug: string | null) =>
+        slug === null ? t("overall", user.locale) : (labels[slug] ?? slug);
       const monthly = cycleFor("monthly", now, user.monthStartDay);
       const weekly = cycleFor("weekly", now, user.monthStartDay);
 
@@ -186,8 +220,8 @@ export async function handleBudgetCheck(
           const shown = fresh.slice(0, 3);
           const hidden = fresh.length - shown.length;
           const body = shown
-            .map((d) => alertLine(d, d.categorySlug ?? "Overall"))
-            .join(" · ") + (hidden > 0 ? ` +${hidden} more` : "");
+            .map((d) => alertLine(d, categoryLabel(d.categorySlug), user.locale))
+            .join(" · ") + (hidden > 0 ? ` +${hidden} ${t("more", user.locale)}` : "");
 
           // Send BEFORE recording: for a once-daily job, a duplicate
           // notification (if recording fails after a successful send) is far
@@ -197,7 +231,7 @@ export async function handleBudgetCheck(
           await deps.sendPush(
             tokensForRecap.map((to) => ({
               to,
-              title: "Budget check",
+              title: t("budgetCheck", user.locale),
               body,
               data: { url: "/budgets" },
             })),
@@ -232,7 +266,7 @@ export async function handleBudgetCheck(
                 ? set.overall
                 : set.byCategory[b.category_slug ?? ""] ?? 0;
               const pct = b.amount > 0 ? Math.round((spend / b.amount) * 100) : 0;
-              return { label: b.category_slug ?? "Overall", pct };
+              return { label: categoryLabel(b.category_slug), pct };
             })
             .sort((a, b) => b.pct - a.pct)
             .map((s) => `${s.label} ${s.pct}%`);
@@ -242,7 +276,7 @@ export async function handleBudgetCheck(
           // truncates unreadably). The recorded meta below keeps every line.
           const shown = lines.slice(0, 4);
           const hidden = lines.length - shown.length;
-          const body = shown.join(" · ") + (hidden > 0 ? ` +${hidden} more` : "");
+          const body = shown.join(" · ") + (hidden > 0 ? ` +${hidden} ${t("more", user.locale)}` : "");
 
           // Send BEFORE recording, same rationale as the alert push above.
           if (tokensForRecap.length > 0) {
@@ -493,6 +527,21 @@ if (import.meta.main) {
         .select("token")
         .eq("user_id", userId);
       return (data ?? []).map((r: { token: string }) => r.token);
+    },
+
+    async getCategoryLabels(userId, locale) {
+      // Global built-ins (user_id is null) PLUS this user's own custom rows —
+      // both are valid categories a user's transactions/budgets can reference.
+      const { data, error } = await supabase
+        .from("categories")
+        .select("slug, name_en, name_ar")
+        .or(`user_id.is.null,user_id.eq.${userId}`);
+      if (error) throw new Error(error.message);
+      const out: Record<string, string> = {};
+      for (const c of (data ?? []) as { slug: string; name_en: string; name_ar: string }[]) {
+        out[c.slug] = locale === "ar" ? c.name_ar : c.name_en;
+      }
+      return out;
     },
 
     async sendPush(messages) {
