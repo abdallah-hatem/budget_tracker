@@ -259,6 +259,45 @@ export default function Settings() {
         <MaterialCommunityIcons name={rtl ? 'chevron-left' : 'chevron-right'} size={22} color="#6B7672" />
       </TouchableOpacity>
 
+      {/* ── BUDGETS (opens the caps + progress screen) ──────────────────────── */}
+      <TouchableOpacity
+        testID="settings-budgets"
+        onPress={() => router.push('/budgets' as Href)}
+        accessibilityRole="button"
+        activeOpacity={0.7}
+        style={{
+          marginBottom: 16,
+          backgroundColor: '#14191A',
+          borderRadius: 20,
+          padding: 16,
+          flexDirection: rtl ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          gap: 14,
+        }}
+      >
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            backgroundColor: 'rgba(43,217,142,0.16)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <MaterialCommunityIcons name="piggy-bank-outline" size={22} color="#2BD98E" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <AppText weight="semibold" className="text-ink" style={{ fontSize: 15.5, textAlign: rtl ? 'right' : 'left' }}>
+            {t('budgets.title', locale)}
+          </AppText>
+          <AppText className="text-ink3" style={{ fontSize: 12.5, marginTop: 2, textAlign: rtl ? 'right' : 'left' }}>
+            {t('budgets.settings_hint', locale)}
+          </AppText>
+        </View>
+        <MaterialCommunityIcons name={rtl ? 'chevron-left' : 'chevron-right'} size={22} color="#6B7672" />
+      </TouchableOpacity>
+
       {/* ── ACCOUNTS ───────────────────────────────────────────────────────── */}
       <CollapsibleCard title={t('settings.accounts', locale)} icon="wallet-outline" rtl={rtl} testID="section-accounts">
         <View style={{ gap: 14 }}>

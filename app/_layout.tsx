@@ -106,6 +106,7 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       <Stack.Screen name="statistics" options={{ presentation: 'card' }} />
+      <Stack.Screen name="budgets" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

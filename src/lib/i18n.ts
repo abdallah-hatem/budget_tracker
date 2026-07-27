@@ -299,6 +299,30 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'sms_tut.done': { en: 'Got it', ar: 'تمام' },
   'sms_tut.view': { en: 'View SMS setup guide', ar: 'عرض دليل إعداد الرسائل' },
 
+  // ── Budgets ─────────────────────────────────────────────────────────────────
+  'budgets.section': { en: 'Budgets', ar: 'الميزانيات' },
+  'budgets.title': { en: 'Budgets', ar: 'الميزانيات' },
+  'budgets.subtitle': {
+    en: 'Set a spending cap per category or overall. You get a daily nudge as you approach it.',
+    ar: 'حدد سقفًا للإنفاق لكل فئة أو إجمالاً. ستصلك تنبيهات يومية عند الاقتراب منه.',
+  },
+  'budgets.empty': { en: 'No budgets yet.', ar: 'لا توجد ميزانيات بعد.' },
+  'budgets.add': { en: '+ Add budget', ar: '+ إضافة ميزانية' },
+  'budgets.overall': { en: 'Overall', ar: 'الإجمالي' },
+  'budgets.category': { en: 'Category', ar: 'فئة' },
+  'budgets.monthly': { en: 'Monthly', ar: 'شهري' },
+  'budgets.weekly': { en: 'Weekly', ar: 'أسبوعي' },
+  'budgets.amount': { en: 'Cap amount', ar: 'قيمة السقف' },
+  'budgets.warnAt': { en: 'Warn at %', ar: 'التنبيه عند %' },
+  'budgets.spentOf': { en: 'spent of', ar: 'من أصل' },
+  'budgets.remaining': { en: 'left', ar: 'متبقي' },
+  'budgets.over': { en: 'over', ar: 'تجاوز' },
+  'budgets.scope': { en: 'Applies to', ar: 'ينطبق على' },
+  'budgets.period': { en: 'Period', ar: 'الفترة' },
+  'budgets.save': { en: 'Save', ar: 'حفظ' },
+  'budgets.cancel': { en: 'Cancel', ar: 'إلغاء' },
+  'budgets.settings_hint': { en: 'Spending caps and progress', ar: 'سقوف الإنفاق ونسبة الاستهلاك' },
+
   // Forced-update gate
   'update.title': { en: 'Update required', ar: 'مطلوب تحديث' },
   'update.body': {
