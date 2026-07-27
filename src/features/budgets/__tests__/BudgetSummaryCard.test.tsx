@@ -5,9 +5,17 @@ import type { Budget, BudgetProgress } from '../types';
 
 const mockPush = jest.fn();
 
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush }),
-}));
+jest.mock('expo-router', () => {
+  const { useEffect } = require('react');
+  return {
+    useFocusEffect: (cb: () => void) => {
+      useEffect(() => {
+        cb();
+      }, []);
+    },
+    useRouter: () => ({ push: mockPush }),
+  };
+});
 
 jest.mock('../useBudgets', () => ({
   useBudgets: jest.fn(),

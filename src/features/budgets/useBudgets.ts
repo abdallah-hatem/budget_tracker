@@ -19,7 +19,9 @@ export function useBudgets(): {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const now = useMemo(() => new Date(), []);
+  // State (not a one-shot memo) so refresh() can re-evaluate the cycle
+  // windows instead of freezing them at first mount.
+  const [now, setNow] = useState(() => new Date());
   const from = useMemo(() => {
     // Fetch from the earlier of the two cycle starts so both are covered.
     const m = monthlyCycleStart(now, startDay);
@@ -27,22 +29,24 @@ export function useBudgets(): {
     return (m < w ? m : w).toISOString();
   }, [now, startDay]);
 
-  const filter = useMemo(
-    () => ({ from, to: now.toISOString(), status: 'confirmed' as const }),
-    [from, now],
-  );
-  const { data: txns } = useTransactions(filter);
+  // No upper bound: the per-budget loop below already excludes transactions
+  // before each budget's own cycle start, and a future-dated transaction
+  // should still count toward the current cycle.
+  const filter = useMemo(() => ({ from, status: 'confirmed' as const }), [from]);
+  const { data: txns, refresh: refreshTxns } = useTransactions(filter);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setNow(new Date());
     try {
-      setBudgets(await listBudgets());
+      const [budgetRows] = await Promise.all([listBudgets(), refreshTxns()]);
+      setBudgets(budgetRows);
     } catch {
       setBudgets([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshTxns]);
 
   useEffect(() => {
     void refresh();

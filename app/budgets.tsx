@@ -57,9 +57,21 @@ function BudgetsContent() {
   const [warnPct, setWarnPct] = useState('80');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const amountValue = parseFloat(amount);
   const canSave = Number.isFinite(amountValue) && amountValue > 0;
+
+  // Duplicate-budget conflicts raise Postgres 23505 (unique violation) on
+  // `budgets_unique_target_idx` — translate that into a friendly message
+  // rather than surfacing the raw error (or silently no-op'ing).
+  function friendlySaveError(e: unknown): string {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('duplicate key') || msg.includes('23505')) {
+      return t('budgets.error.duplicate', locale);
+    }
+    return t('budgets.error.save_failed', locale);
+  }
 
   function openForm() {
     setScope('overall');
@@ -67,14 +79,17 @@ function BudgetsContent() {
     setPeriod('monthly');
     setAmount('');
     setWarnPct('80');
+    setFormError(null);
     setFormOpen(true);
   }
   function closeForm() {
     setFormOpen(false);
+    setFormError(null);
   }
 
   async function onSave() {
     if (!canSave) return;
+    setFormError(null);
     setSaving(true);
     try {
       const warn = Math.min(99, Math.max(1, parseInt(warnPct, 10) || 80));
@@ -87,16 +102,21 @@ function BudgetsContent() {
       });
       closeForm();
       await refresh();
+    } catch (e) {
+      setFormError(friendlySaveError(e));
     } finally {
       setSaving(false);
     }
   }
 
   async function onDelete(id: string) {
+    setFormError(null);
     setDeletingId(id);
     try {
       await deleteBudget(id);
       await refresh();
+    } catch {
+      setFormError(t('budgets.error.delete_failed', locale));
     } finally {
       setDeletingId(null);
     }
@@ -172,6 +192,20 @@ function BudgetsContent() {
 
         {/* Add form */}
         <View style={{ marginTop: 16 }}>
+          {formError ? (
+            <Text
+              testID="budget-form-error"
+              style={{
+                fontFamily: FONT.jakartaMd,
+                fontSize: 13,
+                color: DANGER,
+                textAlign: align,
+                marginBottom: 10,
+              }}
+            >
+              {formError}
+            </Text>
+          ) : null}
           {formOpen ? (
             <Card>
               <View style={{ gap: 12 }}>
@@ -182,13 +216,19 @@ function BudgetsContent() {
                     testID="budget-scope-overall"
                     label={t('budgets.overall', locale)}
                     active={scope === 'overall'}
-                    onPress={() => setScope('overall')}
+                    onPress={() => {
+                      setScope('overall');
+                      setFormError(null);
+                    }}
                   />
                   <TogglePill
                     testID="budget-scope-category"
                     label={t('budgets.category', locale)}
                     active={scope === 'category'}
-                    onPress={() => setScope('category')}
+                    onPress={() => {
+                      setScope('category');
+                      setFormError(null);
+                    }}
                   />
                 </View>
 
@@ -206,7 +246,10 @@ function BudgetsContent() {
                         <PressableScale
                           key={c.slug}
                           testID={`budget-cat-${c.slug}`}
-                          onPress={() => setCategorySlug(c.slug)}
+                          onPress={() => {
+                            setCategorySlug(c.slug);
+                            setFormError(null);
+                          }}
                           style={{
                             flexDirection: rowDir,
                             alignItems: 'center',
@@ -236,13 +279,19 @@ function BudgetsContent() {
                     testID="budget-period-monthly"
                     label={t('budgets.monthly', locale)}
                     active={period === 'monthly'}
-                    onPress={() => setPeriod('monthly')}
+                    onPress={() => {
+                      setPeriod('monthly');
+                      setFormError(null);
+                    }}
                   />
                   <TogglePill
                     testID="budget-period-weekly"
                     label={t('budgets.weekly', locale)}
                     active={period === 'weekly'}
-                    onPress={() => setPeriod('weekly')}
+                    onPress={() => {
+                      setPeriod('weekly');
+                      setFormError(null);
+                    }}
                   />
                 </View>
 
@@ -251,7 +300,10 @@ function BudgetsContent() {
                 <TextInput
                   testID="budget-amount-input"
                   value={amount}
-                  onChangeText={setAmount}
+                  onChangeText={(v) => {
+                    setAmount(v);
+                    setFormError(null);
+                  }}
                   keyboardType="numeric"
                   placeholder="0"
                   placeholderTextColor={INK3}
@@ -272,7 +324,10 @@ function BudgetsContent() {
                 <TextInput
                   testID="budget-warn-input"
                   value={warnPct}
-                  onChangeText={setWarnPct}
+                  onChangeText={(v) => {
+                    setWarnPct(v);
+                    setFormError(null);
+                  }}
                   keyboardType="numeric"
                   placeholder="80"
                   placeholderTextColor={INK3}

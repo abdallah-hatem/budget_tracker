@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Text, View } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Card, AppText, Money, CategoryAvatar, PressableScale, SectionLabel } from '@/src/ui';
 import { useBudgets } from './useBudgets';
@@ -41,7 +41,17 @@ export function BudgetSummaryCard({ locale }: { locale: Locale }) {
   const rtl = isRTL(locale);
   const rowDir = rtl ? 'row-reverse' : 'row';
 
-  const { progress, loading } = useBudgets();
+  const { progress, loading, refresh } = useBudgets();
+
+  // Re-evaluate spend every time the dashboard regains focus (e.g. after
+  // recording a transaction), so this card never sits frozen at its
+  // first-mount values — matching the useMonthSummary/useAccountBalances
+  // refresh-on-focus pattern used elsewhere on the dashboard.
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
 
   // No flash of empty state: bail out before anything renders while loading,
   // and render nothing at all for a user who has never set a budget.

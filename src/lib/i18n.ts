@@ -322,6 +322,12 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   'budgets.save': { en: 'Save', ar: 'حفظ' },
   'budgets.cancel': { en: 'Cancel', ar: 'إلغاء' },
   'budgets.settings_hint': { en: 'Spending caps and progress', ar: 'سقوف الإنفاق ونسبة الاستهلاك' },
+  'budgets.error.duplicate': {
+    en: 'You already have a budget for this category and period.',
+    ar: 'لديك بالفعل ميزانية لهذه الفئة وهذه الفترة.',
+  },
+  'budgets.error.save_failed': { en: 'Could not save this budget. Please try again.', ar: 'تعذّر حفظ الميزانية. حاول مرة أخرى.' },
+  'budgets.error.delete_failed': { en: 'Could not delete this budget. Please try again.', ar: 'تعذّر حذف الميزانية. حاول مرة أخرى.' },
 
   // Forced-update gate
   'update.title': { en: 'Update required', ar: 'مطلوب تحديث' },
