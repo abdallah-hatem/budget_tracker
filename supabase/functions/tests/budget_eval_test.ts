@@ -74,3 +74,33 @@ Deno.test("overall scope carries a null categorySlug", () => {
 Deno.test("zero spend never alerts", () => {
   assertEquals(evaluateBudget(budget(), 0, cycle(0.99)), null);
 });
+
+Deno.test("996/1000 -> approaching with pct clamped to 99, not 100", () => {
+  const a = evaluateBudget(budget(), 996, cycle(0.9));
+  assertEquals(a?.kind, "approaching");
+  assertEquals(a?.meta.pct, 99);
+});
+
+Deno.test("float-sum just under the cap -> reached, not approaching", () => {
+  // Summing many numeric(12,2) rows can land a hair under the integer cap.
+  const a = evaluateBudget(budget(), 999.9999999999998, cycle(0.9));
+  assertEquals(a?.kind, "reached");
+});
+
+Deno.test("float-sum just over the cap -> reached via cent-rounding, not a spurious exceeded", () => {
+  // 1000.0000000000002 rounds to the same integer cent value (100000) as the
+  // 1000 cap, so this is correctly classified as "reached" rather than
+  // "exceeded" with a meaningless over:0 (or over: <1 cent artifact).
+  const a = evaluateBudget(budget(), 1000.0000000000002, cycle(0.9));
+  assertEquals(a?.kind, "reached");
+});
+
+Deno.test("pace is evaluated exactly at PACE_MIN_ELAPSED", () => {
+  const a = evaluateBudget(budget(), 300, cycle(PACE_MIN_ELAPSED));
+  assertEquals(a?.kind, "pace");
+  assertEquals(a?.meta.projected, 1200);
+});
+
+Deno.test("pace is suppressed just below PACE_MIN_ELAPSED", () => {
+  assertEquals(evaluateBudget(budget(), 300, cycle(PACE_MIN_ELAPSED - 0.01)), null);
+});
