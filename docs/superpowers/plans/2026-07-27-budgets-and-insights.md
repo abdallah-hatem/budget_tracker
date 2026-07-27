@@ -19,6 +19,7 @@
 - **Cron migration steps are exception-safe** (`do $$ begin ... exception when others then null; end $$`), matching `supabase/migrations/0013_purge_raw_text.sql`.
 - **Money is `numeric(12,2)` in SQL, `number` in TS.** Percentages are integers 0–100.
 - **Verification gate for every task:** `npx tsc --noEmit`, `npx jest`, and `cd supabase/functions && deno test --allow-all --node-modules-dir=auto tests/` must all pass before commit.
+- **DEV-FIRST — everything runs against LOCAL Docker Supabase.** No task before Task 12 may touch the production project (`pzyadiwfjmjsafssxshc`): migrations apply locally with `supabase migration up`, the function is served locally with `supabase functions serve`, and the cron is verified locally. Production deploy happens **once**, in Task 12, after everything is green. Local Supabase is already running (`supabase start`; DB `:54322`, API `:54321`); `.env` points at the LAN IP `http://192.168.1.5:54321`.
 
 ## File Structure
 
@@ -1305,10 +1306,22 @@ if (import.meta.main) {
 Run: `cd supabase/functions && deno check --node-modules-dir=auto budget-check/index.ts && deno test --allow-all --node-modules-dir=auto tests/`
 Expected: check OK; all tests pass (the `import.meta.main` guard keeps the wiring out of tests).
 
-- [ ] **Step 3: Deploy the function**
+- [ ] **Step 3: Serve the function LOCALLY and smoke-test it**
 
-Run: `supabase functions deploy budget-check --project-ref pzyadiwfjmjsafssxshc`
-Expected: "Deployed Functions on project pzyadiwfjmjsafssxshc: budget-check".
+Do **not** deploy to production here (see Global Constraints — dev-first). Serve locally instead, in its own terminal window:
+
+```bash
+supabase functions serve --env-file supabase/functions/.env
+```
+
+Then invoke it against local Supabase using the LOCAL anon/service key printed by `supabase status`:
+
+```bash
+curl -s -X POST http://127.0.0.1:54321/functions/v1/budget-check \
+  -H "Authorization: Bearer $(supabase status -o json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).SERVICE_ROLE_KEY))")" \
+  -H "Content-Type: application/json" -d '{}'
+```
+Expected: `{"ok":true,"users":0,"notified":0}` on a fresh local DB (no budgets yet). This proves the function boots and its queries type-check against the real schema.
 
 - [ ] **Step 4: Write the cron migration**
 
@@ -1351,34 +1364,22 @@ exception when others then null;
 end $$;
 ```
 
-- [ ] **Step 5: Store the service-role key in Vault, then apply**
-
-In the Supabase SQL editor (or via `supabase db query`), run once — substituting the project's real service-role key:
-
-```sql
-select vault.create_secret('<service-role-key>', 'service_role_key');
-```
-
-Then apply the migration:
+- [ ] **Step 5: Apply the migration LOCALLY**
 
 ```bash
-SUPABASE_DB_PASSWORD=<db-pass> supabase db push --yes
+supabase migration up
 ```
+Expected: `0018_budget_check_cron.sql` applies without error. Because every step is exception-safe, it succeeds even if `pg_net` is unavailable in the local stack — that is by design, and it is why the next step verifies the outcome rather than trusting the exit code.
 
-- [ ] **Step 6: Verify the job is scheduled and fires**
+- [ ] **Step 6: Verify the schedule locally**
 
 ```bash
-supabase db query "select jobname, schedule, active from cron.job where jobname = 'budget-check-daily';"
+docker exec supabase_db_budget_tracker psql -U postgres -c \
+  "select jobname, schedule, active from cron.job where jobname = 'budget-check-daily';"
 ```
-Expected: one row, `active = t`.
+Expected: one row, `active = t`. If **zero rows**, pg_cron/pg_net are not enabled in the local stack — that is acceptable (the exception-safe blocks swallowed it). Record that in the commit message and rely on the production verification in Task 12; do **not** remove the exception guards to force a local failure.
 
-Then invoke the function directly once to confirm the endpoint works end-to-end:
-
-```bash
-curl -s -X POST https://pzyadiwfjmjsafssxshc.supabase.co/functions/v1/budget-check \
-  -H "Authorization: Bearer <service-role-key>" -H "Content-Type: application/json" -d '{}'
-```
-Expected: `{"ok":true,"users":<n>,"notified":<n>}`.
+Production deploy of both the function and this migration happens in Task 12.
 
 - [ ] **Step 7: Commit**
 
@@ -1976,9 +1977,11 @@ This needs `sent` and the push tokens available even when no threshold alert fir
 Run: `cd supabase/functions && deno test --allow-all --node-modules-dir=auto tests/`
 Expected: PASS — the earlier Task 6 tests still pass (they run on a Monday-equivalent date, so no recap interferes) plus the 3 new ones.
 
-- [ ] **Step 5: Redeploy**
+- [ ] **Step 5: Re-verify locally**
 
-Run: `supabase functions deploy budget-check --project-ref pzyadiwfjmjsafssxshc`
+The locally-served function picks up the change on save. Re-run the local smoke
+test from Task 7 Step 3 and confirm it still returns `{"ok":true,...}`. Do NOT
+deploy to production here — that happens once, in Task 12.
 
 - [ ] **Step 6: Commit**
 
@@ -2000,12 +2003,48 @@ npx tsc --noEmit && npx jest && cd supabase/functions && deno test --allow-all -
 ```
 Expected: tsc clean; all Jest suites pass; all Deno tests pass.
 
-- [ ] **Step 2: Confirm the server side is live**
+- [ ] **Step 2: Push the migrations to production**
+
+This is the FIRST production touch in the whole plan. Show the two migrations
+(`0017_budgets.sql`, `0018_budget_check_cron.sql`) in the message first for
+visibility, per the repo's prod-DB policy, then push:
 
 ```bash
-supabase db query "select jobname, active from cron.job where jobname = 'budget-check-daily';"
+SUPABASE_DB_PASSWORD=<db-pass from supabase_credentials.md> supabase db push --yes
 ```
-Expected: one active row. (Migration + function were deployed in Task 7.)
+Expected: both migrations apply. Only un-applied migrations run.
+
+- [ ] **Step 3: Store the service-role key in Vault (once) and deploy the function**
+
+The cron job reads the key from Vault so it never lands in migration history. In
+the production SQL editor, run once:
+
+```sql
+select vault.create_secret('<service-role-key>', 'service_role_key');
+```
+
+Then deploy:
+
+```bash
+supabase functions deploy budget-check --project-ref pzyadiwfjmjsafssxshc
+```
+
+- [ ] **Step 4: Verify the production job and endpoint**
+
+```bash
+curl -s -X POST https://pzyadiwfjmjsafssxshc.supabase.co/functions/v1/budget-check \
+  -H "Authorization: Bearer <service-role-key>" -H "Content-Type: application/json" -d '{}'
+```
+Expected: `{"ok":true,"users":<n>,"notified":<n>}`.
+
+Confirm the schedule exists (Supabase SQL editor):
+
+```sql
+select jobname, schedule, active from cron.job where jobname = 'budget-check-daily';
+```
+Expected: one row, `active = t`. If it is missing, the exception-safe blocks
+swallowed a real failure — enable `pg_cron`/`pg_net` in the dashboard
+(Database → Extensions) and re-run the schedule block from `0018`.
 
 - [ ] **Step 3: OTA the client to production iOS**
 
