@@ -29,12 +29,12 @@ const CATEGORY_STYLES: Record<string, { emoji: string; color: string }> = {
   home:           { emoji: '🏠', color: '#0EA5E9' },
   travel:         { emoji: '✈️', color: '#F43F5E' },
   shopping:       { emoji: '🛍️', color: '#D946EF' },
-  other_expense:  { emoji: '💸', color: '#64748B' },
+  other_expense:  { emoji: '💸', color: '#94A3B8' },
   salary:         { emoji: '💰', color: '#2BD98E' },
   transfer_in:    { emoji: '🔁', color: '#14B8A6' },
   gift:           { emoji: '🎁', color: '#F59E0B' },
   refund:         { emoji: '↩️', color: '#38BDF8' },
-  other_income:   { emoji: '➕', color: '#64748B' },
+  other_income:   { emoji: '➕', color: '#5B8C7B' },
 };
 
 const DEFAULT_STYLE = { emoji: '💳', color: '#6B7672' };

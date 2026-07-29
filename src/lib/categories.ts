@@ -23,7 +23,7 @@ export const CATEGORIES: Category[] = [
   { slug: 'transfer_in',   name_en: 'Transfer In',       name_ar: 'تحويل وارد',    kind: 'income',  icon: 'bank-transfer-in', color: '#0D9488', sort_order: 20 },
   { slug: 'gift',          name_en: 'Gift',              name_ar: 'هدية',          kind: 'income',  icon: 'gift',             color: '#D946EF', sort_order: 30 },
   { slug: 'refund',        name_en: 'Refund',            name_ar: 'استرداد',       kind: 'income',  icon: 'cash-refund',      color: '#10B981', sort_order: 40 },
-  { slug: 'other_income',  name_en: 'Other income',      name_ar: 'دخل آخر',          kind: 'income',  icon: 'dots-horizontal',  color: '#64748B', sort_order: 50 },
+  { slug: 'other_income',  name_en: 'Other income',      name_ar: 'دخل آخر',          kind: 'income',  icon: 'dots-horizontal',  color: '#5B8C7B', sort_order: 50 },
 ];
 
 // ---------------------------------------------------------------------------

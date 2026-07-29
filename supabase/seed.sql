@@ -22,5 +22,5 @@ insert into public.categories (slug, name_en, name_ar, kind, icon, color, sort_o
   ('transfer_in',   'Transfer In',        'تحويل وارد',     'income',  'bank-transfer-in',    '#0D9488', 20),
   ('gift',          'Gift',               'هدية',           'income',  'gift',                '#D946EF', 30),
   ('refund',        'Refund',             'استرداد',        'income',  'cash-refund',         '#10B981', 40),
-  ('other_income',  'Other income',       'دخل آخر',           'income',  'dots-horizontal',     '#64748B', 50)
+  ('other_income',  'Other income',       'دخل آخر',           'income',  'dots-horizontal',     '#5B8C7B', 50)
 on conflict (slug) do nothing;
