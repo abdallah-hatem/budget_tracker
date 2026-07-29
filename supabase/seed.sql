@@ -16,11 +16,11 @@ insert into public.categories (slug, name_en, name_ar, kind, icon, color, sort_o
   ('home',          'Home',               'منزل',           'expense', 'home',                '#14B8A6', 90),
   ('travel',        'Travel',             'سفر',            'expense', 'airplane',            '#0EA5E9', 100),
   ('shopping',      'Shopping',           'تسوق',           'expense', 'shopping',            '#F43F5E', 110),
-  ('other_expense', 'Other',              'أخرى',           'expense', 'dots-horizontal',     '#94A3B8', 120),
+  ('other_expense', 'Other expense',      'مصروفات أخرى',           'expense', 'dots-horizontal',     '#94A3B8', 120),
   -- Income
   ('salary',        'Salary',             'راتب',           'income',  'cash-multiple',       '#16A34A', 10),
   ('transfer_in',   'Transfer In',        'تحويل وارد',     'income',  'bank-transfer-in',    '#0D9488', 20),
   ('gift',          'Gift',               'هدية',           'income',  'gift',                '#D946EF', 30),
   ('refund',        'Refund',             'استرداد',        'income',  'cash-refund',         '#10B981', 40),
-  ('other_income',  'Other',              'أخرى',           'income',  'dots-horizontal',     '#64748B', 50)
+  ('other_income',  'Other income',       'دخل آخر',           'income',  'dots-horizontal',     '#64748B', 50)
 on conflict (slug) do nothing;

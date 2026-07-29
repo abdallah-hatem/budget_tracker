@@ -17,13 +17,13 @@ export const CATEGORIES: Category[] = [
   { slug: 'home',          name_en: 'Home',              name_ar: 'منزل',          kind: 'expense', icon: 'home',             color: '#14B8A6', sort_order: 90 },
   { slug: 'travel',        name_en: 'Travel',            name_ar: 'سفر',           kind: 'expense', icon: 'airplane',         color: '#0EA5E9', sort_order: 100 },
   { slug: 'shopping',      name_en: 'Shopping',          name_ar: 'تسوق',          kind: 'expense', icon: 'shopping',         color: '#F43F5E', sort_order: 110 },
-  { slug: 'other_expense', name_en: 'Other',             name_ar: 'أخرى',          kind: 'expense', icon: 'dots-horizontal',  color: '#94A3B8', sort_order: 120 },
+  { slug: 'other_expense', name_en: 'Other expense',     name_ar: 'مصروفات أخرى',          kind: 'expense', icon: 'dots-horizontal',  color: '#94A3B8', sort_order: 120 },
   // Income
   { slug: 'salary',        name_en: 'Salary',            name_ar: 'راتب',          kind: 'income',  icon: 'cash-multiple',    color: '#16A34A', sort_order: 10 },
   { slug: 'transfer_in',   name_en: 'Transfer In',       name_ar: 'تحويل وارد',    kind: 'income',  icon: 'bank-transfer-in', color: '#0D9488', sort_order: 20 },
   { slug: 'gift',          name_en: 'Gift',              name_ar: 'هدية',          kind: 'income',  icon: 'gift',             color: '#D946EF', sort_order: 30 },
   { slug: 'refund',        name_en: 'Refund',            name_ar: 'استرداد',       kind: 'income',  icon: 'cash-refund',      color: '#10B981', sort_order: 40 },
-  { slug: 'other_income',  name_en: 'Other',             name_ar: 'أخرى',          kind: 'income',  icon: 'dots-horizontal',  color: '#64748B', sort_order: 50 },
+  { slug: 'other_income',  name_en: 'Other income',      name_ar: 'دخل آخر',          kind: 'income',  icon: 'dots-horizontal',  color: '#64748B', sort_order: 50 },
 ];
 
 // ---------------------------------------------------------------------------
