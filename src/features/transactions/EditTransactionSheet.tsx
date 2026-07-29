@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateTransaction, deleteTransaction } from './api';
 import { listAccountBalances } from '../accounts/api';
 import { categoryLabel } from './display';
-import { expenseCategories, incomeCategories } from '../../lib/categories';
+import { useVisibleCategories } from '../categories/hiddenCategories';
 import { t, isRTL } from '../../lib/i18n';
 import { CategoryAvatar, PressableScale, NumericInput } from '../../ui';
 import { DateTimeField } from '../../ui/DateTimeField';
@@ -57,7 +57,12 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
     if (x != null) catScrollRef.current?.scrollTo({ x: Math.max(0, x - 16), animated });
   };
 
-  const cats = type === 'income' ? incomeCategories() : expenseCategories();
+  // keepSlug = the transaction's own category_slug: it MUST stay in the list
+  // even if the user has since hidden it — otherwise this sheet couldn't
+  // represent (or preserve on save) the row's current category.
+  const expenseCats = useVisibleCategories('expense', categorySlug);
+  const incomeCats = useVisibleCategories('income', categorySlug);
+  const cats = type === 'income' ? incomeCats : expenseCats;
 
   // Persist the edits. `confirm` also flips status → 'confirmed' (Confirm
   // button / confirmOnSave); otherwise the row keeps its current status.
@@ -151,7 +156,7 @@ export function EditTransactionSheet({ transaction, locale, onDone, onCancel, co
               testID={`edit-type-${ty}`}
               onPress={() => {
                 setType(ty);
-                const next = ty === 'income' ? incomeCategories() : expenseCategories();
+                const next = ty === 'income' ? incomeCats : expenseCats;
                 if (!next.some((c) => c.slug === categorySlug)) {
                   setCategorySlug(next[0]?.slug ?? categorySlug);
                 }

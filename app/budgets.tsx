@@ -9,6 +9,7 @@ import { useBudgets } from '@/src/features/budgets/useBudgets';
 import { useShowOnHome, setShowOnHome } from '@/src/features/budgets/showOnHome';
 import { createBudget, deleteBudget, updateBudget } from '@/src/features/budgets/api';
 import { expenseCategories } from '@/src/lib/categories';
+import { useVisibleCategories } from '@/src/features/categories/hiddenCategories';
 import { categoryLabel } from '@/src/features/transactions/display';
 import { t, isRTL } from '@/src/lib/i18n';
 import { FONT } from '@/src/lib/font';
@@ -53,8 +54,10 @@ function BudgetsContent() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [scope, setScope] = useState<BudgetScope>('overall');
-  const allExpenseCategories = expenseCategories();
-  const [categorySlug, setCategorySlug] = useState(allExpenseCategories[0]?.slug ?? 'food');
+  // Seed the initial selection from the full (unfiltered) list; keepSlug below
+  // then protects it in allExpenseCategories even if it happens to be hidden.
+  const [categorySlug, setCategorySlug] = useState(expenseCategories()[0]?.slug ?? 'food');
+  const allExpenseCategories = useVisibleCategories('expense', categorySlug);
   const [period, setPeriod] = useState<BudgetPeriod>('monthly');
   const [amount, setAmount] = useState('');
   const [warnPct, setWarnPct] = useState('80');

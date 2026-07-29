@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Keyboard } from 'react-native';
 import { CollapsibleCard, CategoryAvatar, PressableScale } from '../../ui';
 import { expenseCategories, incomeCategories, categoryBySlug } from '../../lib/categories';
+import { useVisibleCategories } from '../categories/hiddenCategories';
 import { categoryLabel } from '../transactions/display';
 import { t, isRTL } from '../../lib/i18n';
 import { FONT } from '../../lib/font';
@@ -32,11 +33,16 @@ export function NotificationActionsSection({ locale }: { locale: Locale }) {
   const align: 'left' | 'right' = rtl ? 'right' : 'left';
   const rowDir = rtl ? 'row-reverse' : 'row';
 
-  const allCategories = [...expenseCategories(), ...incomeCategories()];
-
   const [actions, setActions] = useState<QuickAction[]>([]);
-  const [categorySlug, setCategorySlug] = useState(allCategories[0]?.slug ?? 'food');
+  // Seed from the unfiltered list; keepSlug below then protects the selection
+  // even if it happens to be hidden.
+  const [categorySlug, setCategorySlug] = useState(
+    () => [...expenseCategories(), ...incomeCategories()][0]?.slug ?? 'food',
+  );
   const [note, setNote] = useState('');
+  const expenseCats = useVisibleCategories('expense', categorySlug);
+  const incomeCats = useVisibleCategories('income', categorySlug);
+  const allCategories = [...expenseCats, ...incomeCats];
 
   useEffect(() => {
     getQuickActions().then(setActions).catch(() => {});

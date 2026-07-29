@@ -2,7 +2,8 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categoryLabel } from './display';
-import { expenseCategories, incomeCategories } from '../../lib/categories';
+import { expenseCategories } from '../../lib/categories';
+import { useVisibleCategories } from '../categories/hiddenCategories';
 import { t, isRTL } from '../../lib/i18n';
 import { CategoryAvatar, PressableScale, NumericInput } from '../../ui';
 import { DateTimeField } from '../../ui/DateTimeField';
@@ -50,7 +51,12 @@ export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
     if (x != null) catScrollRef.current?.scrollTo({ x: Math.max(0, x - 16), animated });
   };
 
-  const cats = type === 'income' ? incomeCategories() : expenseCategories();
+  // keepSlug: the currently-picked slug always stays visible, even if it's
+  // hidden — a rare race (hidden from Settings while this sheet is open) but
+  // cheap to protect against, and consistent with the edit-style pickers.
+  const expenseCats = useVisibleCategories('expense', categorySlug);
+  const incomeCats = useVisibleCategories('income', categorySlug);
+  const cats = type === 'income' ? incomeCats : expenseCats;
 
   function handleAdd() {
     const parsed = parseFloat(amount);
@@ -127,7 +133,7 @@ export function ManualEntrySheet({ locale, onSubmit, onCancel }: Props) {
               testID={`manual-type-${ty}`}
               onPress={() => {
                 setType(ty);
-                const next = ty === 'income' ? incomeCategories() : expenseCategories();
+                const next = ty === 'income' ? incomeCats : expenseCats;
                 if (!next.some((c) => c.slug === categorySlug)) {
                   setCategorySlug(next[0]?.slug ?? categorySlug);
                 }

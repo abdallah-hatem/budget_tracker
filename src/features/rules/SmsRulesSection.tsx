@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Keyboard } from 'react-native';
 import { Card, CollapsibleCard, SectionLabel, CategoryAvatar, PressableScale } from '../../ui';
 import { expenseCategories, incomeCategories } from '../../lib/categories';
+import { useVisibleCategories } from '../categories/hiddenCategories';
 import { categoryLabel } from '../transactions/display';
 import { t, isRTL } from '../../lib/i18n';
 import { FONT } from '../../lib/font';
@@ -14,8 +15,6 @@ const INK2 = '#A8B2AF';
 const INK3 = '#6B7672';
 const ACCENT = '#2BD98E';
 const DANGER = '#FF5C6C';
-
-const ALL_CATEGORIES = [...expenseCategories(), ...incomeCategories()];
 
 function inputStyle(rtl: boolean) {
   return {
@@ -45,8 +44,15 @@ export function SmsRulesSection({
   const rtl = isRTL(locale);
   const [rules, setRules] = useState<SmsRule[]>([]);
   const [keyword, setKeyword] = useState('');
-  const [categorySlug, setCategorySlug] = useState(ALL_CATEGORIES[0]?.slug ?? 'food');
+  // Seed from the unfiltered list; keepSlug below then protects the selection
+  // even if it happens to be hidden.
+  const [categorySlug, setCategorySlug] = useState(
+    () => [...expenseCategories(), ...incomeCategories()][0]?.slug ?? 'food',
+  );
   const [note, setNote] = useState('');
+  const expenseCats = useVisibleCategories('expense', categorySlug);
+  const incomeCats = useVisibleCategories('income', categorySlug);
+  const ALL_CATEGORIES = [...expenseCats, ...incomeCats];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

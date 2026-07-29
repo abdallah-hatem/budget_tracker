@@ -15,7 +15,7 @@ import { useTransactions } from '../../src/features/transactions/useTransactions
 import { useRefetchOnTxnChange } from '../../src/features/sync/dataSync';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import { categoryLabel } from '../../src/features/transactions/display';
-import { expenseCategories, incomeCategories } from '../../src/lib/categories';
+import { useVisibleCategories } from '../../src/features/categories/hiddenCategories';
 import { useCategoriesVersion } from '../../src/features/categories/useCategoriesVersion';
 import { categoryStyle } from '../../src/lib/categoryStyle';
 import { localDayKey } from '../../src/lib/day';
@@ -121,14 +121,17 @@ export default function TransactionsScreen() {
   const catVersion = useCategoriesVersion();
 
   // Only show the categories that belong to the active view (expense vs income),
-  // including the user's custom ones.
+  // including the user's custom ones, minus any the user has hidden — except
+  // the currently-active filter chip, which stays selectable/visible.
+  const visibleExpense = useVisibleCategories('expense', categoryFilter);
+  const visibleIncome = useVisibleCategories('income', categoryFilter);
   const filterItems = useMemo(() => [
     { slug: null as string | null, label: t('all_categories', locale) },
-    ...(view === 'income' ? incomeCategories() : expenseCategories()).map((c) => ({
+    ...(view === 'income' ? visibleIncome : visibleExpense).map((c) => ({
       slug: c.slug,
       label: categoryLabel(c.slug, locale),
     })),
-  ], [locale, view, catVersion]);
+  ], [locale, view, catVersion, visibleExpense, visibleIncome]);
 
   return (
     <Screen padded={false}>

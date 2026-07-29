@@ -6,7 +6,7 @@
 import React, { useReducer, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
 import type { Locale, ParsedTransaction, Transaction, TxnSource } from '../../types';
-import { expenseCategories, incomeCategories } from '../../lib/categories';
+import { useVisibleCategories } from '../categories/hiddenCategories';
 import { NumericInput } from '../../ui';
 import { insertTransaction } from '../transactions/api';
 import { buildCaptureRow } from './toTransactionRow';
@@ -45,8 +45,11 @@ export function ConfirmSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const categories =
-    state.type === 'income' ? incomeCategories() : expenseCategories();
+  // Keep the parsed/seeded category visible even if the user has since hidden
+  // it — otherwise the sheet couldn't represent the value it's about to save.
+  const expenseCats = useVisibleCategories('expense', state.category_slug);
+  const incomeCats = useVisibleCategories('income', state.category_slug);
+  const categories = state.type === 'income' ? incomeCats : expenseCats;
 
   const handleSave = async () => {
     const amount = Number(state.amountText);

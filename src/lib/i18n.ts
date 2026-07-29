@@ -102,6 +102,10 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
     en: 'Hide this category from Home? Long-press hides; tap it under "Hidden" to bring it back.',
     ar: 'إخفاء هذا التصنيف من الرئيسية؟ يمكنك إعادته بالضغط عليه تحت «مخفي».',
   },
+  'cat.hideEverywhere.hint': {
+    en: 'Tap a built-in category to hide it from every picker — adding a transaction, editing one, filtering, budgets, and rules. Tap it again to bring it back.',
+    ar: 'اضغط على تصنيف افتراضي لإخفائه من كل قائمة اختيار — عند إضافة معاملة أو تعديلها أو التصفية أو الميزانيات والقواعد. اضغط عليه مرة أخرى لإعادته.',
+  },
   'settings.langEnglish': { en: 'English', ar: 'الإنجليزية' },
   'settings.langArabic': { en: 'Arabic', ar: 'العربية' },
   'settings.signOut': { en: 'Sign out', ar: 'تسجيل الخروج' },
