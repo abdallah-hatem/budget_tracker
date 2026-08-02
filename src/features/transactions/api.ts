@@ -46,6 +46,29 @@ export async function updateTransaction(
   return data as Transaction;
 }
 
+/**
+ * Confirm several pending transactions in one round-trip.
+ *
+ * Targets explicit ids rather than "every row where status = 'pending'", so a
+ * message that arrives between the list rendering and the button being tapped
+ * is never silently confirmed — the user only ever confirms what they saw.
+ * The status filter keeps a row that changed in the meantime (edited on another
+ * device, rejected from a notification action) from being clobbered.
+ *
+ * Returns the rows actually confirmed, which may be fewer than `ids`.
+ */
+export async function confirmTransactions(ids: string[]): Promise<Transaction[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({ status: 'confirmed' })
+    .in('id', ids)
+    .eq('status', 'pending')
+    .select();
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Transaction[];
+}
+
 export async function deleteTransaction(id: string): Promise<void> {
   const { error } = await supabase.from('transactions').delete().eq('id', id);
   if (error) throw new Error(error.message);

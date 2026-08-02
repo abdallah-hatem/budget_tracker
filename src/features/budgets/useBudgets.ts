@@ -59,7 +59,7 @@ export function useBudgets(): {
       const since = b.period === 'weekly' ? weekStart : monthStart;
       let spent = 0;
       for (const t of txns ?? []) {
-        if (t.type !== 'expense' || t.status !== 'confirmed') continue;
+        if (t.type !== 'expense' || t.status !== 'confirmed' || t.is_internal_transfer) continue;
         if (new Date(t.occurred_at) < since) continue;
         if (b.scope === 'category' && t.category_slug !== b.category_slug) continue;
         spent += t.amount;

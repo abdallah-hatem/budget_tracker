@@ -7,10 +7,16 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { usePendingContext } from '../../src/features/transactions/PendingProvider';
-import { updateTransaction, deleteTransaction } from '../../src/features/transactions/api';
+import {
+  updateTransaction,
+  deleteTransaction,
+  confirmTransactions,
+} from '../../src/features/transactions/api';
 import { EditTransactionSheet } from '../../src/features/transactions/EditTransactionSheet';
 import { categoryLabel } from '../../src/features/transactions/display';
 import { useSession } from '../../src/features/auth/SessionProvider';
@@ -58,6 +64,37 @@ export default function PendingScreen() {
 
   const pendingCount = data?.length ?? 0;
 
+  // Bulk confirm. Behind a prompt because it is the one action here that can't
+  // be undone in a tap — a wrongly-confirmed row has to be found in the
+  // transactions list and edited back.
+  const [confirmingAll, setConfirmingAll] = useState(false);
+
+  function handleConfirmAll() {
+    const ids = (data ?? []).map((txn) => txn.id);
+    if (ids.length === 0 || confirmingAll) return;
+    Alert.alert(
+      '',
+      t('confirm_all_prompt', locale).replace('{n}', String(ids.length)),
+      [
+        { text: t('cancel', locale), style: 'cancel' },
+        {
+          text: t('confirm_all', locale),
+          onPress: async () => {
+            setConfirmingAll(true);
+            try {
+              await confirmTransactions(ids);
+            } catch (e) {
+              Alert.alert('', e instanceof Error ? e.message : String(e));
+            } finally {
+              setConfirmingAll(false);
+              void refresh();
+            }
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <Screen padded={false}>
       {/* ── Header ─────────────────────────────────────────────────── */}
@@ -66,40 +103,88 @@ export default function PendingScreen() {
           style={{
             flexDirection: rtl ? 'row-reverse' : 'row',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: 8,
           }}
         >
-          <Text
+          <View
             style={{
-              fontFamily: FONT.jakartaB,
-              fontSize: 28,
-              color: '#F4F7F5',
+              flexDirection: rtl ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              gap: 8,
+              flexShrink: 1,
             }}
           >
-            {t('pending_title', locale)}
-          </Text>
-          {pendingCount > 0 && (
-            <View
+            <Text
               style={{
-                backgroundColor: '#2BD98E',
-                borderRadius: 999,
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-                minWidth: 24,
-                alignItems: 'center',
+                fontFamily: FONT.jakartaB,
+                fontSize: 28,
+                color: '#F4F7F5',
               }}
             >
-              <Text
+              {t('pending_title', locale)}
+            </Text>
+            {pendingCount > 0 && (
+              <View
                 style={{
-                  fontFamily: FONT.soraSb,
-                  fontSize: 12,
-                  color: '#06251A',
-                  fontVariant: ['tabular-nums', 'lining-nums'],
+                  backgroundColor: '#2BD98E',
+                  borderRadius: 999,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  minWidth: 24,
+                  alignItems: 'center',
                 }}
               >
-                {pendingCount}
-              </Text>
-            </View>
+                <Text
+                  style={{
+                    fontFamily: FONT.soraSb,
+                    fontSize: 12,
+                    color: '#06251A',
+                    fontVariant: ['tabular-nums', 'lining-nums'],
+                  }}
+                >
+                  {pendingCount}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Confirm all — outlined rather than solid so it doesn't compete
+              with the per-row Confirm, which stays the primary action. */}
+          {pendingCount > 0 && (
+            <PressableScale
+              testID="pending-confirm-all"
+              accessibilityRole="button"
+              accessibilityLabel={t('confirm_all', locale)}
+              accessibilityState={{ disabled: confirmingAll }}
+              disabled={confirmingAll}
+              onPress={handleConfirmAll}
+              style={{
+                borderRadius: 999,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderWidth: 1,
+                borderColor: 'rgba(43,217,142,0.4)',
+                backgroundColor: 'rgba(43,217,142,0.1)',
+                opacity: confirmingAll ? 0.6 : 1,
+                minHeight: 36,
+                justifyContent: 'center',
+              }}
+            >
+              {confirmingAll ? (
+                <ActivityIndicator size="small" color="#2BD98E" />
+              ) : (
+                <Text
+                  style={{
+                    fontFamily: FONT.jakartaSb,
+                    fontSize: 13,
+                    color: '#2BD98E',
+                  }}
+                >
+                  {t('confirm_all', locale)}
+                </Text>
+              )}
+            </PressableScale>
           )}
         </View>
       </View>

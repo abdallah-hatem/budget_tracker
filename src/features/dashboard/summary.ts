@@ -33,6 +33,7 @@ export function summarize(txns: Transaction[], hidden?: Set<string>): Summary {
 
   for (const tx of txns) {
     if (tx.status !== 'confirmed') continue;
+    if (tx.is_internal_transfer) continue;
     // Categories hidden from home are excluded from totals + breakdown, so the
     // donut slices still sum to the hero figure.
     if (hidden?.has(tx.category_slug)) continue;

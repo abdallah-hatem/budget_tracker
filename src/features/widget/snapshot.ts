@@ -62,6 +62,7 @@ export function buildWidgetSnapshot(args: {
     .filter(
       (t) =>
         t.status === 'confirmed' &&
+        !t.is_internal_transfer &&
         t.type === 'expense' &&
         !hidden?.has(t.category_slug) &&
         localDayKey(t.occurred_at) === todayKey,

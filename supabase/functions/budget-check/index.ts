@@ -392,6 +392,7 @@ if (import.meta.main) {
           .eq("user_id", userId)
           .eq("status", "confirmed")
           .eq("type", "expense")
+          .eq("is_internal_transfer", false)
           .gte("occurred_at", start.toISOString())
           .lt("occurred_at", end.toISOString())
           .range(from, to)
@@ -418,6 +419,7 @@ if (import.meta.main) {
             .eq("user_id", userId)
             .eq("status", "confirmed")
             .eq("type", "expense")
+            .eq("is_internal_transfer", false)
             .gte("occurred_at", histStart.toISOString())
             .lt("occurred_at", cycle.end.toISOString())
             .range(from, to),

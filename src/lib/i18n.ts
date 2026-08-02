@@ -193,6 +193,7 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   // Transactions screen
   transactions_title: { en: 'Transactions', ar: 'المعاملات' },
   all_categories: { en: 'All categories', ar: 'جميع الفئات' },
+  internal_transfer: { en: 'Card payment', ar: 'سداد بطاقة' },
 
   // Actions
   edit: { en: 'Edit', ar: 'تعديل' },
@@ -219,6 +220,11 @@ export const STRINGS: Record<string, { en: string; ar: string }> = {
   pending_empty: { en: 'No pending transactions', ar: 'لا توجد معاملات قيد المراجعة' },
   confirm: { en: 'Confirm', ar: 'تأكيد' },
   reject: { en: 'Reject', ar: 'رفض' },
+  confirm_all: { en: 'Confirm all', ar: 'تأكيد الكل' },
+  confirm_all_prompt: {
+    en: 'Confirm all {n} pending transactions?',
+    ar: 'تأكيد كل المعاملات المعلقة ({n})؟',
+  },
   mic_hold_hint: {
     en: 'Hold to add manually or by typing',
     ar: 'اضغط مطولاً للإضافة يدويًا أو بالكتابة',

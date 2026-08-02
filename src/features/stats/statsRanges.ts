@@ -62,7 +62,7 @@ export function monthlyBuckets(
   const totals = new Map<string, number>();
   const keys = new Map<string, MonthKey>();
   for (const tx of txns) {
-    if (tx.status !== 'confirmed' || tx.type !== type) continue;
+    if (tx.status !== 'confirmed' || tx.is_internal_transfer || tx.type !== type) continue;
     if (categorySlug && tx.category_slug !== categorySlug) continue;
     const k = currentMonthKey(new Date(tx.occurred_at), startDay);
     const s = keyStr(k);

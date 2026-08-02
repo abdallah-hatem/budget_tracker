@@ -103,8 +103,11 @@ export default function Dashboard() {
     }, [refresh, refreshAccounts]),
   );
 
-  const recent = transactions.slice(0, 5);
-  const hasData = transactions.length > 0;
+  // Internal card-payment pairs remain stored for auditability but are not
+  // shown as two ordinary recent transactions.
+  const visibleTransactions = transactions.filter((tx) => !tx.is_internal_transfer);
+  const recent = visibleTransactions.slice(0, 5);
+  const hasData = visibleTransactions.length > 0;
 
   // Expenses by default; a small toggle flips the whole view to income.
   const [view, setView] = useState<TxnType>('expense');

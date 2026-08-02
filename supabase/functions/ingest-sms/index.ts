@@ -2,10 +2,11 @@
 // PUBLIC endpoint (verify_jwt = false) authenticated by a per-user hashed token.
 //
 // POST { text: string, token: string, received_at?: string }
-//   -> 200 { ok: true }               (transaction inserted as pending)
-//   -> 200 { ok: true, skipped: true } (no amount found — OTP / promo / other)
-//   -> 401                             (missing or unknown/revoked token)
-//   -> 4xx / 5xx                       (validation errors, server faults)
+//   -> 200 { ok: true }                 (transaction inserted as pending)
+//   -> 200 { ok: true, skipped: true }  (no amount found — OTP / promo / other)
+//   -> 200 { ok: true, duplicate: true} (this exact message was already ingested)
+//   -> 401                              (missing or unknown/revoked token)
+//   -> 4xx / 5xx                        (validation errors, server faults)
 //
 // The service-role key is used server-side only; RLS is bypassed intentionally
 // so the function can resolve user_id from a validated token and write on their
@@ -46,6 +47,76 @@ export function collapseRepeatedBody(text: string): string {
   return out.length > 0 ? out : text;
 }
 
+/** How long two identical no-token messages are assumed to be the same event. */
+const DEDUPE_WINDOW_MS = 10 * 60 * 1000;
+const INTERNAL_TRANSFER_PAIR_WINDOW_MS = 10 * 60 * 1000;
+const INTERNAL_TRANSFER_NOTIFICATION_DELAY_MS = 30 * 1000;
+
+type EdgeRuntimeWithWaitUntil = {
+  waitUntil: (promise: Promise<unknown>) => void;
+};
+
+/** Keep delayed notification work alive after the HTTP response where supported. */
+function runInBackground(task: Promise<unknown>): void {
+  const runtime = (globalThis as typeof globalThis & {
+    EdgeRuntime?: EdgeRuntimeWithWaitUntil;
+  }).EdgeRuntime;
+  if (runtime?.waitUntil) runtime.waitUntil(task);
+  else void task;
+}
+
+/**
+ * Does the message carry something that is unique to ONE transaction?
+ *
+ * This is the difference between a message that can be deduplicated forever and
+ * one that cannot. Compare two real formats seen in production:
+ *
+ *   "... برقم مرجعي 0896a475 بتاريخ 31-07-2026 01:09"   <- ref + clock
+ *   "... رقم المعاملة a65363bf ... في 13:16"             <- txn no + clock
+ *   "تم تحويل مبلغ 15EGP من حساب رقم xxx0328 فى 26-JUL-2026 عن طريق التحويل اللحظي"
+ *
+ * The third has NO reference number and NO time of day — only a date. Two
+ * genuine 15 EGP transfers on the same day are therefore byte-identical, and
+ * production data contains exactly that: three such messages 20 hours apart,
+ * all real. Deduplicating those permanently would silently swallow a real
+ * transaction, so they get a time window instead.
+ */
+export function hasPerTransactionToken(text: string): boolean {
+  // A reference / transaction number, in either language.
+  if (/(?:مرجعي|المعامل[ةه]|reference|ref\.?\s*(?:no|number))/i.test(text)) return true;
+  // A time of day (HH:MM) — enough to separate two transfers on the same date.
+  if (/\d{1,2}:\d{2}/.test(text)) return true;
+  return false;
+}
+
+/**
+ * Idempotency key for one captured message.
+ *
+ * The SAME bank message can reach us more than once: an iOS Shortcuts personal
+ * automation that matches a sender through two rules fires twice, and Android's
+ * NotificationListener re-delivers a notification when it is updated or bundled.
+ * Observed in production as two POSTs 16-160 ms apart carrying byte-identical
+ * text — concurrent, so a read-then-write check cannot catch them. The key is
+ * stored on the row and backed by a unique index, which makes the second insert
+ * lose atomically.
+ *
+ * Whitespace is normalised because the two copies are not always byte-identical
+ * (Android forwards EXTRA_TEXT and EXTRA_BIG_TEXT, which differ in line breaks).
+ *
+ * When the message carries no per-transaction token the key also folds in a
+ * coarse time bucket, so identical text only collapses when it arrives close
+ * together. Two copies that straddle a bucket boundary both survive — that is
+ * deliberate: this design fails towards "a duplicate slipped through" (the old,
+ * visible, user-fixable behaviour) and never towards "a real transaction
+ * vanished".
+ */
+export async function dedupeKey(text: string, atMs: number): Promise<string> {
+  const normalised = collapseRepeatedBody(text).replace(/\s+/g, " ").trim();
+  if (hasPerTransactionToken(normalised)) return await sha256Hex(normalised);
+  const bucket = Math.floor(atMs / DEDUPE_WINDOW_MS);
+  return await sha256Hex(`${normalised}|w${bucket}`);
+}
+
 // ---------------------------------------------------------------------------
 // Injectable dependency interface (enables unit tests with no network or DB).
 // ---------------------------------------------------------------------------
@@ -66,6 +137,33 @@ export interface SmsRule {
   keyword: string;
   category_slug: string;
   note: string | null;
+}
+
+/** A just-ingested SMS that may be one side of an internal card payment. */
+export interface InternalTransferCandidate {
+  userId: string;
+  amount: number;
+  type: "expense" | "income";
+  transferReference: string;
+  occurredAt: string;
+  transactionId?: string;
+}
+
+/**
+ * Extract the bank's stable reference from an SMS. The reference is much safer
+ * than amount + timestamp alone: two unrelated payments can legitimately have
+ * the same amount on the same day, but a bank reference identifies one transfer.
+ */
+export function extractTransferReference(text: string): string | null {
+  const match = text.match(
+    /(?:رقم\s+(?:مرجعي|المعامل[ةه])|reference(?:\s*(?:number|no\.?))?|ref\.?)\s*[:#]?\s*([a-z0-9]+(?:[-/][a-z0-9]+)*)/i,
+  );
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+/** True for Instapay / instant-payment messages, in Arabic or English. */
+export function isInstantTransfer(text: string): boolean {
+  return /تحويل\s*لحظي|شبكة\s+المدفوعات\s+اللحظية|instant\s+(?:payment|transfer)|instapay/i.test(text);
 }
 
 export interface IngestDeps {
@@ -90,9 +188,26 @@ export interface IngestDeps {
   lookupUserId: (tokenHash: string) => Promise<string | null>;
   /** Return the user's keyword rules (override category + note on a match). */
   getRules: (userId: string) => Promise<SmsRule[]>;
-  /** Insert a pending transaction row into the DB. Throw on error. */
-  /** Insert a pending transaction; returns the new row id (for push actions). */
-  insertPending: (row: Record<string, unknown>) => Promise<string | null>;
+  /**
+   * Insert a pending transaction. Throws on a real DB error.
+   * `duplicate` is true when the row lost the unique-index race on
+   * (user_id, dedupe_key) — i.e. this message is already stored.
+   */
+  insertPending: (
+    row: Record<string, unknown>,
+  ) => Promise<{ id: string | null; duplicate: boolean }>;
+  /** Find the opposite side of a reference-matched internal transfer. */
+  findMatchingTransfer?: (
+    candidate: InternalTransferCandidate,
+  ) => Promise<{ id: string } | null>;
+  /** Mark both rows as an internal transfer so they do not affect finances. */
+  markInternalTransfer?: (ids: string[]) => Promise<void>;
+  /**
+   * Cheap pre-LLM check: has this exact message already been stored for the
+   * user? Catches sequential re-sends (a retried automation) before we spend
+   * Groq tokens. Concurrent re-sends slip past it and are caught by the insert.
+   */
+  seenRecently?: (userId: string, key: string) => Promise<boolean>;
   /** Best-effort: update last_used_at for the token. */
   touchToken: (tokenHash: string) => Promise<void>;
   /** Return Expo push tokens registered for the given user_id. */
@@ -186,6 +301,44 @@ export async function handleIngest(
     return json({ ok: true, skipped: true, reason: "no_amount" }, 200);
   }
 
+  // --- Resolve occurred_at ---
+  // Resolved before the dedupe key because the key folds in a time bucket for
+  // messages that carry no per-transaction reference.
+  // Clamp to reject far-future dates (e.g. wrong device clock / replayed SMS).
+  const FUTURE_CLAMP_MS = 5 * 60 * 1000; // 5 minutes
+  const receivedAt = typeof body.received_at === "string"
+    ? body.received_at
+    : undefined;
+  let occurredAt: string;
+  if (receivedAt !== undefined) {
+    const d = new Date(receivedAt);
+    if (Number.isNaN(d.getTime())) {
+      // Unparseable date → fall back to now.
+      occurredAt = new Date().toISOString();
+    } else if (d.getTime() > Date.now() + FUTURE_CLAMP_MS) {
+      // Far-future date → clamp to now.
+      occurredAt = new Date().toISOString();
+    } else {
+      occurredAt = d.toISOString();
+    }
+  } else {
+    occurredAt = new Date().toISOString();
+  }
+
+  // --- Idempotency, layer 1: have we already stored this exact message? ---
+  // Best-effort and non-fatal: on any error we fall through and let the unique
+  // index on (user_id, dedupe_key) be the authority.
+  const key = await dedupeKey(text, new Date(occurredAt).getTime());
+  if (deps.seenRecently) {
+    try {
+      if (await deps.seenRecently(userId, key)) {
+        return json({ ok: true, duplicate: true }, 200);
+      }
+    } catch (_e) {
+      // Ignore — layer 2 still guarantees correctness.
+    }
+  }
+
   const extra = deps.fetchCategoriesFn ? await deps.fetchCategoriesFn(userId) : [];
   const t0 = Date.now();
   let parsed: ParsedTransaction;
@@ -247,32 +400,20 @@ export async function handleIngest(
     // Rules are best-effort — fall back to the AI parse on any error.
   }
 
-  // --- Resolve occurred_at ---
-  // Clamp to reject far-future dates (e.g. wrong device clock / replayed SMS).
-  const FUTURE_CLAMP_MS = 5 * 60 * 1000; // 5 minutes
-  const receivedAt = typeof body.received_at === "string"
-    ? body.received_at
-    : undefined;
-  let occurredAt: string;
-  if (receivedAt !== undefined) {
-    const d = new Date(receivedAt);
-    if (Number.isNaN(d.getTime())) {
-      // Unparseable date → fall back to now.
-      occurredAt = new Date().toISOString();
-    } else if (d.getTime() > Date.now() + FUTURE_CLAMP_MS) {
-      // Far-future date → clamp to now.
-      occurredAt = new Date().toISOString();
-    } else {
-      occurredAt = d.toISOString();
-    }
-  } else {
-    occurredAt = new Date().toISOString();
-  }
+  // Instapay card payments produce two bank messages: an outgoing debit from
+  // the funding account and an incoming credit to the card. Keep the bank's
+  // reference only for these messages; it is the safe join key for pairing.
+  const transferReference = isInstantTransfer(cleanText)
+    ? extractTransferReference(cleanText)
+    : null;
 
   // --- Insert the pending transaction row ---
+  // Idempotency, layer 2: the insert is ON CONFLICT DO NOTHING against the
+  // unique index on (user_id, dedupe_key), so of two concurrent copies of the
+  // same message exactly one row survives.
   let txnId: string | null = null;
   try {
-    txnId = await deps.insertPending({
+    const inserted = await deps.insertPending({
       user_id: userId,
       type,
       amount,
@@ -280,17 +421,72 @@ export async function handleIngest(
       category_slug: categorySlug,
       note,
       raw_text: text,
+      dedupe_key: key,
       source: "sms",
       status: "pending",
       confidence: parsed.confidence,
       occurred_at: occurredAt,
+      ...(transferReference ? { transfer_reference: transferReference } : {}),
     });
+    // Already stored by the other copy — do not notify a second time.
+    if (inserted.duplicate) return json({ ok: true, duplicate: true }, 200);
+    txnId = inserted.id;
   } catch (_e) {
     return json({ error: "Failed to save transaction." }, 502);
   }
 
+  // Pair after insert so concurrent mirrored SMS deliveries can see each
+  // other's committed row. A failed best-effort pairing leaves the normal
+  // pending transaction intact rather than losing a real payment.
+  let paired = false;
+  if (txnId && transferReference && deps.findMatchingTransfer && deps.markInternalTransfer) {
+    try {
+      const match = await deps.findMatchingTransfer({
+        userId,
+        amount,
+        type,
+        transferReference,
+        occurredAt,
+        transactionId: txnId,
+      });
+      if (match && match.id !== txnId) {
+        await deps.markInternalTransfer([match.id, txnId]);
+        paired = true;
+      }
+    } catch (_e) {
+      // Pairing is deliberately non-fatal. The row can still be reviewed and
+      // a later retry can pair it without blocking SMS ingestion.
+    }
+  }
+
+  // An internally paired payment must never create a review notification.
+  if (paired) return json({ ok: true }, 200);
+
   // --- Best-effort push notification (never changes the 200 response) ---
-  (async () => {
+  // Give a reference-bearing Instapay message a short pairing window. This
+  // prevents a transient notification for the first half of a card payment
+  // when the mirrored bank SMS arrives a few seconds later.
+  runInBackground((async () => {
+    if (transferReference && txnId && deps.findMatchingTransfer && deps.markInternalTransfer) {
+      await new Promise<void>((resolve) => setTimeout(resolve, INTERNAL_TRANSFER_NOTIFICATION_DELAY_MS));
+      try {
+        const lateMatch = await deps.findMatchingTransfer({
+          userId,
+          amount,
+          type,
+          transferReference,
+          occurredAt,
+          transactionId: txnId,
+        });
+        if (lateMatch && lateMatch.id !== txnId) {
+          await deps.markInternalTransfer([lateMatch.id, txnId]);
+          return;
+        }
+      } catch (_e) {
+        // Fall through to the normal notification if the delayed lookup fails.
+      }
+    }
+
     try {
       const tokens = await deps.getPushTokens(userId);
       if (tokens.length === 0) return;
@@ -316,7 +512,7 @@ export async function handleIngest(
     } catch (_e) {
       // Swallow — push failure must never affect the 200 response.
     }
-  })();
+  })());
 
   return json({ ok: true }, 200);
 }
@@ -366,14 +562,59 @@ if (import.meta.main) {
       return data as SmsRule[];
     },
 
+    async seenRecently(userId, key) {
+      const { count, error } = await sb
+        .from("transactions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("dedupe_key", key);
+      if (error) throw new Error(`dedupe lookup failed: ${error.message}`);
+      return (count ?? 0) > 0;
+    },
+
     async insertPending(row) {
+      // ignoreDuplicates → ON CONFLICT (user_id, dedupe_key) DO NOTHING, which
+      // returns an EMPTY set when this message was already stored.
       const { data, error } = await sb
         .from("transactions")
-        .insert(row)
-        .select("id")
-        .single();
+        .upsert(row, { onConflict: "user_id,dedupe_key", ignoreDuplicates: true })
+        .select("id");
       if (error) throw new Error(`DB insert failed: ${error.message}`);
-      return (data as { id: string } | null)?.id ?? null;
+      const rows = (data ?? []) as { id: string }[];
+      if (rows.length === 0) return { id: null, duplicate: true };
+      return { id: rows[0].id, duplicate: false };
+    },
+
+    async findMatchingTransfer(candidate) {
+      const opposite = candidate.type === "income" ? "expense" : "income";
+      let query = sb
+        .from("transactions")
+        .select("id, occurred_at")
+        .eq("user_id", candidate.userId)
+        .eq("source", "sms")
+        .eq("type", opposite)
+        .eq("amount", candidate.amount)
+        .eq("transfer_reference", candidate.transferReference)
+        .eq("is_internal_transfer", false)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (candidate.transactionId) query = query.neq("id", candidate.transactionId);
+      const { data, error } = await query;
+      if (error || !data) return null;
+      const targetMs = new Date(candidate.occurredAt).getTime();
+      const match = (data as { id: string; occurred_at: string }[]).find((row) => {
+        const rowMs = new Date(row.occurred_at).getTime();
+        return Number.isFinite(rowMs) && Math.abs(rowMs - targetMs) <= INTERNAL_TRANSFER_PAIR_WINDOW_MS;
+      });
+      return match ? { id: match.id } : null;
+    },
+
+    async markInternalTransfer(ids) {
+      const { error } = await sb
+        .from("transactions")
+        .update({ is_internal_transfer: true, status: "confirmed" })
+        .in("id", ids);
+      if (error) throw new Error(`Failed to mark internal transfer: ${error.message}`);
     },
 
     async touchToken(tokenHash) {

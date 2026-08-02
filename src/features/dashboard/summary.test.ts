@@ -16,6 +16,8 @@ function txn(overrides: Partial<Transaction>): Transaction {
     source: 'text',
     status: overrides.status ?? 'confirmed',
     confidence: null,
+    is_internal_transfer: overrides.is_internal_transfer,
+    transfer_reference: overrides.transfer_reference,
     occurred_at: overrides.occurred_at ?? '2026-06-01T10:00:00.000Z',
     account_id: null,
     created_at: '2026-06-01T10:00:00.000Z',
@@ -72,6 +74,18 @@ describe('summarize', () => {
     expect(result.income).toBe(0);
     expect(result.net).toBe(-100);
     expect(result.expenseByCategory).toEqual([{ slug: 'food', total: 100 }]);
+    expect(result.incomeByCategory).toEqual([]);
+  });
+
+  it('excludes matched internal transfer rows from totals and breakdown', () => {
+    const result = summarize([
+      txn({ id: 'out', type: 'expense', amount: 2202, category_slug: 'other_expense', is_internal_transfer: true }),
+      txn({ id: 'in', type: 'income', amount: 2202, category_slug: 'transfer_in', is_internal_transfer: true }),
+      txn({ id: 'real', type: 'expense', amount: 75, category_slug: 'food' }),
+    ]);
+    expect(result.expense).toBe(75);
+    expect(result.income).toBe(0);
+    expect(result.expenseByCategory).toEqual([{ slug: 'food', total: 75 }]);
     expect(result.incomeByCategory).toEqual([]);
   });
 

@@ -114,7 +114,12 @@ export default function TransactionsScreen() {
   // Refetch when a capture/edit changes transactions while this tab is on screen.
   useRefetchOnTxnChange(useCallback(() => { void refresh(); }, [refresh]));
 
-  const sections = useMemo(() => groupByDay(data ?? []), [data]);
+  // Matched card-payment pairs are internal bookkeeping, not spending rows.
+  // They remain in the database but stay out of the normal user-facing list.
+  const sections = useMemo(
+    () => groupByDay((data ?? []).filter((txn) => !txn.is_internal_transfer)),
+    [data],
+  );
 
   // Re-derive the filter pills once custom categories load (registry version),
   // so the user's custom categories appear alongside the built-ins.

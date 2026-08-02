@@ -10,7 +10,7 @@ import { CategoryAvatar } from './CategoryAvatar';
 import { Money } from './Money';
 import { categoryLabel } from '@/src/features/transactions/display';
 import { uiFont, uiFontSemiBold } from '@/src/lib/font';
-import { isRTL } from '@/src/lib/i18n';
+import { isRTL, t } from '@/src/lib/i18n';
 import type { Locale, Transaction } from '@/src/types';
 
 export interface TransactionRowProps {
@@ -52,7 +52,9 @@ export function TransactionRow({ txn, locale, onPress }: TransactionRowProps) {
     onPress?.(event);
   }
 
-  const label = categoryLabel(txn.category_slug, locale);
+  const label = txn.is_internal_transfer
+    ? t('internal_transfer', locale)
+    : categoryLabel(txn.category_slug, locale);
   const title = txn.note && txn.note.trim().length > 0 ? txn.note : label;
   const time = formatTime(txn.occurred_at, locale);
   const meta = title === label ? time : `${label} · ${time}`;

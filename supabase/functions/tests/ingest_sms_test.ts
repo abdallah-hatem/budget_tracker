@@ -4,6 +4,10 @@ import { assert, assertEquals } from "@std/assert";
 import {
   handleIngest,
   collapseRepeatedBody,
+  dedupeKey,
+  hasPerTransactionToken,
+  extractTransferReference,
+  isInstantTransfer,
   type ExpoPushMessage,
   type IngestDeps,
 } from "../ingest-sms/index.ts";
@@ -76,7 +80,7 @@ function makeDeps(over: Partial<IngestDeps> = {}): IngestDeps {
     lookupUserId: (hash) =>
       hash === VALID_TOKEN_HASH ? Promise.resolve(VALID_USER_ID) : Promise.resolve(null),
     getRules: () => Promise.resolve([]),
-    insertPending: () => Promise.resolve("txn-id"),
+    insertPending: () => Promise.resolve({ id: "txn-id", duplicate: false }),
     touchToken: () => Promise.resolve(),
     getPushTokens: () => Promise.resolve([]),
     countPending: () => Promise.resolve(3),
@@ -242,7 +246,7 @@ Deno.test("valid token + amount > 0 → insertPending called once → 200 {ok:tr
       insertPending: (row) => {
         insertCalled++;
         insertedRow = row;
-        return Promise.resolve("txn-id");
+        return Promise.resolve({ id: "txn-id", duplicate: false });
       },
     }),
   );
@@ -261,6 +265,65 @@ Deno.test("valid token + amount > 0 → insertPending called once → 200 {ok:tr
   assertEquals(row.amount, 250);
   assertEquals(row.currency, "EGP");
   assert(typeof row.occurred_at === "string");
+});
+
+Deno.test("extractTransferReference extracts the bank reference from Arabic Instapay SMS", () => {
+  assertEquals(
+    extractTransferReference(
+      "تم ارسال تحويل لحظي بمبلغ 2202.00 بتاريخ 2026-08-02 الساعة 02:44 PM رقم مرجعي 13ee4a0",
+    ),
+    "13ee4a0",
+  );
+});
+
+Deno.test("isInstantTransfer recognizes Arabic Instapay wording", () => {
+  assertEquals(
+    isInstantTransfer("تم إضافة تحويل لحظي عبر شبكة المدفوعات اللحظية"),
+    true,
+  );
+  assertEquals(isInstantTransfer("POS purchase 2202 EGP"), false);
+});
+
+Deno.test("matching opposite Instapay SMS rows are marked internal and not pushed", async () => {
+  let insertedRows: Record<string, unknown>[] = [];
+  let markedIds: string[][] = [];
+  let pushCalled = false;
+
+  const res = await handleIngest(
+    postReq({
+      token: VALID_TOKEN,
+      text: "تم ارسال تحويل لحظي بمبلغ 2202.00 بتاريخ 2026-08-02 الساعة 02:44 PM رقم مرجعي 13ee4a0",
+      received_at: "2026-08-02T12:44:00.000Z",
+    }),
+    makeDeps({
+      categorizeFn: () => Promise.resolve({
+        ...SAMPLE_PARSED,
+        type: "expense",
+        amount: 2202,
+        note: "instapay",
+      }),
+      insertPending: (row) => {
+        insertedRows.push(row);
+        return Promise.resolve({ id: "outgoing-id", duplicate: false });
+      },
+      findMatchingTransfer: () => Promise.resolve({ id: "incoming-id" }),
+      markInternalTransfer: (ids) => {
+        markedIds.push(ids);
+        return Promise.resolve();
+      },
+      getPushTokens: () => Promise.resolve([FAKE_PUSH_TOKEN]),
+      sendPush: () => {
+        pushCalled = true;
+        return Promise.resolve();
+      },
+    }),
+  );
+
+  assertEquals(res.status, 200);
+  assertEquals(insertedRows.length, 1);
+  assertEquals(insertedRows[0].transfer_reference, "13ee4a0");
+  assertEquals(markedIds, [["incoming-id", "outgoing-id"]]);
+  assertEquals(pushCalled, false);
 });
 
 Deno.test("valid token + amount > 0 → CORS header present on 200", async () => {
@@ -284,7 +347,7 @@ Deno.test("a matching keyword rule overrides category + note (amount kept)", asy
       getRules: () => Promise.resolve([
         { keyword: "vodafone", category_slug: "bills", note: "Phone" },
       ]),
-      insertPending: (r) => { row = r; return Promise.resolve("txn-id"); },
+      insertPending: (r) => { row = r; return Promise.resolve({ id: "txn-id", duplicate: false }); },
     }),
   );
   assert(row !== null);
@@ -303,7 +366,7 @@ Deno.test("longest matching keyword wins", async () => {
         { keyword: "uber", category_slug: "transport", note: null },
         { keyword: "uber eats", category_slug: "food", note: "Food delivery" },
       ]),
-      insertPending: (r) => { row = r; return Promise.resolve("txn-id"); },
+      insertPending: (r) => { row = r; return Promise.resolve({ id: "txn-id", duplicate: false }); },
     }),
   );
   assert(row !== null);
@@ -321,7 +384,7 @@ Deno.test("a rule with an income category flips type to income", async () => {
       getRules: () => Promise.resolve([
         { keyword: "salary deposit", category_slug: "salary", note: null },
       ]),
-      insertPending: (r) => { row = r; return Promise.resolve("txn-id"); },
+      insertPending: (r) => { row = r; return Promise.resolve({ id: "txn-id", duplicate: false }); },
     }),
   );
   assert(row !== null);
@@ -338,7 +401,7 @@ Deno.test("no matching rule → AI category/note are used", async () => {
       getRules: () => Promise.resolve([
         { keyword: "vodafone", category_slug: "bills", note: "Phone" },
       ]),
-      insertPending: (r) => { row = r; return Promise.resolve("txn-id"); },
+      insertPending: (r) => { row = r; return Promise.resolve({ id: "txn-id", duplicate: false }); },
     }),
   );
   assert(row !== null);
@@ -360,7 +423,7 @@ Deno.test("amount === 0 → insertPending NOT called → 200 {ok:true, skipped:t
       categorizeFn: () => Promise.resolve(SAMPLE_PARSED_ZERO),
       insertPending: () => {
         insertCalled++;
-        return Promise.resolve("txn-id");
+        return Promise.resolve({ id: "txn-id", duplicate: false });
       },
     }),
   );
@@ -383,7 +446,7 @@ Deno.test("kind:'offer' with amount > 0 → insertPending NOT called → skipped
       categorizeFn: () => Promise.resolve(SAMPLE_PARSED_OFFER),
       insertPending: () => {
         insertCalled++;
-        return Promise.resolve("txn-id");
+        return Promise.resolve({ id: "txn-id", duplicate: false });
       },
     }),
   );
@@ -406,7 +469,7 @@ Deno.test("kind:'other' with amount > 0 (unpaid fine/bill) → NOT inserted → 
       categorizeFn: () => Promise.resolve(SAMPLE_PARSED_FINE),
       insertPending: () => {
         insertCalled++;
-        return Promise.resolve("txn-id");
+        return Promise.resolve({ id: "txn-id", duplicate: false });
       },
     }),
   );
@@ -427,7 +490,7 @@ Deno.test("very small positive amount that rounds to 0 → skipped", async () =>
         Promise.resolve({ ...SAMPLE_PARSED, amount: 0.001 }),
       insertPending: () => {
         insertCalled++;
-        return Promise.resolve("txn-id");
+        return Promise.resolve({ id: "txn-id", duplicate: false });
       },
     }),
   );
@@ -490,7 +553,7 @@ Deno.test("valid received_at is reflected in occurred_at", async () => {
     makeDeps({
       insertPending: (row) => {
         insertedRow = row;
-        return Promise.resolve("txn-id");
+        return Promise.resolve({ id: "txn-id", duplicate: false });
       },
     }),
   );
@@ -510,7 +573,7 @@ Deno.test("invalid received_at falls back to current time (ISO string)", async (
     makeDeps({
       insertPending: (row) => {
         insertedRow = row;
-        return Promise.resolve("txn-id");
+        return Promise.resolve({ id: "txn-id", duplicate: false });
       },
     }),
   );
@@ -563,7 +626,7 @@ Deno.test("amount is rounded to 2 decimal places before insert", async () => {
       categorizeFn: () => Promise.resolve({ ...SAMPLE_PARSED, amount: 99.999 }),
       insertPending: (row) => {
         insertedRow = row;
-        return Promise.resolve("txn-id");
+        return Promise.resolve({ id: "txn-id", duplicate: false });
       },
     }),
   );
@@ -603,7 +666,7 @@ Deno.test("far-future received_at is clamped: occurred_at is not in the far futu
     makeDeps({
       insertPending: (row) => {
         insertedRow = row;
-        return Promise.resolve("txn-id");
+        return Promise.resolve({ id: "txn-id", duplicate: false });
       },
     }),
   );
@@ -790,3 +853,178 @@ Deno.test("ingest: a doubled notification body is collapsed BEFORE categorize", 
   // so it can't sum 250 + 250 into 500.
   assertEquals(seenByLlm, "خصم 250 من حسابك رقم xxxx1234");
 });
+
+// ---------------------------------------------------------------------------
+// Tests: idempotency / duplicate suppression
+// ---------------------------------------------------------------------------
+
+const ARABIC_INSTAPAY =
+  "يرجى العلم انه تم تنفيذ تحويل لحظي بمبلغ 800.00 جم إلى حسابك المنتهي بـ ********1354 " +
+  "من AMR ADLY FAHEEM ALY برقم مرجعي 0896a475 بتاريخ 31-07-2026 01:09 للمزيد، برجاء الاتصال بـ 19666";
+
+const T0 = Date.UTC(2026, 6, 31, 1, 9, 0);
+
+Deno.test("dedupeKey: identical text → identical key", async () => {
+  assertEquals(await dedupeKey(ARABIC_INSTAPAY, T0), await dedupeKey(ARABIC_INSTAPAY, T0));
+});
+
+Deno.test("dedupeKey: whitespace-only differences collapse to the same key", async () => {
+  const a = await dedupeKey(ARABIC_INSTAPAY, T0);
+  const b = await dedupeKey(`  ${ARABIC_INSTAPAY.replace(/ /g, "  ")}\n\n `, T0);
+  assertEquals(a, b);
+});
+
+Deno.test("dedupeKey: a different reference number → different key", async () => {
+  const a = await dedupeKey(ARABIC_INSTAPAY, T0);
+  const b = await dedupeKey(ARABIC_INSTAPAY.replace("0896a475", "0896a476"), T0);
+  assertEquals(a === b, false);
+});
+
+Deno.test("ingest: dedupe_key is written on the inserted row", async () => {
+  let row: Record<string, unknown> = {};
+  const res = await handleIngest(
+    postReq({ token: VALID_TOKEN, text: ARABIC_INSTAPAY }),
+    makeDeps({
+      insertPending: (r) => {
+        row = r;
+        return Promise.resolve({ id: "txn-id", duplicate: false });
+      },
+    }),
+  );
+  assertEquals(res.status, 200);
+  assert(typeof row.dedupe_key === "string" && (row.dedupe_key as string).length === 64);
+});
+
+Deno.test(
+  "ingest: insert reports a conflict → 200 {ok:true, duplicate:true}",
+  async () => {
+    const res = await handleIngest(
+      postReq({ token: VALID_TOKEN, text: ARABIC_INSTAPAY }),
+      makeDeps({
+        insertPending: () => Promise.resolve({ id: null, duplicate: true }),
+      }),
+    );
+    assertEquals(res.status, 200);
+    const json = await res.json();
+    assertEquals(json, { ok: true, duplicate: true });
+  },
+);
+
+Deno.test(
+  "ingest: a conflicting insert must NOT send a push notification",
+  async () => {
+    let sendPushCalled = false;
+    const res = await handleIngest(
+      postReq({ token: VALID_TOKEN, text: ARABIC_INSTAPAY }),
+      makeDeps({
+        insertPending: () => Promise.resolve({ id: null, duplicate: true }),
+        getPushTokens: () => Promise.resolve(["ExponentPushToken[xxx]"]),
+        sendPush: () => {
+          sendPushCalled = true;
+          return Promise.resolve();
+        },
+      }),
+    );
+    assertEquals(res.status, 200);
+    // Give the fire-and-forget push block a turn to run.
+    await new Promise((r) => setTimeout(r, 10));
+    assertEquals(sendPushCalled, false, "duplicate must not re-notify");
+  },
+);
+
+Deno.test(
+  "ingest: an already-ingested text short-circuits BEFORE the LLM call",
+  async () => {
+    let categorizeCalled = false;
+    let insertCalled = false;
+    const res = await handleIngest(
+      postReq({ token: VALID_TOKEN, text: ARABIC_INSTAPAY }),
+      makeDeps({
+        seenRecently: () => Promise.resolve(true),
+        categorizeFn: () => {
+          categorizeCalled = true;
+          return Promise.resolve(SAMPLE_PARSED);
+        },
+        insertPending: () => {
+          insertCalled = true;
+          return Promise.resolve({ id: "txn-id", duplicate: false });
+        },
+      }),
+    );
+    assertEquals(res.status, 200);
+    assertEquals(await res.json(), { ok: true, duplicate: true });
+    assertEquals(categorizeCalled, false, "must not spend Groq tokens on a known duplicate");
+    assertEquals(insertCalled, false);
+  },
+);
+
+Deno.test(
+  "ingest: seenRecently failing is non-fatal — the message still ingests",
+  async () => {
+    const res = await handleIngest(
+      postReq({ token: VALID_TOKEN, text: ARABIC_INSTAPAY }),
+      makeDeps({
+        seenRecently: () => Promise.reject(new Error("DB unavailable")),
+        insertPending: () => Promise.resolve({ id: "txn-id", duplicate: false }),
+      }),
+    );
+    assertEquals(res.status, 200);
+    assertEquals(await res.json(), { ok: true });
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tests: messages that carry NO per-transaction reference
+//
+// Production data contains three byte-identical copies of the message below,
+// 20 HOURS apart — three real 15 EGP transfers, not one message re-delivered.
+// The format has no reference number and no time of day, only a date, so it
+// must never be deduplicated outside a short window.
+// ---------------------------------------------------------------------------
+
+const NO_REF_SMS =
+  "تم تحويل مبلغ 15EGP من حساب رقم xxx0328 فى 26-JUL-2026 عن طريق التحويل اللحظي";
+
+Deno.test("hasPerTransactionToken: a reference number counts", () => {
+  assertEquals(hasPerTransactionToken(ARABIC_INSTAPAY), true);
+});
+
+Deno.test("hasPerTransactionToken: ALEXBANK's رقم المعاملة counts", () => {
+  assertEquals(
+    hasPerTransactionToken(
+      "ALEXBANK قمت بتحويل لحظي بمبلغ 720.00 جم من حسابك 9001 يوم 7/1/26 في 13:16 رقم المعاملة a65363bf",
+    ),
+    true,
+  );
+});
+
+Deno.test("hasPerTransactionToken: date-only message has no token", () => {
+  assertEquals(hasPerTransactionToken(NO_REF_SMS), false);
+});
+
+Deno.test(
+  "dedupeKey: a message WITH a reference dedupes regardless of time",
+  async () => {
+    const a = await dedupeKey(ARABIC_INSTAPAY, T0);
+    const b = await dedupeKey(ARABIC_INSTAPAY, T0 + 48 * 60 * 60 * 1000);
+    assertEquals(a, b, "a referenced message is self-unique — always the same key");
+  },
+);
+
+Deno.test(
+  "dedupeKey: two copies of a date-only message seconds apart share a key",
+  async () => {
+    const a = await dedupeKey(NO_REF_SMS, T0);
+    const b = await dedupeKey(NO_REF_SMS, T0 + 200);
+    assertEquals(a, b, "a re-delivered copy must still be caught");
+  },
+);
+
+Deno.test(
+  "dedupeKey: REGRESSION — two real date-only transfers hours apart must NOT collide",
+  async () => {
+    const a = await dedupeKey(NO_REF_SMS, T0);
+    const b = await dedupeKey(NO_REF_SMS, T0 + 20 * 60 * 60 * 1000);
+    assertEquals(a === b, false, "this would silently swallow a real transaction");
+  },
+);

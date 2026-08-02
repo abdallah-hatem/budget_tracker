@@ -31,6 +31,10 @@ export interface Transaction {
   status: TxnStatus;
   confidence: number | null;
   account_id: string | null;
+  /** Bank SMS reference, retained so mirrored Instapay rows can be paired. */
+  transfer_reference?: string | null;
+  /** Matched internal transfer rows are excluded from financial totals. */
+  is_internal_transfer?: boolean;
   occurred_at: string;
   created_at: string;
 }
@@ -64,6 +68,9 @@ export interface ParsedTransaction {
 
 // account_id is optional on insert — the DB trigger fills it from the user's
 // default account when omitted; callers may still set it explicitly.
-export type NewTransaction = Omit<Transaction, 'id' | 'created_at' | 'account_id'> & {
+export type NewTransaction = Omit<
+  Transaction,
+  'id' | 'created_at' | 'account_id' | 'transfer_reference' | 'is_internal_transfer'
+> & {
   account_id?: string | null;
 };

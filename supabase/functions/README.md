@@ -16,6 +16,16 @@ Completions API in JSON mode (`max_tokens: 256`, `temperature: 0`). The model's
 `category_slug` is validated against the 17 category slugs, falling back to
 `other_expense` / `other_income` when out of range.
 
+## ingest-sms internal transfer pairing
+
+`ingest-sms` extracts a bank reference from Instapay messages. When the same
+user receives an incoming and outgoing SMS with the same reference, amount, and
+nearby timestamp, both rows are marked as internal transfers. They remain in
+history but are excluded from dashboard totals, budgets, balances, and pending
+review. Messages with a reference wait briefly before their pending push so the
+mirrored half can arrive without creating a false review alert. Amount/time
+alone never pair transactions.
+
 ## Local development
 
 1. Provide the secret (gitignored):

@@ -7,6 +7,7 @@ function tx(
   category_slug: string,
   type: TxnType = 'expense',
   status: Transaction['status'] = 'confirmed',
+  is_internal_transfer = false,
 ): Transaction {
   return {
     id: occurred_at + amount + category_slug,
@@ -21,6 +22,7 @@ function tx(
     status,
     confidence: null,
     account_id: null,
+    is_internal_transfer,
     occurred_at,
     created_at: occurred_at,
   };
@@ -65,6 +67,16 @@ describe('computeStats', () => {
     expect(s.count).toBe(1);
     expect(s.highest).toEqual({ slug: 'salary', total: 9999 });
     expect(s.lowest).toBeNull(); // only one category
+  });
+
+  it('excludes internal transfer pairs', () => {
+    const s = computeStats([
+      tx('2026-07-15T12:00:00Z', 2202, 'other_expense', 'expense', 'confirmed', true),
+      tx('2026-07-15T12:00:00Z', 2202, 'transfer_in', 'income', 'confirmed', true),
+      tx('2026-07-16T12:00:00Z', 80, 'food'),
+    ], 'expense', 1);
+    expect(s.total).toBe(80);
+    expect(s.count).toBe(1);
   });
 
   it('returns zeros for an empty set', () => {

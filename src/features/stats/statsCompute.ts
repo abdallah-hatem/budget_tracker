@@ -45,6 +45,7 @@ export function computeStats(
   const rows = txns.filter(
     (t) =>
       t.status === 'confirmed' &&
+      !t.is_internal_transfer &&
       t.type === type &&
       (!categorySlug || t.category_slug === categorySlug),
   );

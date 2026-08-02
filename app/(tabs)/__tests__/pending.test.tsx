@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import PendingScreen from '../pending';
 import type { Transaction } from '../../../src/types';
@@ -21,6 +22,7 @@ jest.mock('../../../src/features/transactions/PendingProvider', () => ({
 jest.mock('../../../src/features/transactions/api', () => ({
   updateTransaction: jest.fn(),
   deleteTransaction: jest.fn(),
+  confirmTransactions: jest.fn(),
   listTransactions: jest.fn(),
 }));
 
@@ -29,12 +31,17 @@ jest.mock('../../../src/features/auth/SessionProvider', () => ({
 }));
 
 import { usePendingContext } from '../../../src/features/transactions/PendingProvider';
-import { updateTransaction, deleteTransaction } from '../../../src/features/transactions/api';
+import {
+  updateTransaction,
+  deleteTransaction,
+  confirmTransactions,
+} from '../../../src/features/transactions/api';
 import { useSession } from '../../../src/features/auth/SessionProvider';
 
 const mockUsePendingContext = usePendingContext as jest.MockedFunction<typeof usePendingContext>;
 const mockUpdate = updateTransaction as jest.Mock;
 const mockDelete = deleteTransaction as jest.Mock;
+const mockConfirmAll = confirmTransactions as jest.Mock;
 const mockSession = useSession as jest.Mock;
 
 function pendingTx(over: Partial<Transaction> = {}): Transaction {
@@ -181,5 +188,89 @@ describe('PendingScreen', () => {
 
     expect(screen.getByText('Bank: deducted EGP 120')).toBeTruthy();
     expect(screen.getByText('via SMS')).toBeTruthy();
+  });
+
+  describe('Confirm all', () => {
+    it('is hidden when there is nothing pending', () => {
+      mockUsePendingContext.mockReturnValue({
+        data: [], count: 0, loading: false, error: null, refresh: noopRefresh,
+      });
+
+      render(<PendingScreen />);
+
+      expect(screen.queryByTestId('pending-confirm-all')).toBeNull();
+    });
+
+    it('is shown when rows are pending', () => {
+      mockUsePendingContext.mockReturnValue({
+        data: [pendingTx({ id: 'p1' })], count: 1, loading: false, error: null, refresh: noopRefresh,
+      });
+
+      render(<PendingScreen />);
+
+      expect(screen.getByTestId('pending-confirm-all')).toBeTruthy();
+    });
+
+    it('prompts before confirming, and does nothing if the prompt is cancelled', () => {
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      mockUsePendingContext.mockReturnValue({
+        data: [pendingTx({ id: 'p1' }), pendingTx({ id: 'p2' })],
+        count: 2, loading: false, error: null, refresh: noopRefresh,
+      });
+
+      render(<PendingScreen />);
+      fireEvent.press(screen.getByTestId('pending-confirm-all'));
+
+      expect(alertSpy).toHaveBeenCalled();
+      // The count is interpolated into the prompt.
+      expect(alertSpy.mock.calls[0][1]).toContain('2');
+      // Nothing happens until the user picks the confirm button.
+      expect(mockConfirmAll).not.toHaveBeenCalled();
+      alertSpy.mockRestore();
+    });
+
+    it('confirms exactly the ids on screen when accepted, then refreshes', async () => {
+      const refreshFn = jest.fn().mockResolvedValue(undefined);
+      mockConfirmAll.mockResolvedValue([]);
+      // Accept the prompt by invoking the non-cancel button.
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(
+        ((_t: string, _m: string, buttons: { text: string; style?: string; onPress?: () => void }[]) => {
+          buttons.find((b) => b.style !== 'cancel')?.onPress?.();
+        }) as unknown as typeof Alert.alert,
+      );
+      mockUsePendingContext.mockReturnValue({
+        data: [pendingTx({ id: 'p1' }), pendingTx({ id: 'p2' })],
+        count: 2, loading: false, error: null, refresh: refreshFn,
+      });
+
+      render(<PendingScreen />);
+      fireEvent.press(screen.getByTestId('pending-confirm-all'));
+
+      await waitFor(() => expect(mockConfirmAll).toHaveBeenCalledWith(['p1', 'p2']));
+      await waitFor(() => expect(refreshFn).toHaveBeenCalled());
+      alertSpy.mockRestore();
+    });
+
+    it('surfaces a failure and still refreshes', async () => {
+      const refreshFn = jest.fn().mockResolvedValue(undefined);
+      mockConfirmAll.mockRejectedValue(new Error('network down'));
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(
+        ((_t: string, _m: string, buttons?: { text: string; style?: string; onPress?: () => void }[]) => {
+          buttons?.find((b) => b.style !== 'cancel')?.onPress?.();
+        }) as unknown as typeof Alert.alert,
+      );
+      mockUsePendingContext.mockReturnValue({
+        data: [pendingTx({ id: 'p1' })], count: 1, loading: false, error: null, refresh: refreshFn,
+      });
+
+      render(<PendingScreen />);
+      fireEvent.press(screen.getByTestId('pending-confirm-all'));
+
+      await waitFor(() =>
+        expect(alertSpy.mock.calls.some((c) => c[1] === 'network down')).toBe(true),
+      );
+      await waitFor(() => expect(refreshFn).toHaveBeenCalled());
+      alertSpy.mockRestore();
+    });
   });
 });

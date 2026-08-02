@@ -7,6 +7,7 @@ function tx(
   amount: number,
   type: TxnType = 'expense',
   status: Transaction['status'] = 'confirmed',
+  is_internal_transfer = false,
 ): Transaction {
   return {
     id: occurred_at + amount,
@@ -21,6 +22,7 @@ function tx(
     status,
     confidence: null,
     account_id: null,
+    is_internal_transfer,
     occurred_at,
     created_at: occurred_at,
   };
@@ -81,6 +83,15 @@ describe('monthlyBuckets', () => {
     const b = monthlyBuckets(txns, 1, 'expense');
     expect(b.length).toBe(1);
     expect(b[0].total).toBe(300);
+  });
+
+  it('ignores internal transfer rows', () => {
+    const b = monthlyBuckets([
+      tx('2026-07-15T12:00:00Z', 2202, 'expense', 'confirmed', true),
+      tx('2026-07-16T12:00:00Z', 80),
+    ], 1, 'expense');
+    expect(b).toHaveLength(1);
+    expect(b[0].total).toBe(80);
   });
 
   it('returns empty when nothing matches', () => {
