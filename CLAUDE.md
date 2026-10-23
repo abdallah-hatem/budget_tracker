@@ -18,8 +18,8 @@
 - Push with the linked project: `db push` does NOT take `--project-ref`; it uses
   the linked project. Use `SUPABASE_DB_PASSWORD=<db-pass> supabase db push --yes`.
   Migrations live in `supabase/migrations/`; only un-applied ones run. The DB
-  password is in `supabase_credentials.md` (gitignored) — currently
-  `car_sys12_pass@as`; never commit it.
+  password is in `supabase_credentials.md` (gitignored) — read it from there;
+  never write it into a tracked file.
 - NOTE: the auto-mode safety classifier may still block a prod `db push` from
   Bash regardless of this rule — that guardrail is separate from CLAUDE.md and is
   lifted via a Bash permission rule in the user's settings (or the user runs the
